@@ -1301,13 +1301,13 @@ function renderQuiz(){
   const u=qz.u,img=ICONS[u.n]||SITEICONS[u.n];
   $("#qz-score").innerHTML=`<span><b>${QZS.right}</b>von ${QZS.total} richtig</span><span><b>${QZS.total?Math.round(QZS.right/QZS.total*100):0}%</b>Quote</span><span><b>${QZS.streak}</b>Serie</span><span><b>${QZS.best}</b>Rekord</span>`;
   chipRow("#qz-set",[["both","Kosten + Traits"],["cost","Nur Kosten"],["traits","Nur Traits"]],qz.mode,"qzmode");
-  const showName=qz.done||!img;
+  const showName=true;
   const costBtns=QZ_COSTS.map(c=>{let cls="";if(qz.done){if(c===u.c)cls=qz.cost===c?"ok":"miss";else if(c===qz.cost)cls="wrong"}
     return `<button class="qopt ${cls}" data-qzc="${c}" aria-pressed="${qz.cost===c}" ${qz.done?"disabled":""}>${c} Gold</button>`}).join("");
   const trBtns=qz.opts.map(t=>{const sel=qz.tr.has(t),is=u.t.includes(t);let cls="";if(qz.done){if(is)cls=sel?"ok":"miss";else if(sel)cls="wrong"}
     return `<button class="qopt ${cls}" data-qzt="${esc(t)}" aria-pressed="${sel}" ${qz.done?"disabled":""}>${esc(t)}</button>`}).join("");
   const res=qz.done?(qz.ok?'<div class="qres ok">Richtig!</div>':`<div class="qres no">Leider falsch</div><div class="muted" style="font-size:13.5px">${esc(u.n)}: ${u.c} Gold, ${u.t.map(esc).join(", ")}</div>`):'<div class="qres"></div>';
-  $("#qz-card").innerHTML=`${img?`<img class="qimg c${qz.done?u.c:0}" src="${img}" alt="Welcher Champion?" draggable="false">`:`<div class="qimg c${qz.done?u.c:0}">?</div>`}
+  $("#qz-card").innerHTML=`${img?`<img class="qimg c${qz.done?u.c:0}" src="${img}" alt="${esc(u.n)}" draggable="false">`:`<div class="qimg c${qz.done?u.c:0}">?</div>`}
     <div class="qname">${showName?esc(u.n):"Wer ist das?"}</div>
     ${qz.mode!=="traits"?`<div class="qq"><div class="flabel" style="text-align:center">Kosten</div><div class="qopts">${costBtns}</div></div>`:""}
     ${qz.mode!=="cost"?`<div class="qq"><div class="flabel" style="text-align:center">Traits (alle richtigen anklicken)</div><div class="qopts">${trBtns}</div></div>`:""}
