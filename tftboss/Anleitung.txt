@@ -58,3 +58,13 @@ AUTOPILOT (die KI klickt selbst)
 Was er macht: Augments wählen, Shop-Karten kaufen, XP kaufen (F), rollen (D).
 Was er noch nicht macht: Items auf Units legen, Units umstellen, Karussell. TFT stellt Units zu Kampfbeginn selbst aufs Board, wenn Platz ist.
 Hinweis: Nicht in Ranked benutzen. Er nutzt deine Tastenbelegung F (XP) und D (Rollen), die müssen in TFT so eingestellt sein.
+
+STREAK-PLAN (Winstreak / Lossstreak)
+- Kalibriere zusätzlich "Mein Leben" (deine Lebens-Zahl) und "Leben aller Spieler" (die Zahlen-Spalte der Spielerliste rechts, 8 Plätze).
+- Ab 2-1 entscheidet er nach deinem Board (Paare, 2-Sterne, Items, Augments):
+  Stark = Winstreak: Level 4 bei 2-1, 5 bei 2-5, 6 bei 3-2, Units zum Stärken kaufen, Zinsen dürfen fürs Streak-Halten draufgehen.
+  Schwach = Lossstreak: nicht leveln, keine Füll-Units, Gold auf 50 sparen, erst bei 3-2 leveln und stabilisieren.
+- Nach jeder Runde liest er am Leben ab, ob du gewonnen oder verloren hast. Zwei Niederlagen im Winstreak: Wechsel auf Lossstreak.
+  Zwei Siege im Lossstreak: Wechsel auf Winstreak. Unter 50 Leben bricht er den Lossstreak ab.
+- Spät im Spiel: unter 40 Leben rollt er bis 20 Gold, unter 20 Leben rollt er alles.
+- Gegner-Boards Unit für Unit erkennt er nicht (3D-Figuren). Er nutzt das Leben aller Spieler und deine Ergebnisse.

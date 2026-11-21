@@ -14,6 +14,12 @@ var consumables: Array = []      # Verbrauchsitems (Duplicator, Remover ...)
 var my_augs: Array = []
 var aug_offer: Array = []        # 3 Augment-Namen, wenn gerade eine Wahl offen ist
 
+var hp := -1                     # eigenes Leben
+var lobby_hp: Array = []         # Leben aller Spieler aus der Liste rechts
+var results: Array = []          # "W" / "L" pro PvP-Runde
+var plan := ""                   # "win", "loss" oder "" (noch offen)
+var plan_why := ""
+
 var target: Dictionary = {}      # gewählte Ziel-Comp
 var locked := false
 
@@ -38,6 +44,11 @@ func reset() -> void:
 	aug_offer.clear()
 	target = {}
 	locked = false
+	hp = -1
+	lobby_hp = []
+	results = []
+	plan = ""
+	plan_why = ""
 
 # ---------------------------------------------------------------- Comp-Helfer
 
@@ -300,7 +311,7 @@ func shop_advice() -> Array:
 		elif have >= 1 and sn < 41 and c <= 3:
 			prio = 1.5 + have
 			why = "Paar, wird 2 Sterne" if have == 2 else "Paar"
-		elif sn <= 23 and c <= 2:
+		elif sn <= 32 and c <= 3 and plan != "loss":
 			prio = 0.8
 			why = "Board stärker machen"
 		if have >= 8:
@@ -331,41 +342,154 @@ func _keep_gold(sn: int) -> int:
 	var rr := reroll_level(target) if not target.is_empty() else 0
 	if rr > 0 and level >= rr and sn >= 31:
 		return 50
+	if plan == "win" and win_streak() >= 2 and sn <= 32:
+		return 0   # Winstreak halten ist mehr wert als Zinsen
 	return mini(50, int(gold / 10) * 10)
+
+## Wie stark ist mein Spiel gerade (grob)? Units mit Paaren/2 Sternen, Items, Augments.
+func strength() -> float:
+	var sc := 0.0
+	for u in owned.keys():
+		var n: int = owned[u]
+		var c := Meta.cost(u)
+		if n >= 3:
+			sc += 1.5 + c * 0.5
+		elif n == 2:
+			sc += 0.7
+		else:
+			sc += 0.15 * c
+	var comps := 0
+	for k in comps_have.values():
+		comps += k
+	sc += comps * 0.6 + items_have.size() * 1.5
+	for a in my_augs:
+		var cats: Array = Meta.augs.get(a, {}).get("c", [])
+		if "Kampf" in cats or "Items" in cats:
+			sc += 1.0
+		if "Gold" in cats:
+			sc -= 1.5
+	return sc
+
+func win_streak() -> int:
+	var n := 0
+	for i in range(results.size() - 1, -1, -1):
+		if results[i] != "W":
+			break
+		n += 1
+	return n
+
+func loss_streak() -> int:
+	var n := 0
+	for i in range(results.size() - 1, -1, -1):
+		if results[i] != "L":
+			break
+		n += 1
+	return n
+
+## Mein Platz nach Leben in der Lobby (1 = am meisten Leben), 0 wenn unbekannt
+func hp_rank() -> int:
+	if hp < 0 or lobby_hp.size() < 2:
+		return 0
+	var r := 1
+	for h in lobby_hp:
+		if int(h) > hp:
+			r += 1
+	return r
+
+## Winstreak oder Lossstreak? Wird ab 2-1 entschieden und nach jeder Runde geprüft.
+func update_plan() -> void:
+	var sn := stage_num(stage)
+	if sn < 21:
+		return
+	if sn >= 33:
+		if plan != "":
+			plan_why = "Ab Stage 3-3 normal weiter: Board aufbauen und Comp spielen."
+		plan = ""
+		return
+	var st := strength()
+	if plan == "":
+		if st >= 4.0 or win_streak() >= 2:
+			plan = "win"
+			plan_why = "Starkes Board (Stärke %.1f): Winstreak, früh leveln." % st
+		elif st < 2.5 or loss_streak() >= 2:
+			plan = "loss"
+			plan_why = "Schwaches Board (Stärke %.1f): Lossstreak, Gold sparen, nicht leveln." % st
+		else:
+			plan = "win" if win_streak() > loss_streak() else "loss"
+			plan_why = "Mittelstarkes Board (Stärke %.1f), Ergebnisse entscheiden: %s." % [st, "Winstreak" if plan == "win" else "Lossstreak"]
+		return
+	var hp_ok := hp < 0 or hp >= 60
+	if plan == "win" and loss_streak() >= 2 and hp_ok and sn <= 31:
+		plan = "loss"
+		plan_why = "Zwei Niederlagen in Folge: auf Lossstreak umgestellt."
+	elif plan == "loss" and win_streak() >= 2:
+		plan = "win"
+		plan_why = "Zwei Siege in Folge: Board ist stark genug, auf Winstreak umgestellt."
+	elif plan == "loss" and hp >= 0 and hp < 50 and sn <= 32:
+		plan = "win"
+		plan_why = "Leben unter 50: Lossstreak abbrechen, jetzt stabilisieren."
 
 func econ_advice(g: int) -> Array:
 	var out := []
 	if target.is_empty() or g < 0:
 		return out
+	update_plan()
 	var sn := stage_num(stage)
 	var style := style_of(target)
 	var rr := reroll_level(target)
-	# Level-Plan der Comp: ab welcher Stage welches Level
+	# Level-Plan: früh nach Streak, danach nach der Comp
 	var want := 0
-	for e in target.get("lv", []):
-		if sn >= stage_num(str(e["s"])):
-			want = maxi(want, int(e["l"]))
-	if rr > 0 and sn >= 31 and want > rr and _missing_three_stars().size() > 0:
-		want = rr
+	if sn <= 32 and plan == "win":
+		want = 4 if sn >= 21 else 0
+		if sn >= 25:
+			want = 5
+		if sn >= 32:
+			want = 6
+	elif sn <= 31 and plan == "loss":
+		want = 0          # Lossstreak: nicht leveln
+	elif sn == 32 and plan == "loss":
+		want = 6 if rr == 0 or rr >= 6 else rr
+	else:
+		for e in target.get("lv", []):
+			if sn >= stage_num(str(e["s"])):
+				want = maxi(want, int(e["l"]))
+		if rr > 0 and sn >= 31 and want > rr and _missing_three_stars().size() > 0:
+			want = rr
 	if level > 0 and want > level and g >= 4:
-		out.append({"k": "level", "t": "Level hoch auf %d (F drücken, bis Level %d)" % [want, want]})
+		out.append({"k": "level", "t": "Level hoch auf %d (F)" % want})
 		return out
 	var missing := _missing_core()
 	var roll := ""
-	if rr > 0 and level >= rr and sn >= 31:
+	var until := 50
+	# Notfall: wenig Leben, Board stabilisieren
+	if hp >= 0 and sn >= 33 and hp <= 20 and g > 4:
+		roll = "Nur noch %d Leben: alles rollen (D)" % hp
+		until = 0
+	elif hp >= 0 and sn >= 33 and hp <= 40 and g > 20 and missing.size() > 0:
+		roll = "%d Leben: rollen bis 20 Gold zum Stabilisieren (D)" % hp
+		until = 20
+	elif plan == "loss" and sn == 32 and hp >= 0 and hp < 60 and g > 30:
+		roll = "Lossstreak vorbei: rollen bis 30 Gold zum Stabilisieren (D)"
+		until = 30
+	elif rr > 0 and level >= rr and sn >= 31:
 		var m3 := _missing_three_stars()
 		if m3.size() > 0 and g > 50:
 			roll = "Rollen bis 50 Gold (D), suche %s" % ", ".join(m3.slice(0, 3))
+			until = 50
 	elif style.begins_with("Fast 8") and level >= 8 and sn >= 42 and missing.size() > 0:
-		roll = "Roll-down: rollen bis ca. 15 Gold (D), suche %s" % ", ".join(missing.slice(0, 3))
+		roll = "Roll-down auf 8: rollen bis ca. 15 Gold (D), suche %s" % ", ".join(missing.slice(0, 3))
+		until = 15
 	elif style.begins_with("Fast 9") and level >= 9 and missing.size() > 0:
 		roll = "Roll-down auf 9: rollen bis ca. 10 Gold (D), suche %s" % ", ".join(missing.slice(0, 3))
+		until = 10
 	elif style == "Standard" and level >= 7 and sn >= 41 and missing.size() > 0 and g > 30:
 		roll = "Rollen bis 30 Gold (D), suche %s" % ", ".join(missing.slice(0, 3))
+		until = 30
 	elif g > 60 and sn >= 41:
 		roll = "Zu viel Gold: rollen bis 50 (D)"
-	if roll != "":
-		out.append({"k": "roll", "t": roll, "until": _roll_floor(style, rr)})
+		until = 50
+	if roll != "" and g > until:
+		out.append({"k": "roll", "t": roll, "until": until})
 	elif sn >= 21:
 		var nxt := (int(g / 10) + 1) * 10
 		if g < 50:

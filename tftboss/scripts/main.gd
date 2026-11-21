@@ -5,8 +5,10 @@ const SETTINGS := "user://einstellungen.json"
 const TICK := 0.6
 const AUG_STAGES := [21, 32, 42]
 const KIND_COLOR := {"aug": "c48cff", "item": "6fd3ff", "buy": "7be07b", "level": "f5c542", "roll": "ff9a4a", "info": "a9a6c4"}
-const NUM_NAME := {"stage": "Stage", "level": "Level", "gold": "Gold"}
-const NUM_EXAMPLE := {"stage": "3-2", "level": "6", "gold": "34"}
+const NUM_NAME := {"stage": "Stage", "level": "Level", "gold": "Gold", "hp": "dein Leben", "lobby": "Leben eines Spielers"}
+const NUM_EXAMPLE := {"stage": "3-2", "level": "6", "gold": "34", "hp": "78", "lobby": "64"}
+## PvP-Runden pro Stage (x-4 ist Karussell, x-7 PvE)
+const PVP_ROUNDS := [1, 2, 3, 5, 6]
 
 var vision := Vision.new()
 var pilot := Autopilot.new()
@@ -30,6 +32,7 @@ var empty_ticks: Array = [0, 0, 0, 0, 0]
 var aug_off_stage := ""
 var aug_seen_full := false
 var last_stage_num := 0
+var round_hp := -1                # Leben zu Beginn der aktuellen Runde
 var stage_seen_ms := -100000      # wann die Stage zuletzt sicher gelesen wurde
 var unknown_prev := {}            # Platz -> Fingerabdruck vom letzten Durchlauf (erst fragen, wenn stabil)
 var busy := false
@@ -413,7 +416,13 @@ func _render_advice() -> void:
 	if tg.is_empty():
 		lbl_target.text = "Noch keine."
 		return
-	var tline := "[b]%s[/b]  [color=#a9a6c4](%s-Tier, %s, Ø Platz %.2f)[/color]%s" % [tg["name"], tg["tier"], Brain.style_de(tg), float(tg["avg"]), "  [color=#7be07b]fest[/color]" if brain.locked else "  [color=#a9a6c4]noch flexibel[/color]"]
+	var plan_txt: String = {"win": "[color=#7be07b]Winstreak[/color]", "loss": "[color=#ff9a4a]Lossstreak[/color]"}.get(brain.plan, "[color=#a9a6c4]normal[/color]")
+	var res_txt := "".join(brain.results.slice(maxi(0, brain.results.size() - 8))) if brain.results.size() > 0 else "-"
+	var rank := brain.hp_rank()
+	var head := "Plan: %s  ·  Runden: %s  ·  Leben: %s%s" % [plan_txt, res_txt, str(brain.hp) if brain.hp >= 0 else "-", ("  ·  Platz %d nach Leben" % rank) if rank > 0 else ""]
+	if brain.plan_why != "":
+		head += "\n[color=#a9a6c4]%s[/color]" % brain.plan_why
+	var tline := head + "\n[b]%s[/b]  [color=#a9a6c4](%s-Tier, %s, Ø Platz %.2f)[/color]%s" % [tg["name"], tg["tier"], Brain.style_de(tg), float(tg["avg"]), "  [color=#7be07b]fest[/color]" if brain.locked else "  [color=#a9a6c4]noch flexibel[/color]"]
 	var carry: Array = tg.get("carry", [])
 	var items := []
 	if carry.size() > 0:
@@ -586,6 +595,32 @@ func _tick() -> void:
 			_ask({"kind": "num", "key": key, "glyphs": r["glyphs"], "meta": r.get("meta", []), "img": crop})
 		seen.append("%s %s" % [NUM_NAME[key], t if t != "" else "-"])
 
+	# Eigenes Leben
+	if rects.has("hp"):
+		var crop_hp := _crop(img, "hp")
+		var rh := vision.read_number("hp", crop_hp)
+		if rh["ok"] and str(rh["text"]).is_valid_int():
+			var h := int(rh["text"])
+			if h >= 0 and h <= 100 and h != brain.hp:
+				brain.hp = h
+				changed = true
+		elif rh["glyphs"].size() > 0 and _in_game():
+			_ask({"kind": "num", "key": "hp", "glyphs": rh["glyphs"], "meta": rh.get("meta", []), "img": crop_hp})
+		seen.append("Leben %s" % (str(brain.hp) if brain.hp >= 0 else "-"))
+	# Leben aller Spieler
+	if rects.has("lobby") and _in_game():
+		var hs := []
+		var ls := _slots(img, "lobby")
+		for i in ls.size():
+			var rl := vision.read_number("lobby%d" % i, ls[i])
+			if rl["ok"] and str(rl["text"]).is_valid_int():
+				hs.append(int(rl["text"]))
+			elif rl["glyphs"].size() > 0:
+				_ask({"kind": "num", "key": "lobby", "glyphs": rl["glyphs"], "meta": rl.get("meta", []), "img": ls[i]})
+		if hs != brain.lobby_hp:
+			brain.lobby_hp = hs
+			changed = true
+
 	var active := _in_game() or not rects.has("stage")
 
 	# Shop
@@ -684,6 +719,13 @@ func _on_stage(t: String) -> void:
 	var sn := Brain.stage_num(t)
 	if sn <= 12 and last_stage_num >= 21:
 		_new_game()
+	# Ergebnis der Runde, die gerade zu Ende ging: Leben verloren = Niederlage
+	var prev := last_stage_num
+	if prev >= 21 and (prev % 10) in PVP_ROUNDS and round_hp >= 0 and brain.hp >= 0 and sn > prev:
+		brain.results.append("L" if brain.hp < round_hp else "W")
+		if auto_on:
+			_log("Runde %d-%d: %s" % [prev / 10, prev % 10, "verloren" if brain.hp < round_hp else "gewonnen"])
+	round_hp = brain.hp
 	last_stage_num = sn
 	brain.stage = t
 	aug_seen_full = false
@@ -937,6 +979,7 @@ func _toggle_auto() -> void:
 		_auto_status("TFT war nicht vorne. Nochmal starten und in den 3 Sekunden ins Spiel klicken.")
 		return
 	auto_on = true
+	timer.wait_time = 0.35
 	running = true
 	_update_run_btn()
 	btn_auto.text = "Autopilot stoppen"
@@ -945,6 +988,7 @@ func _toggle_auto() -> void:
 
 func _auto_off(why: String) -> void:
 	auto_on = false
+	timer.wait_time = TICK
 	btn_auto.text = "Autopilot starten"
 	_log(why)
 	_auto_status(why)

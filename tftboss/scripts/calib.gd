@@ -7,8 +7,9 @@ signal finished(rects: Dictionary)
 signal changed(rects: Dictionary)
 signal cancelled
 
-const NAMES := {"shop": "Shop", "gold": "Gold", "level": "Level", "stage": "Stage", "items": "Item-Plätze", "augs": "Augments"}
-const ORDER := ["shop", "gold", "level", "stage", "items", "augs"]
+const NAMES := {"shop": "Shop", "gold": "Gold", "level": "Level", "stage": "Stage", "items": "Item-Plätze", "augs": "Augments", "hp": "Mein Leben", "lobby": "Leben aller Spieler"}
+const ORDER := ["shop", "gold", "level", "stage", "items", "augs", "hp", "lobby"]
+const LOBBY_SLOTS := 8
 const STEPS := [
 	["shop", "Zieh einen Rahmen um alle 5 Shop-Karten. Nur die Karten, ohne Level- und Reroll-Knopf links."],
 	["gold", "Zieh einen Rahmen eng um deine Gold-Zahl."],
@@ -16,8 +17,10 @@ const STEPS := [
 	["stage", "Zieh einen Rahmen eng um die Stage-Anzeige oben, zum Beispiel 3-2."],
 	["items", "Rahmen von der Oberkante des obersten Item-Platzes bis zur Unterkante des untersten ziehen, auch über die leeren. Die dünnen Linien müssen zwischen den Plätzen liegen. Wenn nicht: mit − und + die Anzahl ändern."],
 	["augs", "Rahmen um alle 3 Augment-Karten (geht nur, solange eine Augment-Wahl offen ist)."],
+	["hp", "Rahmen mit etwas Abstand um deine eigene Lebens-Zahl (in der Spielerliste rechts oder unter deinem Portrait)."],
+	["lobby", "Rahmen um die Lebens-Zahlen aller 8 Spieler in der Liste rechts, von der obersten bis zur untersten Zahl, nur die Zahlen-Spalte. Die Linien müssen zwischen den Spielern liegen, sonst mit − und + anpassen."],
 ]
-const COLORS := {"items": Color("ff6fae"), "shop": Color("7be07b"), "gold": Color("f5c542"), "level": Color("6fd3ff"), "stage": Color("ff9a4a"), "augs": Color("c48cff")}
+const COLORS := {"hp": Color("ff6b6b"), "lobby": Color("ffa0a0"), "items": Color("ff6fae"), "shop": Color("7be07b"), "gold": Color("f5c542"), "level": Color("6fd3ff"), "stage": Color("ff9a4a"), "augs": Color("c48cff")}
 
 var img: Image
 var rects := {}
@@ -110,10 +113,11 @@ func setup(screen_img: Image, old: Dictionary, key: String = "") -> void:
 	_update_info()
 
 func _slots_add(d: int) -> void:
-	if not rects.has("items"):
+	var key: String = STEPS[step][0]
+	if not rects.has(key):
 		return
-	var r: Array = rects["items"]
-	var n: int = int(r[4]) if r.size() > 4 else ITEM_SLOTS
+	var r: Array = rects[key]
+	var n: int = int(r[4]) if r.size() > 4 else (ITEM_SLOTS if key == "items" else LOBBY_SLOTS)
 	n = clampi(n + d, 1, 16)
 	if r.size() > 4:
 		r[4] = n
@@ -125,9 +129,10 @@ func _slots_add(d: int) -> void:
 func _update_info() -> void:
 	var s: Array = STEPS[step]
 	if slot_row:
-		slot_row.visible = s[0] == "items"
-		var cnt: int = int(rects["items"][4]) if rects.has("items") and rects["items"].size() > 4 else ITEM_SLOTS
-		slot_lbl.text = "  Item-Plätze: %d  " % cnt
+		slot_row.visible = s[0] == "items" or s[0] == "lobby"
+		var k: String = s[0]
+		var cnt: int = int(rects[k][4]) if rects.has(k) and rects[k].size() > 4 else (ITEM_SLOTS if k == "items" else LOBBY_SLOTS)
+		slot_lbl.text = "  Plätze: %d  " % cnt
 	info.remove_theme_color_override("font_color")
 	if only != "":
 		var st := "Rahmen gesetzt. „Speichern“ oder Enter drücken, oder neu ziehen." if rects.has(only) else "Mit der Maus einen Rahmen ziehen, dann „Speichern“."
@@ -155,8 +160,8 @@ func _gui_input(e: InputEvent) -> void:
 				var key: String = STEPS[step][0]
 				var cnt: int = int(rects[key][4]) if rects.has(key) and rects[key].size() > 4 else 0
 				rects[key] = [r.position.x, r.position.y, r.size.x, r.size.y]
-				if key == "items":
-					rects[key].append(cnt if cnt > 0 else ITEM_SLOTS)
+				if key == "items" or key == "lobby":
+					rects[key].append(cnt if cnt > 0 else (ITEM_SLOTS if key == "items" else LOBBY_SLOTS))
 				changed.emit(rects)
 				var px := Rect2(drag_from.min(drag_to), (drag_from - drag_to).abs())
 				if px.intersects(panel.get_rect()):
@@ -259,6 +264,9 @@ static func split(key: String, r: Rect2, count: int = 0) -> Array:
 		"items":
 			vertical = r.size.y >= r.size.x
 			n = count if count > 0 else ITEM_SLOTS
+		"lobby":
+			vertical = r.size.y >= r.size.x
+			n = count if count > 0 else LOBBY_SLOTS
 	for i in n:
 		if vertical:
 			out.append(Rect2(r.position.x, r.position.y + r.size.y * i / n, r.size.x, r.size.y / n))
