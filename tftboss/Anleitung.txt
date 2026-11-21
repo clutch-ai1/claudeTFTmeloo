@@ -48,3 +48,13 @@ WAS ES DIR SAGT
 DATEN
 Die Comps kommen live von deiner Seite clutch-ai1.github.io/claudeTFTmeloo (alle 30 Minuten neu).
 Ohne Internet nimmt es die zuletzt geladenen Daten.
+
+AUTOPILOT (die KI klickt selbst)
+1. Vorher kalibrieren: mindestens Shop, Gold, Level und Stage. Für Augments auch "Augments" (bei der nächsten Wahl).
+2. TFT im Modus "Randloses Fenster", Spiel läuft.
+3. Im Boss-Fenster "Autopilot starten" drücken und innerhalb von 3 Sekunden ins TFT-Fenster klicken.
+   Das Programm merkt sich dieses Fenster und klickt nur, solange genau dieses Fenster vorne ist.
+4. F8 schaltet den Autopiloten jederzeit sofort aus. Oder im Boss-Fenster "Autopilot stoppen".
+Was er macht: Augments wählen, Shop-Karten kaufen, XP kaufen (F), rollen (D).
+Was er noch nicht macht: Items auf Units legen, Units umstellen, Karussell. TFT stellt Units zu Kampfbeginn selbst aufs Board, wenn Platz ist.
+Hinweis: Nicht in Ranked benutzen. Er nutzt deine Tastenbelegung F (XP) und D (Rollen), die müssen in TFT so eingestellt sein.

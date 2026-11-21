@@ -184,7 +184,7 @@ func advise() -> Array:
 			if s > bs:
 				bs = s
 				best = i
-		out.append({"k": "aug", "t": "Augment nehmen: %s (%s)" % [aug_offer[best], SIDE[best]]})
+		out.append({"k": "aug", "idx": best, "t": "Augment nehmen: %s (%s)" % [aug_offer[best], SIDE[best]]})
 		return out
 
 	if sn == 0:
@@ -202,7 +202,7 @@ func advise() -> Array:
 	var spent := 0
 	for b in buys:
 		spent += b["cost"]
-		out.append({"k": "buy", "t": "Kaufen: Platz %d %s (%s)" % [b["slot"] + 1, b["u"], b["why"]]})
+		out.append({"k": "buy", "slot": b["slot"], "u": b["u"], "t": "Kaufen: Platz %d %s (%s)" % [b["slot"] + 1, b["u"], b["why"]]})
 
 	# 4. Level und Rollen
 	for x in econ_advice(gold - spent if gold >= 0 else -1):
@@ -365,7 +365,7 @@ func econ_advice(g: int) -> Array:
 	elif g > 60 and sn >= 41:
 		roll = "Zu viel Gold: rollen bis 50 (D)"
 	if roll != "":
-		out.append({"k": "roll", "t": roll})
+		out.append({"k": "roll", "t": roll, "until": _roll_floor(style, rr)})
 	elif sn >= 21:
 		var nxt := (int(g / 10) + 1) * 10
 		if g < 50:
@@ -433,3 +433,15 @@ func consumable_advice() -> Array:
 			"Training Dummy":
 				lines.append("Trainingspuppe vorne hinstellen, damit sie Schaden schluckt")
 	return lines
+
+## Bis zu welchem Gold der Autopilot rollt
+func _roll_floor(style: String, rr: int) -> int:
+	if rr > 0:
+		return 50
+	if style.begins_with("Fast 8"):
+		return 15
+	if style.begins_with("Fast 9"):
+		return 10
+	if style == "Standard":
+		return 30
+	return 50

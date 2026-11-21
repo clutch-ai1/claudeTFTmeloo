@@ -9,6 +9,16 @@ const NUM_NAME := {"stage": "Stage", "level": "Level", "gold": "Gold"}
 const NUM_EXAMPLE := {"stage": "3-2", "level": "6", "gold": "34"}
 
 var vision := Vision.new()
+var pilot := Autopilot.new()
+var auto_on := false
+var auto_title := ""
+var auto_next_ms := 0
+var auto_pending := {}           # Shop-Platz -> Zeit, bis wann er als "gerade gekauft" gilt
+var auto_tried := {}             # Shop-Platz -> Unit, die schon versucht wurde (Kauf ging nicht durch)
+var auto_log: Array = []
+var auto_last_img_size := Vector2i.ZERO
+var btn_auto: Button
+var lbl_auto: RichTextLabel
 var brain := Brain.new()
 var rects := {}
 var screen_idx := 0
@@ -95,6 +105,7 @@ func _save_settings() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		_save_settings()
+		pilot.stop()
 
 # ================================================================= UI
 
@@ -170,6 +181,23 @@ func _build_ui() -> void:
 	head.add_child(btn_run)
 	_update_run_btn()
 	v.add_child(head)
+
+	var pap := _panel(Color("2a1630"))
+	var vap := VBoxContainer.new()
+	var hap := HBoxContainer.new()
+	var tap := _title("AUTOPILOT  (die KI klickt selbst, F8 = sofort aus)")
+	tap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hap.add_child(tap)
+	btn_auto = Button.new()
+	btn_auto.text = "Autopilot starten"
+	btn_auto.pressed.connect(_toggle_auto)
+	hap.add_child(btn_auto)
+	vap.add_child(hap)
+	lbl_auto = _rich()
+	lbl_auto.add_theme_font_size_override("normal_font_size", 14)
+	vap.add_child(lbl_auto)
+	pap.add_child(vap)
+	v.add_child(pap)
 
 	var row := HBoxContainer.new()
 	var b_cal := MenuButton.new()
@@ -642,6 +670,11 @@ func _tick() -> void:
 
 	if not active and rects.has("stage"):
 		seen.append("warte auf ein Spiel")
+	auto_last_img_size = img.get_size()
+	if changed:
+		_refresh_all()
+		changed = false
+	_autopilot_step()
 	lbl_seen.text = "Erkannt: %s  ·  %d ms" % ["  ·  ".join(seen), Time.get_ticks_msec() - t0]
 	if changed:
 		_refresh_all()
@@ -865,3 +898,126 @@ func _end_calibration() -> void:
 	running = true
 	_update_run_btn()
 	_refresh_all()
+
+# ================================================================= Autopilot
+
+func _auto_status(t: String) -> void:
+	var lines := ["[b]%s[/b]" % t]
+	for l in auto_log.slice(maxi(0, auto_log.size() - 4)):
+		lines.append("[color=#a9a6c4]%s[/color]" % l)
+	lbl_auto.text = "\n".join(lines)
+
+func _log(t: String) -> void:
+	var tm := Time.get_time_dict_from_system()
+	auto_log.append("%02d:%02d:%02d  %s" % [tm["hour"], tm["minute"], tm["second"], t])
+	if auto_log.size() > 30:
+		auto_log.pop_front()
+
+func _toggle_auto() -> void:
+	if auto_on:
+		_auto_off("Autopilot aus.")
+		return
+	if rects.is_empty() or not rects.has("shop") or not rects.has("gold"):
+		_auto_status("Erst Shop und Gold kalibrieren.")
+		return
+	if not pilot.start():
+		_auto_status(pilot.error)
+		return
+	btn_auto.disabled = true
+	for i in range(3, 0, -1):
+		_auto_status("Wechsle jetzt ins TFT-Fenster ... %d" % i)
+		await get_tree().create_timer(1.0).timeout
+	var st := pilot.state()
+	btn_auto.disabled = false
+	if st.get("dead", false):
+		_auto_status("Der Eingabe-Helfer läuft nicht (PowerShell blockiert?).")
+		return
+	auto_title = st["title"]
+	if auto_title == "" or auto_title == get_window().title:
+		_auto_status("TFT war nicht vorne. Nochmal starten und in den 3 Sekunden ins Spiel klicken.")
+		return
+	auto_on = true
+	running = true
+	_update_run_btn()
+	btn_auto.text = "Autopilot stoppen"
+	_log("an, steuert: " + auto_title)
+	_auto_status("Autopilot an. F8 schaltet aus.")
+
+func _auto_off(why: String) -> void:
+	auto_on = false
+	btn_auto.text = "Autopilot starten"
+	_log(why)
+	_auto_status(why)
+
+func _gpos(key: String, idx: int) -> Vector2i:
+	## Mitte eines Platzes in Bildschirm-Koordinaten
+	var r: Array = rects[key]
+	var W := float(auto_last_img_size.x)
+	var H := float(auto_last_img_size.y)
+	var whole := Rect2(float(r[0]) * W, float(r[1]) * H, float(r[2]) * W, float(r[3]) * H)
+	var parts := Calib.split(key, whole, int(r[4]) if r.size() > 4 else 0)
+	var c: Vector2 = parts[clampi(idx, 0, parts.size() - 1)].get_center()
+	return DisplayServer.screen_get_position(screen_idx) + Vector2i(c)
+
+func _autopilot_step() -> void:
+	if not auto_on:
+		return
+	var st := pilot.state()
+	if st.get("dead", false):
+		_auto_off("Eingabe-Helfer beendet, Autopilot aus.")
+		return
+	if st["panic"]:
+		_auto_off("F8 gedrückt, Autopilot aus.")
+		return
+	if st["title"] != auto_title:
+		_auto_status("Pausiert: TFT ist nicht im Vordergrund.")
+		return
+	var now := Time.get_ticks_msec()
+	if now < auto_next_ms:
+		return
+	if not _in_game():
+		_auto_status("Wartet auf ein Spiel (Stage nicht erkannt).")
+		return
+	for k in auto_pending.keys():
+		if auto_pending[k] < now:
+			auto_pending.erase(k)
+	# Geklickt, aber die Karte ist noch da: Kauf ging nicht (Bank voll, zu wenig Gold). Nicht nochmal versuchen.
+	for k in auto_tried.keys():
+		if brain.shop[k] != auto_tried[k]:
+			auto_tried.erase(k)
+	for a in brain.advise():
+		match a["k"]:
+			"aug":
+				if rects.has("augs"):
+					pilot.click(_gpos("augs", a["idx"]))
+					_log("Augment: " + str(brain.aug_offer[a["idx"]]))
+					auto_next_ms = now + 1500
+					_auto_status("Nimmt Augment.")
+					return
+			"buy":
+				var sl: int = a["slot"]
+				if auto_pending.has(sl) or auto_tried.get(sl, "") == a["u"]:
+					continue
+				pilot.click(_gpos("shop", sl))
+				auto_pending[sl] = now + 2500
+				auto_tried[sl] = a["u"]
+				_log("Kauft %s (Platz %d)" % [a["u"], sl + 1])
+				auto_next_ms = now + 450
+				_auto_status("Kauft %s." % a["u"])
+				return
+			"level":
+				if brain.gold >= 4:
+					pilot.key(Autopilot.VK_F)
+					_log("Level-XP gekauft (F)")
+					auto_next_ms = now + 700
+					_auto_status("Kauft XP.")
+					return
+			"roll":
+				if brain.gold > int(a.get("until", 50)) + 1:
+					pilot.key(Autopilot.VK_D)
+					vision.cache.clear()
+					_log("Rollt (D), %d Gold" % brain.gold)
+					auto_next_ms = now + 1100
+					_auto_status("Rollt.")
+					return
+	_auto_status("Nichts zu tun, wartet.")
