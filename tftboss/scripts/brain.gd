@@ -19,6 +19,7 @@ var lobby_hp: Array = []         # Leben aller Spieler aus der Liste rechts
 var results: Array = []          # "W" / "L" pro PvP-Runde
 var plan := ""                   # "win", "loss" oder "" (noch offen)
 var my_score := -1.0             # Stärke meiner aktiven Traits (aus der Trait-Leiste)
+var my_traits: Dictionary = {}   # Trait -> Anzahl (per Texterkennung gelesen)
 var opp_scores: Array = []       # dasselbe für die Gegner, beim Scouten gelesen
 var win_chance := -1.0           # geschätzte Siegchance gegen einen zufälligen Gegner
 var plan_why := ""
@@ -53,6 +54,7 @@ func reset() -> void:
 	plan = ""
 	plan_why = ""
 	my_score = -1.0
+	my_traits = {}
 	opp_scores = []
 	win_chance = -1.0
 
@@ -458,7 +460,7 @@ func update_plan() -> void:
 		return
 	var st := strength()
 	var wc := win_chance
-	var known := owned.size() >= 2 or not comps_have.is_empty() or not items_have.is_empty()
+	var known := owned.size() >= 2 or not comps_have.is_empty() or not items_have.is_empty() or not my_traits.is_empty()
 	if not known and wc < 0.0:
 		# Ohne Wissen über das Board nur nach Ergebnissen entscheiden, sonst normal spielen
 		if win_streak() >= 2:

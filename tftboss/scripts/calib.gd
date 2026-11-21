@@ -20,7 +20,7 @@ const STEPS := [
 	["items", "Rahmen von der Oberkante des obersten Item-Platzes bis zur Unterkante des untersten ziehen, auch über die leeren. Die dünnen Linien müssen zwischen den Plätzen liegen. Wenn nicht: mit − und + die Anzahl ändern."],
 	["augs", "Rahmen um alle 3 Augment-Karten (geht nur, solange eine Augment-Wahl offen ist)."],
 	["hp", "Rahmen mit etwas Abstand um deine eigene Lebens-Zahl (in der Spielerliste rechts oder unter deinem Portrait)."],
-	["traits", "Rahmen um die Trait-Leiste links: von der Oberkante des obersten bis zur Unterkante des untersten sichtbaren Trait-Eintrags, so breit, dass Symbol und Zahl drin sind. Die Linien müssen zwischen den Einträgen liegen, sonst mit − und + anpassen."],
+	["traits", "Rahmen um die ganze Trait-Leiste links, mit Symbolen, Namen und Zahlen (z. B. „Juggernaut 2“), vom obersten bis zum untersten Eintrag."],
 	["lobby", "Rahmen um die Lebens-Zahlen aller 8 Spieler in der Liste rechts, von der obersten bis zur untersten Zahl, nur die Zahlen-Spalte. Die Linien müssen zwischen den Spielern liegen, sonst mit − und + anpassen."],
 ]
 const COLORS := {"traits": Color("8fd0ff"), "hp": Color("ff6b6b"), "lobby": Color("ffa0a0"), "items": Color("ff6fae"), "shop": Color("7be07b"), "gold": Color("f5c542"), "level": Color("6fd3ff"), "stage": Color("ff9a4a"), "augs": Color("c48cff")}

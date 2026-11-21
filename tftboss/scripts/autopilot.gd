@@ -14,6 +14,9 @@ public static class TB {
   [DllImport("user32.dll", SetLastError = true)] public static extern uint SendInput(uint n, INPUT[] inputs, int size);
   [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+  [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X; public int Y; }
+  [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT p);
+  public static string Cursor() { POINT p; GetCursorPos(out p); return p.X + "," + p.Y; }
   [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint c, uint t);
   [DllImport("user32.dll")] public static extern short GetAsyncKeyState(int vk);
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
@@ -35,6 +38,33 @@ public static class TB {
 }
 '@
 [TB]::SetProcessDPIAware() | Out-Null
+# ---- Windows-Texterkennung (OCR) ----
+$ocrErr = ''
+$ocr = $null
+try {
+  Add-Type -AssemblyName System.Runtime.WindowsRuntime
+  [void][Windows.Storage.StorageFile, Windows.Storage, ContentType = WindowsRuntime]
+  [void][Windows.Media.Ocr.OcrEngine, Windows.Foundation, ContentType = WindowsRuntime]
+  [void][Windows.Graphics.Imaging.BitmapDecoder, Windows.Graphics, ContentType = WindowsRuntime]
+  [void][Windows.Storage.Streams.IRandomAccessStream, Windows.Storage.Streams, ContentType = WindowsRuntime]
+  [void][Windows.Globalization.Language, Windows.Globalization, ContentType = WindowsRuntime]
+  $asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' })[0]
+  function Await($op, $type) { $t = $asTaskGeneric.MakeGenericMethod($type).Invoke($null, @($op)); $t.Wait(-1) | Out-Null; $t.Result }
+  try { $ocr = [Windows.Media.Ocr.OcrEngine]::TryCreateFromLanguage([Windows.Globalization.Language]::new('en-US')) } catch { }
+  if ($ocr -eq $null) { $ocr = [Windows.Media.Ocr.OcrEngine]::TryCreateFromUserProfileLanguages() }
+  if ($ocr -eq $null) { $ocrErr = 'keine OCR-Sprache installiert' }
+} catch { $ocrErr = $_.Exception.Message }
+function ReadText($path) {
+  try {
+    $f = Await ([Windows.Storage.StorageFile]::GetFileFromPathAsync($path)) ([Windows.Storage.StorageFile])
+    $st = Await ($f.OpenAsync([Windows.Storage.FileAccessMode]::Read)) ([Windows.Storage.Streams.IRandomAccessStream])
+    $dec = Await ([Windows.Graphics.Imaging.BitmapDecoder]::CreateAsync($st)) ([Windows.Graphics.Imaging.BitmapDecoder])
+    $bmp = Await ($dec.GetSoftwareBitmapAsync()) ([Windows.Graphics.Imaging.SoftwareBitmap])
+    $res = Await ($ocr.RecognizeAsync($bmp)) ([Windows.Media.Ocr.OcrResult])
+    $st.Dispose()
+    return (($res.Lines | ForEach-Object { $_.Text }) -join ' # ')
+  } catch { return ('ERR ' + $_.Exception.Message) }
+}
 [TB]::GetAsyncKeyState(0x77) | Out-Null
 $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 while ($true) {
@@ -46,6 +76,15 @@ while ($true) {
     'rclick' { [TB]::Click([int]$p[1], [int]$p[2], $true) }
     'key'    { [TB]::Key([byte][int]$p[1]) }
     'state'  { [Console]::Out.WriteLine(('{0}|{1}|{2}|{3}' -f ([TB]::GetAsyncKeyState(0x77) -band 1), [TB]::Blocked, [int]$admin, [TB]::Title())); [Console]::Out.Flush() }
+    'move'   { [TB]::SetCursorPos([int]$p[1], [int]$p[2]) | Out-Null }
+    'cursor' { [Console]::Out.WriteLine([TB]::Cursor()); [Console]::Out.Flush() }
+    'ocrinfo' { if ($ocr -eq $null) { [Console]::Out.WriteLine('ERR ' + $ocrErr) } else { [Console]::Out.WriteLine('OK ' + $ocr.RecognizerLanguage.LanguageTag) }; [Console]::Out.Flush() }
+    'ocr'    {
+      $paths = $l.Substring(4).Split('|')
+      $out = @()
+      foreach ($pp in $paths) { if ($ocr -eq $null) { $out += ('ERR ' + $ocrErr) } else { $out += (ReadText $pp) } }
+      [Console]::Out.WriteLine(($out -join ' @@ ')); [Console]::Out.Flush()
+    }
     'quit'   { exit }
   }
 }
@@ -119,3 +158,31 @@ func key(vk: int) -> void:
 static func restart_as_admin() -> void:
 	var exe := OS.get_executable_path()
 	OS.create_process("powershell.exe", ["-NoProfile", "-WindowStyle", "Hidden", "-Command", "Start-Process -FilePath '%s' -Verb RunAs" % exe.replace("'", "''")])
+
+func _ask_line(cmd: String) -> String:
+	if not ok or not OS.is_process_running(pid):
+		ok = false
+		return ""
+	_send(cmd)
+	return pipe.get_line()
+
+## Ergebnis: "OK en-US" oder "ERR ..."
+func ocr_info() -> String:
+	return _ask_line("ocrinfo")
+
+## Liest Text aus mehreren Bilddateien. Eine Zeile pro Datei, Zeilen im Bild mit " # " getrennt.
+func ocr(paths: Array) -> Array:
+	var line := _ask_line("ocr " + "|".join(paths))
+	if line == "":
+		return []
+	return Array(line.split(" @@ "))
+
+func cursor() -> Vector2i:
+	var l := _ask_line("cursor")
+	var p := l.split(",")
+	if p.size() != 2:
+		return Vector2i(-1, -1)
+	return Vector2i(int(p[0]), int(p[1]))
+
+func move(p: Vector2i) -> void:
+	_send("move %d %d" % [p.x, p.y])

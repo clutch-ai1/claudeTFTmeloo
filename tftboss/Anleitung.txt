@@ -49,6 +49,13 @@ DATEN
 Die Comps kommen live von deiner Seite clutch-ai1.github.io/claudeTFTmeloo (alle 30 Minuten neu).
 Ohne Internet nimmt es die zuletzt geladenen Daten.
 
+VERSION 7: TEXTERKENNUNG
+- Der Bot liest Stage, Gold, Level, Leben, Spielerliste, Traits und die Namen im Shop direkt mit der Texterkennung von Windows.
+  Die Lernfragen für diese Bereiche fallen weg.
+- Kalibriere "Trait-Leiste" so, dass die Namen und Zahlen mit drin sind (ganze Leiste links).
+- Alles, was er liest und tut, steht in Desktop\TFT Boss\protokoll.txt.
+- Beim Start des Autopiloten macht er einen Maus-Test und schreibt das Ergebnis ins Protokoll.
+
 AUTOPILOT (die KI klickt selbst)
 0. WICHTIG: TFT läuft mit Administratorrechten. Damit Windows die Klicks nicht blockiert, muss auch TFT Boss als Administrator laufen:
    Rechtsklick auf "TFT Boss Autopilot.exe" > "Als Administrator ausführen". Oder im Programm den Knopf "Als Admin neu starten".

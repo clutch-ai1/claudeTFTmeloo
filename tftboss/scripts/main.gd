@@ -26,6 +26,10 @@ var stage_changed_ms := 0
 var btn_scout: Button
 var btn_admin: Button
 var blocked_seen := 0
+var use_ocr := false
+var ocr_msg := ""
+var ocr_last_log := 0
+var shop_empty_since := [0, 0, 0, 0, 0]
 const REC_MAX := 200
 var rec_count := 0
 var rec_stage := ""
@@ -87,6 +91,14 @@ func _ready() -> void:
 	timer.start()
 	Meta.loaded.connect(_refresh_all)
 	_refresh_all()
+	_log_file("Start, Version 7, Bildschirm %d" % screen_idx)
+	if OS.get_name() == "Windows" and pilot.start():
+		await get_tree().create_timer(2.5).timeout
+		var info := pilot.ocr_info()
+		use_ocr = info.begins_with("OK")
+		ocr_msg = "Texterkennung an (%s)" % info.substr(3) if use_ocr else "Texterkennung nicht verfügbar: " + info
+		_log_file(ocr_msg)
+		_refresh_all()
 
 # ================================================================= Einstellungen
 
@@ -593,9 +605,18 @@ func _tick() -> void:
 	var changed := false
 	_update_preview(img)
 
-	# Zahlen
+	# Texterkennung: liest Stage, Gold, Level, Leben, Spielerliste, Traits und Shop-Namen direkt
+	var done_ocr := {}
+	if use_ocr:
+		var res := _ocr_tick(img)
+		done_ocr = res["done"]
+		if res["changed"]:
+			changed = true
+		seen.append_array(res["seen"])
+
+	# Zahlen (ohne Texterkennung: gelernte Ziffern)
 	for key in ["stage", "level", "gold"]:
-		if not rects.has(key):
+		if not rects.has(key) or done_ocr.has(key):
 			continue
 		var crop := _crop(img, key)
 		var r := vision.read_number(key, crop)
@@ -621,7 +642,7 @@ func _tick() -> void:
 		seen.append("%s %s" % [NUM_NAME[key], t if t != "" else "-"])
 
 	# Eigenes Leben
-	if rects.has("hp"):
+	if rects.has("hp") and not done_ocr.has("hp"):
 		var crop_hp := _crop(img, "hp")
 		var rh := vision.read_number("hp", crop_hp)
 		if rh["ok"] and str(rh["text"]).is_valid_int():
@@ -633,7 +654,7 @@ func _tick() -> void:
 			_ask({"kind": "num", "key": "hp", "glyphs": rh["glyphs"], "meta": rh.get("meta", []), "img": crop_hp})
 		seen.append("Leben %s" % (str(brain.hp) if brain.hp >= 0 else "-"))
 	# Leben aller Spieler
-	if rects.has("lobby") and _in_game():
+	if rects.has("lobby") and _in_game() and not done_ocr.has("lobby"):
 		var hs := []
 		var ls := _slots(img, "lobby")
 		for i in ls.size():
@@ -649,7 +670,7 @@ func _tick() -> void:
 	var active := _in_game() or not rects.has("stage")
 
 	# Eigene Trait-Stärke (nicht während des Scoutens, dann zeigt die Leiste den Gegner)
-	if rects.has("traits") and active and not scouting:
+	if rects.has("traits") and active and not scouting and not done_ocr.has("traits"):
 		var ts := _trait_score(img, true)
 		if ts["ok"] and absf(ts["score"] - brain.my_score) > 0.01:
 			brain.my_score = ts["score"]
@@ -658,7 +679,7 @@ func _tick() -> void:
 		seen.append("Traits %s" % (str(snappedf(brain.my_score, 0.1)) if brain.my_score >= 0 else "?"))
 
 	# Shop
-	if rects.has("shop") and active:
+	if rects.has("shop") and active and not done_ocr.has("shop"):
 		var names := []
 		var slots := _slots(img, "shop")
 		for i in slots.size():
@@ -999,6 +1020,7 @@ func _auto_status(t: String) -> void:
 	lbl_auto.text = "\n".join(lines)
 
 func _log(t: String) -> void:
+	_log_file("Autopilot: " + t)
 	var tm := Time.get_time_dict_from_system()
 	auto_log.append("%02d:%02d:%02d  %s" % [tm["hour"], tm["minute"], tm["second"], t])
 	if auto_log.size() > 30:
@@ -1029,6 +1051,18 @@ func _toggle_auto() -> void:
 		return
 	blocked_seen = int(st.get("blocked", 0))
 	auto_title = st["title"]
+	# Maus-Selbsttest: Cursor bewegen und zurücklesen
+	var before := pilot.cursor()
+	var test := DisplayServer.screen_get_position(screen_idx) + DisplayServer.screen_get_size(screen_idx) / 2
+	pilot.move(test)
+	await get_tree().create_timer(0.15).timeout
+	var after := pilot.cursor()
+	pilot.move(before)
+	_log_file("Maus-Test: Ziel %s, Ergebnis %s, Admin %s, Fenster '%s'" % [str(test), str(after), str(st.get("admin")), auto_title])
+	if (after - test).length() > 3:
+		_auto_status("Maus-Test fehlgeschlagen: Windows lässt mich die Maus nicht bewegen. Als Administrator starten.")
+		btn_admin.visible = true
+		return
 	if auto_title == "" or auto_title == get_window().title:
 		_auto_status("TFT war nicht vorne. Nochmal starten und in den 3 Sekunden ins Spiel klicken.")
 		return
@@ -1188,6 +1222,13 @@ func _scout(manual: bool = false) -> void:
 		if shot == null or shot.is_empty():
 			continue
 		_record(shot, "gegner%d" % (i + 1))
+		if use_ocr and rects.has("traits"):
+			var tt := pilot.ocr([_ocr_png(shot.get_region(_rect_px(shot, "traits")), "scout_traits", 2)])
+			if tt.size() == 1:
+				var tc := OcrRead.traits(str(tt[0]), Meta.traits.keys())
+				scores.append(OcrRead.trait_power(tc))
+				_log_file("Gegner %d: %s" % [i + 1, str(tc)])
+			continue
 		var ts := _trait_score(shot, true)
 		if ts["ok"]:
 			scores.append(ts["score"])
@@ -1228,3 +1269,149 @@ func _record(img: Image, what: String) -> void:
 	var path := _rec_dir().path_join("%s_%s_%s.jpg" % [t, st, what])
 	if img.save_jpg(path, 0.9) == OK:
 		rec_count += 1
+
+# ================================================================= Texterkennung (OCR)
+
+func _ocr_dir() -> String:
+	var d := ProjectSettings.globalize_path("user://ocr")
+	DirAccess.make_dir_recursive_absolute(d)
+	return d
+
+## Speichert einen Ausschnitt vergrößert (Texterkennung liest größere Schrift besser)
+func _ocr_png(img: Image, name: String, scale: int = 2) -> String:
+	var c := img.duplicate() as Image
+	if scale > 1:
+		c.resize(c.get_width() * scale, c.get_height() * scale, Image.INTERPOLATE_CUBIC)
+	var path := _ocr_dir().path_join(name + ".png")
+	c.save_png(path)
+	return path
+
+func _rect_px(img: Image, key: String) -> Rect2i:
+	var r: Array = rects[key]
+	var W := img.get_width()
+	var H := img.get_height()
+	return Rect2i(int(float(r[0]) * W), int(float(r[1]) * H), maxi(2, int(float(r[2]) * W)), maxi(2, int(float(r[3]) * H))).intersection(Rect2i(0, 0, W, H))
+
+func _ocr_tick(img: Image) -> Dictionary:
+	var keys := []
+	var paths := []
+	for k in ["stage", "gold", "level", "hp", "lobby", "traits"]:
+		if rects.has(k):
+			keys.append(k)
+			paths.append(_ocr_png(img.get_region(_rect_px(img, k)), k, 3 if k in ["stage", "gold", "level", "hp"] else 2))
+	if rects.has("shop"):
+		var sr := _rect_px(img, "shop")
+		for i in 5:
+			var w := sr.size.x / 5
+			# nur die Namenszeile unten auf der Karte
+			var nr := Rect2i(sr.position.x + w * i, sr.position.y + int(sr.size.y * 0.76), w, int(sr.size.y * 0.24))
+			keys.append("shop%d" % i)
+			paths.append(_ocr_png(img.get_region(nr), "shop%d" % i, 3))
+	var t0 := Time.get_ticks_msec()
+	var texts := pilot.ocr(paths)
+	var out := {"done": {}, "changed": false, "seen": []}
+	if texts.size() != keys.size():
+		_log_file("OCR-Fehler: %d Antworten für %d Bilder" % [texts.size(), keys.size()])
+		return out
+	var T := {}
+	for i in keys.size():
+		T[keys[i]] = str(texts[i])
+		if str(texts[i]).begins_with("ERR"):
+			_log_file("OCR %s: %s" % [keys[i], texts[i]])
+	var ch := false
+	if T.has("stage"):
+		var st := OcrRead.stage(T["stage"])
+		if st != "":
+			out["done"]["stage"] = true
+			stage_seen_ms = Time.get_ticks_msec()
+			if st != brain.stage:
+				_on_stage(st)
+				ch = true
+	if T.has("gold"):
+		var g := OcrRead.gold(T["gold"])
+		if g >= 0:
+			out["done"]["gold"] = true
+			if g != brain.gold:
+				brain.gold = g
+				ch = true
+	if T.has("level"):
+		var lv := OcrRead.level(T["level"])
+		if lv > 0:
+			out["done"]["level"] = true
+			if lv != brain.level:
+				brain.level = lv
+				ch = true
+	if T.has("hp"):
+		var h := OcrRead.hp(T["hp"])
+		if h >= 0:
+			out["done"]["hp"] = true
+			if h != brain.hp:
+				brain.hp = h
+				ch = true
+	if T.has("lobby"):
+		var lb := OcrRead.lobby(T["lobby"])
+		if lb.size() >= 2:
+			out["done"]["lobby"] = true
+			var hs := lb.map(func(e): return e["hp"])
+			if hs != brain.lobby_hp:
+				brain.lobby_hp = hs
+				ch = true
+	if T.has("traits") and not scouting:
+		var tc := OcrRead.traits(T["traits"], Meta.traits.keys())
+		out["done"]["traits"] = true
+		var pw := OcrRead.trait_power(tc)
+		brain.my_traits = tc
+		if absf(pw - brain.my_score) > 0.01:
+			brain.my_score = pw
+			brain.update_win_chance()
+			ch = true
+	if rects.has("shop"):
+		out["done"]["shop"] = true
+		var names := []
+		var now := Time.get_ticks_msec()
+		for i in 5:
+			var txt: String = T.get("shop%d" % i, "")
+			var u := OcrRead.match_name(txt, Meta.unit_names)
+			var lab := u if u != "" else (Vision.EMPTY if txt.strip_edges().length() < 2 else "")
+			if lab == Vision.EMPTY:
+				if shop_empty_since[i] == 0:
+					shop_empty_since[i] = now
+				# Karte verschwunden: gekauft (nicht beim Neu-Rollen, da kommen sofort neue Namen)
+				var clicked: bool = auto_tried.get(i, "") == prev_shop[i]
+				if now - shop_empty_since[i] > 500 and Meta.units.has(prev_shop[i]) and (clicked or not auto_on):
+					brain.owned[prev_shop[i]] = brain.owned.get(prev_shop[i], 0) + 1
+					_log_file("gekauft erkannt: " + prev_shop[i])
+					prev_shop[i] = ""
+					ch = true
+			else:
+				shop_empty_since[i] = 0
+				if lab != "":
+					prev_shop[i] = lab
+			if lab != brain.shop[i]:
+				brain.shop[i] = lab
+				ch = true
+			names.append(lab if lab != "" else "?")
+		out["seen"].append("Shop: " + " | ".join(names))
+	out["changed"] = ch
+	out["seen"].append("OCR %d ms" % (Time.get_ticks_msec() - t0))
+	if Time.get_ticks_msec() - ocr_last_log > 8000:
+		ocr_last_log = Time.get_ticks_msec()
+		_log_file("Gelesen: Stage %s, Gold %d, Level %d, Leben %d, Lobby %s, Traits %s, Shop %s" % [brain.stage, brain.gold, brain.level, brain.hp, str(brain.lobby_hp), str(brain.my_traits), str(brain.shop)])
+	return out
+
+# ================================================================= Protokoll
+
+func _log_file(t: String) -> void:
+	var d := OS.get_system_dir(OS.SYSTEM_DIR_DESKTOP).path_join("TFT Boss")
+	DirAccess.make_dir_recursive_absolute(d)
+	var path := d.path_join("protokoll.txt")
+	var f: FileAccess
+	if FileAccess.file_exists(path) and FileAccess.get_file_as_bytes(path).size() < 2000000:
+		f = FileAccess.open(path, FileAccess.READ_WRITE)
+		if f:
+			f.seek_end()
+	else:
+		f = FileAccess.open(path, FileAccess.WRITE)
+	if f:
+		f.store_line("%s  %s" % [Time.get_datetime_string_from_system(), t])
+		f.close()
