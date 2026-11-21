@@ -12,6 +12,10 @@ func _ready():
 		m.menu_ms = -100000
 		m._update_phase(img)
 		print(f, " -> ", m.phase, " (", m.PHASE_DE[m.phase], ")")
+	m.phase = "match"; m.menu_ms = -100000; m.players = []
+	m._update_phase(Image.load_from_file("/mnt/user-data/uploads/20349939-image.png"))
+	print("Ladebild -> ", m.phase, " Spieler ", m.players, " ich ", m.my_name)
+	print("same_name: ", OcrRead.same_name("Meloo8PBE", m.my_name), " ", OcrRead.same_name("crepe", m.my_name))
 	# Ladebildschirm: nach Match gefunden ein unbekanntes Bild
 	m.phase = "match"; m.menu_ms = -100000
 	var black := Image.create(1920, 1080, false, Image.FORMAT_RGB8)

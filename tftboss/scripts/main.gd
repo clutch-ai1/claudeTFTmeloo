@@ -24,8 +24,10 @@ var scouting := false
 var phase := ""                  # home, modes, lobby, queue, match, loading, game
 var phase_ms := 0
 var menu_ms := -100000
+var my_name := ""                # eigener Spielername (aus dem Ladebildschirm, goldene Schrift)
+var players: Array = []          # alle 8 Namen aus dem Ladebildschirm
 const PHASE_DE := {"home": "Hauptmenü", "modes": "Modus-Auswahl", "lobby": "Lobby (noch nicht in der Warteschlange)", "queue": "In der Warteschlange", "match": "Match gefunden", "loading": "Ladebildschirm", "game": "Im Spiel", "": "unbekannt"}
-const MENU_RECTS := {"btn": [0.81, 0.86, 0.16, 0.10], "mid": [0.40, 0.42, 0.22, 0.36], "head": [0.0, 0.0, 0.15, 0.05], "menu": [0.02, 0.30, 0.24, 0.37], "cards": [0.33, 0.42, 0.35, 0.42]}
+const MENU_RECTS := {"btn": [0.81, 0.86, 0.16, 0.10], "mid": [0.40, 0.42, 0.22, 0.36], "head": [0.0, 0.0, 0.15, 0.05], "menu": [0.02, 0.30, 0.24, 0.37], "cards": [0.33, 0.42, 0.35, 0.42], "load": [0.72, 0.94, 0.08, 0.055]}
 var trait_block_ms := 0
 var last_action_ms := 0
 var last_shot_ms := 0
@@ -104,7 +106,7 @@ func _ready() -> void:
 	timer.start()
 	Meta.loaded.connect(_refresh_all)
 	_refresh_all()
-	_log_file("Start, Version 9, Bildschirm %d" % screen_idx)
+	_log_file("Start, Version 10, Bildschirm %d" % screen_idx)
 	if OS.get_name() == "Windows" and pilot.start():
 		await get_tree().create_timer(2.5).timeout
 		var st0 := pilot.state()
@@ -149,6 +151,7 @@ func _load_settings() -> void:
 	rects = j.get("rects", {})
 	screen_idx = int(j.get("screen", 0))
 	compact = bool(j.get("compact", false))
+	my_name = str(j.get("name", ""))
 	if j.has("win"):
 		var w: Array = j["win"]
 		var p := Vector2i(int(w[0]), int(w[1]))
@@ -162,7 +165,7 @@ func _save_settings() -> void:
 	var wp := get_window().position
 	var f := FileAccess.open(SETTINGS, FileAccess.WRITE)
 	if f:
-		f.store_string(JSON.stringify({"rects": rects, "screen": screen_idx, "win": [wp.x, wp.y], "compact": compact}))
+		f.store_string(JSON.stringify({"rects": rects, "screen": screen_idx, "win": [wp.x, wp.y], "compact": compact, "name": my_name}))
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
@@ -1306,9 +1309,14 @@ func _scout(manual: bool = false) -> void:
 	var ents := _lobby_entries(shot0) if shot0 != null and not shot0.is_empty() else []
 	# Mich finden: Eintrag ohne Namen, sonst eindeutiges Leben
 	var me := -1
-	for i in ents.size():
-		if str(ents[i]["name"]).length() <= 1:
-			me = i
+	if my_name != "":
+		for i in ents.size():
+			if OcrRead.same_name(str(ents[i]["name"]), my_name):
+				me = i
+	if me < 0:
+		for i in ents.size():
+			if str(ents[i]["name"]).length() <= 1:
+				me = i
 	if me < 0 and brain.hp >= 0:
 		var hits := []
 		for i in ents.size():
@@ -1410,6 +1418,8 @@ func _update_phase(img: Image) -> void:
 		for i in keys.size():
 			T[keys[i]] = str(texts[i]) if not str(texts[i]).begins_with("ERR") else ""
 		p = OcrRead.phase(T)
+		if p == "loading" and players.is_empty():
+			_read_players(img)
 		if p == "":
 			# Nichts Bekanntes zu sehen: nach "Match gefunden" ist das der Ladebildschirm
 			if phase in ["match", "loading"] and now - phase_ms < 240000:
@@ -1422,6 +1432,8 @@ func _update_phase(img: Image) -> void:
 		return
 	if p != phase:
 		var old := phase
+		if p in ["queue", "match"]:
+			players = []
 		if p == "game" and old in ["match", "loading", "queue", "lobby", "home", "modes"]:
 			_new_game()
 			_log_file("Neues Spiel erkannt, alles zurückgesetzt.")
@@ -1430,6 +1442,42 @@ func _update_phase(img: Image) -> void:
 		_log_file("Bildschirm: " + PHASE_DE.get(p, p))
 		if not auto_on:
 			_auto_status("Bildschirm: " + PHASE_DE.get(p, p))
+
+## Ladebildschirm: 8 Karten mit Namen. Mein Name ist golden geschrieben, die anderen weiß.
+func _read_players(img: Image) -> void:
+	var W := img.get_width()
+	var H := img.get_height()
+	var paths := []
+	var gold := []
+	for y in [0.306, 0.754]:
+		for x in [0.274, 0.424, 0.574, 0.724]:
+			var box := Rect2i(int((x - 0.065) * W), int((y - 0.016) * H), int(0.13 * W), int(0.032 * H))
+			var crop := img.get_region(box)
+			var g := 0
+			for py in range(0, crop.get_height(), 2):
+				for px in range(0, crop.get_width(), 2):
+					var c := crop.get_pixel(px, py)
+					if c.r > 0.67 and c.g > 0.51 and c.b < 0.43 and c.r - c.b > 0.31:
+						g += 1
+			gold.append(g)
+			paths.append(_ocr_png(crop, "spieler%d" % paths.size(), 3))
+	var texts := pilot.ocr(paths)
+	if texts.size() != 8:
+		return
+	var names := []
+	var best := -1
+	for i in 8:
+		var n := OcrRead.clean_name(str(texts[i]))
+		names.append(n)
+		if n != "" and (best < 0 or gold[i] > gold[best]):
+			best = i
+	if names.filter(func(n): return n != "").size() < 4:
+		return
+	players = names
+	if best >= 0 and gold[best] > 20 and names[best] != "":
+		my_name = names[best]
+		_save_settings()
+	_log_file("Ladebildschirm: Spieler %s, du bist %s" % [str(players), my_name if my_name != "" else "?"])
 
 func _ocr_dir() -> String:
 	var d := ProjectSettings.globalize_path("user://ocr")

@@ -189,6 +189,8 @@ static func phase(T: Dictionary) -> String:
 	var cards := str(T.get("cards", "")).to_upper()
 	if _any(mid + " " + cards, ["MATCH FOUND", "MATCH GEFUNDEN", "ACCEPT", "ANNEHMEN", "SPIEL GEFUNDEN"]):
 		return "match"
+	if RegEx.create_from_string("\\d{1,3}\\s*%").search(str(T.get("load", ""))) != null:
+		return "loading"
 	var rx := RegEx.create_from_string("\\d:\\d\\d")
 	if _any(btn, ["ESTIMATED", "GESCH"]) or rx.search(btn) != null:
 		return "queue"
@@ -206,3 +208,27 @@ static func _any(t: String, words: Array) -> bool:
 		if t.contains(w) or t2.contains(str(w).replace(" ", "")):
 			return true
 	return false
+
+
+## Spielername aufräumen: Störzeichen am Rand weg
+static func clean_name(t: String) -> String:
+	var o := ""
+	for ch in t.replace(" # ", " "):
+		if ch.is_valid_identifier() or ch.is_valid_int() or ch == " " or (ch.unicode_at(0) > 127 and not ch in "“”‘’«»„…—–·•"):
+			o += ch
+	var parts := []
+	for w in o.split(" ", false):
+		parts.append(w)
+	# einzelne Krümel am Anfang und Ende (OCR-Rauschen) entfernen
+	while parts.size() > 1 and str(parts[0]).length() <= 2:
+		parts.pop_front()
+	while parts.size() > 1 and str(parts[parts.size() - 1]).length() <= 1:
+		parts.pop_back()
+	return " ".join(parts).strip_edges()
+
+static func same_name(a: String, b: String) -> bool:
+	var x := _norm(a + "")
+	var y := _norm(b + "")
+	if x == "" or y == "":
+		return false
+	return x == y or lev(x, y) <= maxi(1, y.length() / 4) or (mini(x.length(), y.length()) >= 4 and (x.contains(y) or y.contains(x)))
