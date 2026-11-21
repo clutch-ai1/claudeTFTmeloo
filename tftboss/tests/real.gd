@@ -9,10 +9,8 @@ func _ready():
 	m.pilot = fp
 	add_child(m)
 	get_window().position = Vector2i(1400, 600); get_window().size = Vector2i(400, 300)
-	var r = JSON.parse_string(FileAccess.get_file_as_string("/mnt/user-data/uploads/TFT Boss/einstellungen.json"))["rects"]
-	r["traits"] = [60.0/1920, 250.0/1080, 190.0/1920, 470.0/1080, 8]
-	r["lobby"] = [1700.0/1920, 170.0/1080, 160.0/1920, 620.0/1080, 8]
-	m.rects = r
+	m.rects = {}
+	m._apply_defaults()
 	m.screen_idx = 0
 	m.use_ocr = true
 	m.running = true

@@ -85,6 +85,7 @@ var preview_tex := {}            # Bereich -> TextureRect
 func _ready() -> void:
 	vision.load_db()
 	_load_settings()
+	_apply_defaults()
 	_build_ui()
 	timer = Timer.new()
 	timer.wait_time = TICK
@@ -96,6 +97,14 @@ func _ready() -> void:
 	_log_file("Start, Version 7, Bildschirm %d" % screen_idx)
 	if OS.get_name() == "Windows" and pilot.start():
 		await get_tree().create_timer(2.5).timeout
+		var st0 := pilot.state()
+		if not st0.get("admin", true) and not OS.get_cmdline_user_args().has("--kein-admin"):
+			_log_file("Keine Adminrechte, starte als Administrator neu")
+			_save_settings()
+			pilot.stop()
+			Autopilot.restart_as_admin()
+			get_tree().quit()
+			return
 		var info := pilot.ocr_info()
 		use_ocr = info.begins_with("OK")
 		ocr_msg = "Texterkennung an (%s)" % info.substr(3) if use_ocr else "Texterkennung nicht verfügbar: " + info
@@ -103,6 +112,23 @@ func _ready() -> void:
 		_refresh_all()
 
 # ================================================================= Einstellungen
+
+## Positionen für 16:9-Bildschirme (gemessen an echten Aufnahmen in 1920x1080), als Anteil der Bildschirmgröße
+const DEFAULT_RECTS := {
+	"stage": [0.3958, 0.0046, 0.0240, 0.0250],
+	"gold": [0.5062, 0.8168, 0.0459, 0.0274],
+	"level": [0.1999, 0.8126, 0.0221, 0.0295],
+	"shop": [0.2833, 0.8519, 0.5255, 0.1463],
+	"items": [0.0028, 0.2389, 0.0283, 0.5011, 10],
+	"augs": [0.1727, 0.1716, 0.6869, 0.6811],
+	"traits": [0.0313, 0.2315, 0.0990, 0.4352],
+	"lobby": [0.8854, 0.1574, 0.0833, 0.5741, 8],
+}
+
+func _apply_defaults() -> void:
+	for k in DEFAULT_RECTS.keys():
+		if not rects.has(k):
+			rects[k] = DEFAULT_RECTS[k].duplicate()
 
 func _load_settings() -> void:
 	if not FileAccess.file_exists(SETTINGS):
@@ -1380,6 +1406,12 @@ func _ocr_tick(img: Image) -> Dictionary:
 			if hs != brain.lobby_hp:
 				brain.lobby_hp = hs
 				ch = true
+			if not rects.has("hp"):
+				for e in lb:
+					if str(e["name"]).length() <= 1 and int(e["hp"]) != brain.hp:
+						brain.hp = int(e["hp"])
+						out["done"]["hp"] = true
+						ch = true
 	if T.has("traits") and not scouting:
 		var tc := OcrRead.traits(T["traits"], Meta.traits.keys())
 		out["done"]["traits"] = true

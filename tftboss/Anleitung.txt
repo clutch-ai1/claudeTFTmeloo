@@ -1,3 +1,10 @@
+TFT BOSS (kurz)
+1. TFT auf "Randloses Fenster", 1920x1080 oder eine andere 16:9-Auflösung.
+2. TFT Boss.exe doppelklicken. Er startet sich selbst als Administrator neu, Windows fragt einmal: "Ja".
+3. Ein Spiel starten, "Autopilot starten", ins Spiel klicken. F8 schaltet ihn aus.
+Kalibrieren ist nicht mehr nötig, die Positionen sind eingebaut. Nur wenn etwas falsch sitzt: "Kalibrieren" und den Bereich neu ziehen.
+Alles, was er liest und tut, steht in protokoll.txt.
+
 TFT BOSS - die KI ist der Boss, du bist die Hände
 =================================================
 
