@@ -744,50 +744,59 @@ func _close_prompt() -> void:
 # ================================================================= Kalibrieren
 
 var calib: Calib = null
-var saved_win := {}
+var calib_win: Window = null
 
 func _start_calibration(key: String = "") -> void:
-	if calib != null:
+	if calib_win != null:
+		calib_win.grab_focus()
 		return
 	running = false
 	_update_run_btn()
 	_close_prompt()
 	var win := get_window()
-	saved_win = {"pos": win.position, "size": win.size}
-	# Fenster kurz aus dem Bild schieben statt minimieren (minimieren hängt unter Windows manchmal)
+	var old_pos := win.position
 	var sp := DisplayServer.screen_get_position(screen_idx)
 	var ss := DisplayServer.screen_get_size(screen_idx)
+	# Hauptfenster kurz aus dem Bild schieben, damit es nicht mit fotografiert wird
 	win.position = sp + ss + Vector2i(200, 200)
 	await get_tree().create_timer(0.35).timeout
 	var img := DisplayServer.screen_get_image(screen_idx)
+	win.position = old_pos
 	if img == null or img.is_empty():
-		_restore_window()
 		lbl_seen.text = "Kann den Bildschirm nicht lesen."
 		running = true
 		_update_run_btn()
 		return
-	win.borderless = true
-	win.position = sp
-	win.size = ss
-	win.move_to_foreground()
-	win.grab_focus()
+	# Eigenes Fenster zum Rahmenziehen. Groß, mit Rand, kein Vollbild.
+	var big := Vector2i(int(ss.x * 0.92), int(ss.y * 0.88))
+	calib_win = Window.new()
+	calib_win.title = "TFT Boss: Kalibrieren" + ("" if key == "" else " (%s)" % Calib.NAMES[key])
+	calib_win.size = big
+	calib_win.position = sp + (ss - big) / 2
+	calib_win.always_on_top = true
+	calib_win.transient = false
+	calib_win.wrap_controls = false
+	calib_win.close_requested.connect(func(): _end_calibration.call_deferred())
 	calib = Calib.new()
-	add_child(calib)
+	calib_win.add_child(calib)
 	calib.setup(img, rects, key)
+	calib.changed.connect(func(r):
+		# sofort speichern, sobald ein Rahmen gezogen ist
+		rects = r
+		_save_settings())
 	calib.finished.connect(func(r):
 		rects = r
-		_end_calibration())
-	calib.cancelled.connect(_end_calibration)
-
-func _restore_window() -> void:
-	var win := get_window()
-	win.borderless = false
-	win.size = saved_win.get("size", Vector2i(460, 820))
-	win.position = saved_win.get("pos", Vector2i(100, 100))
+		_end_calibration.call_deferred())
+	calib.cancelled.connect(func(): _end_calibration.call_deferred())
+	add_child(calib_win)
+	calib_win.show()
+	calib_win.grab_focus()
 
 func _end_calibration() -> void:
+	if calib_win != null and is_instance_valid(calib_win):
+		calib_win.queue_free()
+	calib_win = null
 	calib = null
-	_restore_window()
 	vision.cache.clear()
 	unknown_prev.clear()
 	_save_settings()

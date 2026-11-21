@@ -4,6 +4,7 @@ extends Control
 ## Läuft direkt im TFT-Boss-Fenster, das dafür kurz bildschirmfüllend wird.
 
 signal finished(rects: Dictionary)
+signal changed(rects: Dictionary)
 signal cancelled
 
 const NAMES := {"shop": "Shop", "gold": "Gold", "level": "Level", "stage": "Stage", "items": "Item-Plätze", "augs": "Augments"}
@@ -66,14 +67,16 @@ func setup(screen_img: Image, old: Dictionary, key: String = "") -> void:
 		var btn := Button.new()
 		btn.text = b[0]
 		btn.add_theme_font_size_override("font_size", 18)
+		btn.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+		btn.focus_mode = Control.FOCUS_NONE
 		btn.pressed.connect(b[1])
 		h.add_child(btn)
 	v.add_child(h)
 	panel.add_child(v)
 	# Nur die Knöpfe fangen die Maus, sonst kann man auch durch das Panel hindurch Rahmen ziehen
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.mouse_filter = Control.MOUSE_FILTER_PASS
+	v.mouse_filter = Control.MOUSE_FILTER_PASS
+	h.mouse_filter = Control.MOUSE_FILTER_PASS
 	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(panel)
 	# Rahmen werden über dem Panel gezeichnet, damit man sie immer sieht
@@ -86,6 +89,7 @@ func setup(screen_img: Image, old: Dictionary, key: String = "") -> void:
 
 func _update_info() -> void:
 	var s: Array = STEPS[step]
+	info.remove_theme_color_override("font_color")
 	if only != "":
 		var st := "Rahmen gesetzt. „Speichern“ oder Enter drücken, oder neu ziehen." if rects.has(only) else "Mit der Maus einen Rahmen ziehen, dann „Speichern“."
 		info.text = "%s kalibrieren\n%s\n\n%s" % [NAMES[only], s[1], st]
@@ -110,6 +114,7 @@ func _gui_input(e: InputEvent) -> void:
 			var r := Rect2(a.min(b), (a - b).abs())
 			if r.size.x > 0.003 and r.size.y > 0.003:
 				rects[STEPS[step][0]] = [r.position.x, r.position.y, r.size.x, r.size.y]
+				changed.emit(rects)
 				var px := Rect2(drag_from.min(drag_to), (drag_from - drag_to).abs())
 				if px.intersects(panel.get_rect()):
 					_move_panel()
@@ -140,16 +145,23 @@ func _input(e: InputEvent) -> void:
 			return
 	get_viewport().set_input_as_handled()
 
+var _done := false
+
 func _next() -> void:
+	if _done:
+		return
 	if only != "":
 		if rects.has(only):
+			_done = true
 			finished.emit(rects)
-			queue_free()
+		else:
+			info.text = "%s kalibrieren\n[!] Erst einen Rahmen ziehen, dann „Speichern“." % NAMES[only]
+			info.add_theme_color_override("font_color", Color("ff9a4a"))
 		return
 	step += 1
 	if step >= STEPS.size():
+		_done = true
 		finished.emit(rects)
-		queue_free()
 		return
 	_update_info()
 
@@ -161,8 +173,10 @@ func _back() -> void:
 	_update_info()
 
 func _cancel() -> void:
+	if _done:
+		return
+	_done = true
 	cancelled.emit()
-	queue_free()
 
 func _move_panel() -> void:
 	# Panel in die andere Ecke, falls es etwas verdeckt
