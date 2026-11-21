@@ -24,6 +24,8 @@ var scouting := false
 var scouted_stage := ""
 var stage_changed_ms := 0
 var btn_scout: Button
+var btn_admin: Button
+var blocked_seen := 0
 const REC_MAX := 200
 var rec_count := 0
 var rec_stage := ""
@@ -206,6 +208,15 @@ func _build_ui() -> void:
 	btn_scout.text = "Jetzt scouten"
 	btn_scout.pressed.connect(func(): _scout(true))
 	hap.add_child(btn_scout)
+	btn_admin = Button.new()
+	btn_admin.text = "Als Admin neu starten"
+	btn_admin.visible = false
+	btn_admin.pressed.connect(func():
+		_save_settings()
+		pilot.stop()
+		Autopilot.restart_as_admin()
+		get_tree().quit())
+	vap.add_child(btn_admin)
 	vap.add_child(hap)
 	lbl_auto = _rich()
 	lbl_auto.add_theme_font_size_override("normal_font_size", 14)
@@ -1012,6 +1023,11 @@ func _toggle_auto() -> void:
 	if st.get("dead", false):
 		_auto_status("Der Eingabe-Helfer läuft nicht (PowerShell blockiert?).")
 		return
+	if not st.get("admin", true):
+		btn_admin.visible = true
+		_auto_status("TFT läuft mit Adminrechten, deshalb blockiert Windows meine Klicks. Klick auf „Als Admin neu starten“ und bestätige die Windows-Frage.")
+		return
+	blocked_seen = int(st.get("blocked", 0))
 	auto_title = st["title"]
 	if auto_title == "" or auto_title == get_window().title:
 		_auto_status("TFT war nicht vorne. Nochmal starten und in den 3 Sekunden ins Spiel klicken.")
@@ -1050,6 +1066,11 @@ func _autopilot_step() -> void:
 		return
 	if st["panic"]:
 		_auto_off("F8 gedrückt, Autopilot aus.")
+		return
+	if int(st.get("blocked", 0)) > blocked_seen:
+		blocked_seen = int(st.get("blocked", 0))
+		btn_admin.visible = true
+		_auto_off("Windows hat meine Klicks blockiert. TFT Boss als Administrator starten (Knopf unten).")
 		return
 	if st["title"] != auto_title:
 		_auto_status("Pausiert: TFT ist nicht im Vordergrund.")

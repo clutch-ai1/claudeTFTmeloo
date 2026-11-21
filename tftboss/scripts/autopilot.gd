@@ -7,28 +7,36 @@ const HELPER := """
 Add-Type @'
 using System; using System.Runtime.InteropServices; using System.Text; using System.Threading;
 public static class TB {
+  [StructLayout(LayoutKind.Sequential)] public struct MOUSEINPUT { public int dx; public int dy; public uint mouseData; public uint dwFlags; public uint time; public IntPtr dwExtraInfo; }
+  [StructLayout(LayoutKind.Sequential)] public struct KEYBDINPUT { public ushort wVk; public ushort wScan; public uint dwFlags; public uint time; public IntPtr dwExtraInfo; }
+  [StructLayout(LayoutKind.Explicit)] public struct UNION { [FieldOffset(0)] public MOUSEINPUT mi; [FieldOffset(0)] public KEYBDINPUT ki; }
+  [StructLayout(LayoutKind.Sequential)] public struct INPUT { public uint type; public UNION u; }
+  [DllImport("user32.dll", SetLastError = true)] public static extern uint SendInput(uint n, INPUT[] inputs, int size);
   [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
-  [DllImport("user32.dll")] public static extern void mouse_event(uint f, uint dx, uint dy, uint d, UIntPtr e);
   [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint c, uint t);
-  [DllImport("user32.dll")] public static extern void keybd_event(byte vk, byte scan, uint f, UIntPtr e);
   [DllImport("user32.dll")] public static extern short GetAsyncKeyState(int vk);
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
   [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetWindowText(IntPtr h, StringBuilder s, int n);
+  public static int Blocked = 0;
   public static string Title() { var sb = new StringBuilder(256); GetWindowText(GetForegroundWindow(), sb, 256); return sb.ToString(); }
+  static void Send(INPUT[] a) { uint r = SendInput((uint)a.Length, a, Marshal.SizeOf(typeof(INPUT))); if (r != a.Length) Blocked++; }
+  static INPUT M(uint f) { var i = new INPUT(); i.type = 0; i.u.mi.dwFlags = f; return i; }
+  static INPUT K(ushort sc, uint f) { var i = new INPUT(); i.type = 1; i.u.ki.wScan = sc; i.u.ki.dwFlags = f | 0x0008; return i; }
   public static void Click(int x, int y, bool right) {
-    SetCursorPos(x, y); Thread.Sleep(35);
-    uint d = right ? 0x0008u : 0x0002u, u = right ? 0x0010u : 0x0004u;
-    mouse_event(d, 0, 0, 0, UIntPtr.Zero); Thread.Sleep(45); mouse_event(u, 0, 0, 0, UIntPtr.Zero);
+    if (!SetCursorPos(x, y)) Blocked++;
+    Thread.Sleep(35);
+    Send(new INPUT[] { M(right ? 0x0008u : 0x0002u) }); Thread.Sleep(45); Send(new INPUT[] { M(right ? 0x0010u : 0x0004u) });
   }
   public static void Key(byte vk) {
-    byte sc = (byte)MapVirtualKey(vk, 0);
-    keybd_event(vk, sc, 0, UIntPtr.Zero); Thread.Sleep(45); keybd_event(vk, sc, 0x0002, UIntPtr.Zero);
+    ushort sc = (ushort)MapVirtualKey(vk, 0);
+    Send(new INPUT[] { K(sc, 0) }); Thread.Sleep(45); Send(new INPUT[] { K(sc, 0x0002) });
   }
 }
 '@
 [TB]::SetProcessDPIAware() | Out-Null
 [TB]::GetAsyncKeyState(0x77) | Out-Null
+$admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 while ($true) {
   $l = [Console]::In.ReadLine()
   if ($l -eq $null) { break }
@@ -37,7 +45,7 @@ while ($true) {
     'click'  { [TB]::Click([int]$p[1], [int]$p[2], $false) }
     'rclick' { [TB]::Click([int]$p[1], [int]$p[2], $true) }
     'key'    { [TB]::Key([byte][int]$p[1]) }
-    'state'  { [Console]::Out.WriteLine(('{0}|{1}' -f ([TB]::GetAsyncKeyState(0x77) -band 1), [TB]::Title())); [Console]::Out.Flush() }
+    'state'  { [Console]::Out.WriteLine(('{0}|{1}|{2}|{3}' -f ([TB]::GetAsyncKeyState(0x77) -band 1), [TB]::Blocked, [int]$admin, [TB]::Title())); [Console]::Out.Flush() }
     'quit'   { exit }
   }
 }
@@ -96,13 +104,18 @@ func state() -> Dictionary:
 		return {"panic": false, "title": "", "dead": true}
 	_send("state")
 	var line := pipe.get_line()
-	var i := line.find("|")
-	if i < 0:
-		return {"panic": false, "title": line}
-	return {"panic": line.substr(0, i).strip_edges() == "1", "title": line.substr(i + 1).strip_edges()}
+	var parts := line.split("|", true, 3)
+	if parts.size() < 4:
+		return {"panic": false, "title": line, "blocked": 0, "admin": true}
+	return {"panic": parts[0].strip_edges() == "1", "blocked": int(parts[1]), "admin": parts[2].strip_edges() == "1", "title": parts[3].strip_edges()}
 
 func click(p: Vector2i) -> void:
 	_send("click %d %d" % [p.x, p.y])
 
 func key(vk: int) -> void:
 	_send("key %d" % vk)
+
+## Startet TFT Boss mit Adminrechten neu (Windows fragt einmal nach)
+static func restart_as_admin() -> void:
+	var exe := OS.get_executable_path()
+	OS.create_process("powershell.exe", ["-NoProfile", "-WindowStyle", "Hidden", "-Command", "Start-Process -FilePath '%s' -Verb RunAs" % exe.replace("'", "''")])

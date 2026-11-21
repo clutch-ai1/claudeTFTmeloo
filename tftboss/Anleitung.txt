@@ -50,6 +50,9 @@ Die Comps kommen live von deiner Seite clutch-ai1.github.io/claudeTFTmeloo (alle
 Ohne Internet nimmt es die zuletzt geladenen Daten.
 
 AUTOPILOT (die KI klickt selbst)
+0. WICHTIG: TFT läuft mit Administratorrechten. Damit Windows die Klicks nicht blockiert, muss auch TFT Boss als Administrator laufen:
+   Rechtsklick auf "TFT Boss Autopilot.exe" > "Als Administrator ausführen". Oder im Programm den Knopf "Als Admin neu starten".
+   Das Boss-Fenster am besten auf den zweiten Monitor schieben, damit es nichts im Spiel verdeckt.
 1. Vorher kalibrieren: mindestens Shop, Gold, Level und Stage. Für Augments auch "Augments" (bei der nächsten Wahl).
 2. TFT im Modus "Randloses Fenster", Spiel läuft.
 3. Im Boss-Fenster "Autopilot starten" drücken und innerhalb von 3 Sekunden ins TFT-Fenster klicken.
