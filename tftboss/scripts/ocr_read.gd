@@ -35,6 +35,14 @@ static func gold(t: String) -> int:
 			bestlen = digits.length()
 	return best
 
+## Text hinter "Lvl. N" (für zusammengesetzte Zeilen "Lvl. 3 | 2")
+static func after_level(t: String) -> String:
+	var rx := RegEx.create_from_string("[LlI1|][vV][lI1|]\\.?\\s*\\d{1,2}")
+	var m := rx.search(t)
+	if m == null:
+		return ""
+	return t.substr(m.get_end())
+
 static func level(t: String) -> int:
 	var rx := RegEx.create_from_string("[LlI1|][vV][lI1|]\\.?\\s*(\\d{1,2})")
 	var m := rx.search(t)

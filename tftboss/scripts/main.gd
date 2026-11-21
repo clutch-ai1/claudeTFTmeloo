@@ -106,7 +106,7 @@ func _ready() -> void:
 	timer.start()
 	Meta.loaded.connect(_refresh_all)
 	_refresh_all()
-	_log_file("Start, Version 11, Bildschirm %d" % screen_idx)
+	_log_file("Start, Version 12, Bildschirm %d" % screen_idx)
 	if OS.get_name() == "Windows" and pilot.start():
 		await get_tree().create_timer(2.5).timeout
 		var st0 := pilot.state()
@@ -1495,6 +1495,41 @@ func _read_players(img: Image) -> void:
 	_log_file("Ladebildschirm: Spieler %s, du bist %s" % [str(players), my_name if my_name != "" else "?"])
 
 ## Farbe der Streak-Flamme: +1 rot (Siege), -1 blau (Niederlagen), 0 keine Flamme
+## Zahlen selbst lernen: Liest die Texterkennung eine Zahl, merkt sich der Bot, wie ihre Ziffern aussehen.
+## Liest sie nichts (passiert oft bei einzelnen Ziffern), erkennt er die Zahl an den gelernten Ziffern.
+func _digits_selflearn(key: String, crop, ocr_val: int, maxv: int) -> int:
+	if crop == null:
+		return ocr_val
+	var r := vision.read_number("self_" + key, crop)
+	if ocr_val >= 0 and ocr_val <= maxv:
+		if not (r["ok"] and str(r["text"]) == str(ocr_val)) and r["glyphs"].size() >= str(ocr_val).length():
+			vision.learn_number(r["glyphs"], str(ocr_val), r.get("meta", []))
+			vision.cache.erase("self_" + key)
+		return ocr_val
+	if r["ok"] and str(r["text"]).is_valid_int() and int(r["text"]) <= maxv:
+		return int(r["text"])
+	return -1
+
+## Bilder nebeneinander in eine Zeile setzen (gleiche Höhe, Abstand dazwischen)
+func _hcat(imgs: Array) -> Image:
+	var h := 48
+	var parts := []
+	var w := 0
+	for im0 in imgs:
+		var im: Image = im0.duplicate()
+		im.convert(Image.FORMAT_RGB8)
+		var nw := maxi(1, int(float(im.get_width()) * h / maxf(1.0, im.get_height())))
+		im.resize(nw, h, Image.INTERPOLATE_BILINEAR)
+		parts.append(im)
+		w += nw + 40
+	var out := Image.create(w + 40, h + 24, false, Image.FORMAT_RGB8)
+	out.fill(Color(0.08, 0.1, 0.12))
+	var x := 20
+	for im in parts:
+		out.blit_rect(im, Rect2i(0, 0, im.get_width(), im.get_height()), Vector2i(x, 12))
+		x += im.get_width() + 40
+	return out
+
 func _flame_color(crop: Image) -> int:
 	var blue := 0
 	var red := 0
@@ -1535,28 +1570,37 @@ func _rect_px(img: Image, key: String) -> Rect2i:
 func _ocr_tick(img: Image) -> Dictionary:
 	var keys := []
 	var paths := []
+	var W0 := img.get_width()
+	var H0 := img.get_height()
+	var crops := {}
 	for k in ["stage", "gold", "level", "hp", "lobby", "traits"]:
 		if rects.has(k):
 			keys.append(k)
 			var box := _rect_px(img, k)
-			# Kleine Rahmen großzügig erweitern: die Texterkennung braucht etwas Umfeld
 			if k == "stage":
-				box = _grow(img, box, 0.6, 0.6, 0.3, 0.6)
+				# Die Stage wandert je nach Runde nach links/rechts: ganze obere Leiste lesen
+				box = Rect2i(int(0.33 * W0), 0, int(0.34 * W0), int(0.04 * H0))
 			elif k == "level":
 				box = _grow(img, box, 2.0, 0.3, 0.2, 0.2)   # nach links bis "Lvl."
 			elif k in ["gold", "hp"]:
 				box = _grow(img, box, 0.3, 0.3, 0.2, 0.2)
-			paths.append(_ocr_png(img.get_region(box), k, 4 if k in ["stage", "gold", "level", "hp"] else 2))
+			crops[k] = img.get_region(box)
+			paths.append(_ocr_png(crops[k], k, 3 if k == "stage" else (4 if k in ["gold", "level", "hp"] else 2)))
 			if k == "stage":
-				# zweite Variante mit hohem Kontrast, falls die erste nichts liefert
 				keys.append("stage_bin")
-				paths.append(_ocr_png(_contrast(img.get_region(box)), "stage_bin", 4))
+				paths.append(_ocr_png(_contrast(crops[k]), "stage_bin", 3))
 	# Streak-Flamme neben dem Gold: nur die Zahl lesen, die Farbe zählen wir selbst
-	var W0 := img.get_width()
-	var H0 := img.get_height()
 	var fl := Rect2i(int(0.570 * W0), int(0.808 * H0), int(0.045 * W0), int(0.035 * H0))
+	var streak_crop := img.get_region(Rect2i(int(0.592 * W0), fl.position.y, int(0.024 * W0), fl.size.y))
 	keys.append("streak")
-	paths.append(_ocr_png(img.get_region(Rect2i(int(0.592 * W0), fl.position.y, int(0.024 * W0), fl.size.y)), "streak", 4))
+	paths.append(_ocr_png(streak_crop, "streak", 4))
+	# Einzelne Ziffern liest die Windows-Texterkennung schlecht. Trick: "Lvl. 3" davorsetzen, dann ist es eine Textzeile.
+	if crops.has("level"):
+		if crops.has("gold"):
+			keys.append("goldx")
+			paths.append(_ocr_png(_hcat([crops["level"], crops["gold"]]), "goldx", 3))
+		keys.append("streakx")
+		paths.append(_ocr_png(_hcat([crops["level"], streak_crop]), "streakx", 3))
 	if rects.has("shop"):
 		var sr := _rect_px(img, "shop")
 		for i in 5:
@@ -1602,6 +1646,9 @@ func _ocr_tick(img: Image) -> Dictionary:
 				ch = true
 	if T.has("gold"):
 		var g := OcrRead.gold(T["gold"])
+		if g < 0 and T.has("goldx"):
+			g = OcrRead.gold(OcrRead.after_level(T["goldx"]))
+		g = _digits_selflearn("gold", crops.get("gold"), g, 300)
 		if g >= 0:
 			out["done"]["gold"] = true
 			gold_fresh = true
@@ -1647,12 +1694,22 @@ func _ocr_tick(img: Image) -> Dictionary:
 						brain.hp = int(e["hp"])
 						out["done"]["hp"] = true
 						ch = true
-	if T.has("streak"):
+	if T.has("streak") and _in_game():
 		var fcol := _flame_color(img.get_region(fl))
 		var nums := OcrRead.ints(T["streak"])
+		if nums.is_empty() and T.has("streakx"):
+			nums = OcrRead.ints(OcrRead.after_level(T["streakx"]))
+		if fcol != 0:
+			var sv0 := _digits_selflearn("streak", streak_crop, int(nums[0]) if nums.size() > 0 else -1, 30)
+			nums = [sv0] if sv0 >= 0 else []
 		var sv := 0
 		if fcol != 0:
-			sv = fcol * (int(nums[0]) if nums.size() > 0 and int(nums[0]) <= 30 else 2)
+			if nums.size() > 0 and int(nums[0]) >= 1 and int(nums[0]) <= 30:
+				sv = fcol * int(nums[0])
+			elif signi(brain.streak) == fcol:
+				sv = brain.streak       # Zahl gerade nicht lesbar: alte behalten
+			else:
+				sv = fcol * 2
 		if sv != brain.streak or not brain.streak_seen:
 			if sv != brain.streak and auto_on:
 				_log_file("Streak: %s" % ("%d Siege in Folge" % sv if sv > 0 else ("%d Niederlagen in Folge" % -sv if sv < 0 else "keine")))
@@ -1702,7 +1759,7 @@ func _ocr_tick(img: Image) -> Dictionary:
 	out["seen"].append("OCR %d ms" % (Time.get_ticks_msec() - t0))
 	if Time.get_ticks_msec() - ocr_last_log > 8000:
 		ocr_last_log = Time.get_ticks_msec()
-		_log_file("Rohtext Stage '%s' Level '%s' Gold '%s'" % [T.get("stage", ""), T.get("level", ""), T.get("gold", "")])
+		_log_file("Rohtext Stage '%s' Level '%s' Gold '%s' Gold+Level '%s' Streak '%s'" % [T.get("stage", ""), T.get("level", ""), T.get("gold", ""), T.get("goldx", ""), T.get("streakx", "")])
 		_log_file("Gelesen: Stage %s, Gold %d, Level %d, Leben %d, Lobby %s, Traits %s, Shop %s" % [brain.stage, brain.gold, brain.level, brain.hp, str(brain.lobby_hp), str(brain.my_traits), str(brain.shop)])
 	return out
 

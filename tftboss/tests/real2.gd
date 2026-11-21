@@ -22,6 +22,8 @@ func _ready():
 	await get_tree().create_timer(3.0).timeout
 	print("Klicks: ", fp.actions)
 	var shot := Image.load_from_file("/mnt/user-data/uploads/cdf58647-image.png")
+	var gc: Image = shot.get_region(m._grow(shot, m._rect_px(shot, "gold"), 0.3, 0.3, 0.2, 0.2))
+	print("Selbst gelernt, Gold ohne OCR: ", m._digits_selflearn("gold", gc, -1, 300))
 	print("Lobby: ", m._lobby_entries(shot)); print("Streak: ", m.brain.streak, " seen ", m.brain.streak_seen, " Plan ", m.brain.plan, " ", m.brain.plan_why)
 	print("Log: ", m.auto_log.slice(-5))
 	get_tree().quit()
