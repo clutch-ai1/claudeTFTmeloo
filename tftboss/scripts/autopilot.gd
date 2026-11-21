@@ -38,6 +38,8 @@ public static class TB {
 }
 '@
 [TB]::SetProcessDPIAware() | Out-Null
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
 # ---- Windows-Texterkennung (OCR) ----
 $ocrErr = ''
 $ocr = $null
@@ -158,6 +160,9 @@ func state() -> Dictionary:
 
 func click(p: Vector2i) -> void:
 	_send("click %d %d" % [p.x, p.y])
+
+func rclick(p: Vector2i) -> void:
+	_send("rclick %d %d" % [p.x, p.y])
 
 func key(vk: int) -> void:
 	_send("key %d" % vk)

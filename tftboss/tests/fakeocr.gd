@@ -46,3 +46,5 @@ func ocr_lines(path: String) -> String:
 	for k in order:
 		res.append("%s ~%d" % [" ".join(lines[k]["t"]), lines[k]["y"]])
 	return " # ".join(res)
+func rclick(p: Vector2i) -> void:
+	actions.append("rclick %d,%d" % [p.x, p.y])

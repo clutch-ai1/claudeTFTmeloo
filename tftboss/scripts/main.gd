@@ -32,6 +32,10 @@ var trait_block_ms := 0
 var last_action_ms := 0
 var last_shot_ms := 0
 var gold_fresh := false
+var gold_read_ms := -100000      # wann das Gold zuletzt wirklich gelesen wurde
+var sweep: Array = []            # Punkte, zu denen der Little Legend läuft (Kugeln einsammeln)
+var sweep_ms := 0
+var carousel_ms := 0
 var shop_fresh := false
 var scouted_stage := ""
 var stage_changed_ms := 0
@@ -106,7 +110,7 @@ func _ready() -> void:
 	timer.start()
 	Meta.loaded.connect(_refresh_all)
 	_refresh_all()
-	_log_file("Start, Version 12, Bildschirm %d" % screen_idx)
+	_log_file("Start, Version 13, Bildschirm %d" % screen_idx)
 	if OS.get_name() == "Windows" and pilot.start():
 		await get_tree().create_timer(2.5).timeout
 		var st0 := pilot.state()
@@ -663,8 +667,8 @@ func _tick() -> void:
 
 	# Zahlen (ohne Texterkennung: gelernte Ziffern)
 	for key in ["stage", "level", "gold"]:
-		if not rects.has(key) or done_ocr.has(key):
-			continue
+		if use_ocr or not rects.has(key) or done_ocr.has(key):
+			continue   # mit Texterkennung nicht die alten Ziffern raten (die haben z. B. 32 statt 2 gelesen)
 		var crop := _crop(img, key)
 		var r := vision.read_number(key, crop)
 		var t: String = r["text"]
@@ -831,6 +835,9 @@ func _on_stage(t: String) -> void:
 		if auto_on:
 			_log("Runde %d-%d: %s" % [prev / 10, prev % 10, "verloren" if brain.hp < round_hp else "gewonnen"])
 	round_hp = brain.hp
+	# Nach einer Monster-Runde liegen Kugeln auf dem Board: einmal übers Board laufen
+	if prev > 0 and (prev in [12, 13, 14] or prev % 10 == 7) and sn > prev:
+		_plan_sweep()
 	last_stage_num = sn
 	brain.stage = t
 	stage_changed_ms = Time.get_ticks_msec()
@@ -1179,8 +1186,12 @@ func _autopilot_step() -> void:
 	for k in auto_tried.keys():
 		if brain.shop[k] != auto_tried[k]:
 			auto_tried.erase(k)
+	# Kugeln einsammeln / Karussell: Little Legend mit Rechtsklick laufen lassen
+	if _legend_step(now):
+		return
 	var acts := brain.advise()
-	if not gold_fresh:
+	# Gold kurz nicht lesbar: mit dem mitgerechneten Wert weiterspielen (höchstens 15 s lang)
+	if not gold_fresh and (now - gold_read_ms > 15000 or brain.gold < 0):
 		_auto_status("Gold gerade nicht lesbar, wartet.")
 		return
 	for a in acts:
@@ -1203,6 +1214,7 @@ func _autopilot_step() -> void:
 				auto_pending[sl] = now + 2500
 				auto_tried[sl] = a["u"]
 				brain.note_buy(a["u"], str(a.get("why", "")))
+				brain.gold = maxi(0, brain.gold - Meta.cost(a["u"]))
 				_log("Kauft %s (Platz %d)" % [a["u"], sl + 1])
 				auto_next_ms = now + 450
 				last_action_ms = now
@@ -1211,6 +1223,7 @@ func _autopilot_step() -> void:
 			"level":
 				if brain.gold >= 4:
 					pilot.key(Autopilot.VK_F)
+					brain.gold = maxi(0, brain.gold - 4)
 					_log("Level-XP gekauft (F)")
 					auto_next_ms = now + 700
 					last_action_ms = now
@@ -1221,6 +1234,7 @@ func _autopilot_step() -> void:
 					return
 				if brain.gold > int(a.get("until", 50)) + 1:
 					pilot.key(Autopilot.VK_D)
+					brain.gold = maxi(0, brain.gold - 2)
 					vision.cache.clear()
 					_log("Rollt (D), %d Gold" % brain.gold)
 					auto_next_ms = now + 1100
@@ -1510,6 +1524,39 @@ func _digits_selflearn(key: String, crop, ocr_val: int, maxv: int) -> int:
 		return int(r["text"])
 	return -1
 
+## Laufweg im Zickzack über das eigene Board (Bildschirm-Anteile), damit der Little Legend alle Kugeln aufsammelt
+const SWEEP := [[0.36, 0.60], [0.36, 0.42], [0.36, 0.24], [0.50, 0.24], [0.50, 0.42], [0.50, 0.60], [0.64, 0.60], [0.64, 0.42], [0.64, 0.24], [0.47, 0.55]]
+
+func _plan_sweep() -> void:
+	sweep = SWEEP.duplicate()
+	sweep_ms = Time.get_ticks_msec() + 1500    # kurz warten, bis die Kugeln gelandet sind
+
+func _screen_pt(fx: float, fy: float) -> Vector2i:
+	var sz := auto_last_img_size if auto_last_img_size.x > 0 else DisplayServer.screen_get_size(screen_idx)
+	return DisplayServer.screen_get_position(screen_idx) + Vector2i(int(fx * sz.x), int(fy * sz.y))
+
+## true, wenn gerade gelaufen wird (dann in diesem Schritt nichts anderes tun)
+func _legend_step(now: int) -> bool:
+	var sn := Brain.stage_num(brain.stage)
+	# Karussell (2-4, 3-4, ...): immer wieder zur Mitte laufen, dann schnappt er sich eine Unit
+	if sn >= 24 and sn % 10 == 4 and now - stage_changed_ms < 30000:
+		if now > carousel_ms:
+			carousel_ms = now + 1200
+			pilot.rclick(_screen_pt(0.50, 0.50))
+			if now - stage_changed_ms < 1500:
+				_log("Karussell: läuft zur Mitte")
+		_auto_status("Karussell: holt sich eine Unit.")
+		return true
+	if sweep.is_empty() or now < sweep_ms:
+		return false
+	var p: Array = sweep.pop_front()
+	pilot.rclick(_screen_pt(p[0], p[1]))
+	sweep_ms = now + 900
+	if sweep.size() == SWEEP.size() - 1:
+		_log("Sammelt Kugeln ein")
+	_auto_status("Sammelt Kugeln ein.")
+	return true
+
 ## Bilder nebeneinander in eine Zeile setzen (gleiche Höhe, Abstand dazwischen)
 func _hcat(imgs: Array) -> Image:
 	var h := 48
@@ -1652,6 +1699,7 @@ func _ocr_tick(img: Image) -> Dictionary:
 		if g >= 0:
 			out["done"]["gold"] = true
 			gold_fresh = true
+			gold_read_ms = Time.get_ticks_msec()
 			if g != brain.gold:
 				brain.gold = g
 				ch = true
