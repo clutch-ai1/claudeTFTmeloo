@@ -35,6 +35,11 @@ WAS ES DIR SAGT
 - Käufe zählt es selbst (Karte verschwindet aus dem Shop). Verkaufst du etwas, klick die Unit in "Meine Units" an.
 - Items links neben der Bank erkennt es selbst (Komponenten und fertige Items). Beim ersten Mal fragt es pro Item einmal nach,
   dafür gibt es Schnellknöpfe für alle Komponenten und "Leer".
+- Verbrauchsitems (Duplicator, Kleiner Duplicator, Item-Entferner, Reforger, Masterwork, Item-Truhe ...) haben bei der Item-Frage eigene Knöpfe.
+  Liegen sie links, sagt es dir, auf wen du sie benutzen sollst.
+- WAS ICH SEHE: kleine Live-Bilder von allen kalibrierten Bereichen. Sitzt einer falsch, einfach diesen Bereich neu kalibrieren.
+- Zahlen: Rahmen mit etwas Abstand um die Zahl ziehen. Angeschnittene Teile am Rand (z. B. vom Gold-Symbol) ignoriert es.
+  Siehst du bei der Frage mehr Teile als Ziffern, tipp trotzdem nur die Zahl ein, den Rest merkt es sich als Störung.
 - Kompakt: zeigt nur noch "JETZT MACHEN", gut für den Stream.
 - Neues Spiel erkennt es an Stage 1-1, sonst "Neues Spiel" drücken.
 

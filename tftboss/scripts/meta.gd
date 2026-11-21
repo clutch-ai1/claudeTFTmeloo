@@ -18,6 +18,14 @@ var item_names: Array = []      # fertige Items (ohne Komponenten)
 var traits: Dictionary = {}     # Trait -> [Stufen]
 var source := ""
 
+## Verbrauchsitems: Standard-TFT plus die aus den Set-Daten
+const CONSUMABLES := {
+	"Champion Duplicator": "Duplicator", "Lesser Champion Duplicator": "Kleiner Duplicator",
+	"Magnetic Remover": "Item-Entferner", "Reforger": "Reforger", "Neeko's Help": "Neekos Hilfe",
+	"Masterwork Upgrade": "Masterwork", "Lucky Item Chest": "Item-Truhe", "Radiant Lucky Item Chest": "Radiant-Truhe",
+	"Salvager": "Salvager", "Dr. Mundo's Record Contract": "Mundo-Vertrag", "Training Dummy": "Trainingspuppe",
+}
+
 const COMP_DE := {
 	"B.F. Sword": "Schwert", "Recurve Bow": "Bogen", "Needlessly Large Rod": "Stab",
 	"Tear Of The Goddess": "Träne", "Chain Vest": "Weste", "Negatron Cloak": "Mantel",
@@ -85,6 +93,8 @@ func _apply(txt: String) -> bool:
 	for it in recipes.keys():
 		if not it in item_names:
 			item_names.append(it)
+	for it in CONSUMABLES.keys():
+		item_names.erase(it)
 	item_names.sort()
 	return true
 
@@ -93,7 +103,7 @@ func updated_text() -> String:
 	return t.substr(0, 16).replace("T", " ")
 
 func comp_de(c: String) -> String:
-	return COMP_DE.get(c, c)
+	return COMP_DE.get(c, CONSUMABLES.get(c, c))
 
 func cost(u: String) -> int:
 	return int(units[u]["c"]) if units.has(u) else 0

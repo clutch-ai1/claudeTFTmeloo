@@ -50,6 +50,9 @@ var units_flow: HFlowContainer
 var unit_edit: LineEdit
 var augs_flow: HFlowContainer
 var aug_edit: LineEdit
+var preview_box: PanelContainer
+var preview_flow: HFlowContainer
+var preview_tex := {}            # Bereich -> TextureRect
 
 func _ready() -> void:
 	vision.load_db()
@@ -299,6 +302,16 @@ func _build_ui() -> void:
 	v.add_child(pa)
 	details.append(pa)
 
+	# Was ich sehe: kleine Live-Bilder der kalibrierten Bereiche
+	preview_box = _panel(Color("1a1829"))
+	var vpv := VBoxContainer.new()
+	vpv.add_child(_title("WAS ICH SEHE  (sitzt ein Rahmen falsch: Kalibrieren ▾ und den Bereich neu ziehen)"))
+	preview_flow = HFlowContainer.new()
+	vpv.add_child(preview_flow)
+	preview_box.add_child(vpv)
+	v.add_child(preview_box)
+	details.append(preview_box)
+
 	lbl_seen = _small()
 	v.add_child(lbl_seen)
 	lbl_data = _small()
@@ -420,6 +433,11 @@ func _render_items() -> void:
 		l.text = "● " + it
 		l.add_theme_color_override("font_color", Color("6fd3ff"))
 		items_flow.add_child(l)
+	for it in brain.consumables:
+		var l2 := Label.new()
+		l2.text = "◆ " + Meta.comp_de(it)
+		l2.add_theme_color_override("font_color", Color("e8c27a"))
+		items_flow.add_child(l2)
 
 func _render_units() -> void:
 	for c in units_flow.get_children():
@@ -465,6 +483,36 @@ func _slots(img: Image, key: String) -> Array:
 		out.append(whole.get_region(ri.intersection(Rect2i(Vector2i.ZERO, whole.get_size()))))
 	return out
 
+func _update_preview(img: Image) -> void:
+	if compact or not preview_box.is_visible_in_tree():
+		return
+	for k in Calib.ORDER:
+		if not rects.has(k):
+			if preview_tex.has(k):
+				preview_tex[k].get_parent().queue_free()
+				preview_tex.erase(k)
+			continue
+		var crop := _crop(img, k)
+		if not preview_tex.has(k):
+			var vb := VBoxContainer.new()
+			var tr := TextureRect.new()
+			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			tr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			var lab := Label.new()
+			lab.text = Calib.NAMES[k]
+			lab.add_theme_font_size_override("font_size", 11)
+			lab.add_theme_color_override("font_color", Color("8a87a6"))
+			vb.add_child(tr)
+			vb.add_child(lab)
+			preview_flow.add_child(vb)
+			preview_tex[k] = tr
+		var tr2: TextureRect = preview_tex[k]
+		var hgt := 34.0 if k in ["gold", "level", "stage"] else (90.0 if k == "items" else 46.0)
+		var asp := float(crop.get_width()) / maxf(1.0, float(crop.get_height()))
+		tr2.custom_minimum_size = Vector2(clampf(hgt * asp, 24.0, 420.0), hgt)
+		tr2.texture = ImageTexture.create_from_image(crop)
+
 func _in_game() -> bool:
 	return Time.get_ticks_msec() - stage_seen_ms < 20000
 
@@ -480,6 +528,7 @@ func _tick() -> void:
 		return
 	var seen := []
 	var changed := false
+	_update_preview(img)
 
 	# Zahlen
 	for key in ["stage", "level", "gold"]:
@@ -505,7 +554,7 @@ func _tick() -> void:
 						brain.gold = int(t)
 						changed = true
 		elif r["glyphs"].size() > 0:
-			_ask({"kind": "num", "key": key, "glyphs": r["glyphs"], "img": crop})
+			_ask({"kind": "num", "key": key, "glyphs": r["glyphs"], "meta": r.get("meta", []), "img": crop})
 		seen.append("%s %s" % [NUM_NAME[key], t if t != "" else "-"])
 
 	var active := _in_game() or not rects.has("stage")
@@ -540,6 +589,7 @@ func _tick() -> void:
 	if rects.has("items") and active:
 		var comps := {}
 		var done := []
+		var cons := []
 		var slots := _slots(img, "items")
 		var unknown := 0
 		for i in slots.size():
@@ -550,16 +600,19 @@ func _tick() -> void:
 				_ask_stable("item%d" % i, {"kind": "item", "sig": r["s"], "img": slots[i], "slot": i})
 			elif lab in Meta.components:
 				comps[lab] = comps.get(lab, 0) + 1
+			elif Meta.CONSUMABLES.has(lab):
+				cons.append(lab)
 			elif lab != Vision.EMPTY and lab != Vision.IGNORE:
 				done.append(lab)
-		if comps != brain.comps_have or done != brain.items_have:
+		if comps != brain.comps_have or done != brain.items_have or cons != brain.consumables:
 			brain.comps_have = comps
 			brain.items_have = done
+			brain.consumables = cons
 			changed = true
 		var n := 0
 		for k in comps.values():
 			n += k
-		seen.append("Items: %d Komponenten, %d fertig%s" % [n, done.size(), ", %d unbekannt" % unknown if unknown > 0 else ""])
+		seen.append("Items: %d Komponenten, %d fertig, %d Verbrauch%s" % [n, done.size(), cons.size(), ", %d unbekannt" % unknown if unknown > 0 else ""])
 
 	# Augments
 	var sn := Brain.stage_num(brain.stage)
@@ -674,6 +727,13 @@ func _fill_quick() -> void:
 	for k in Meta.components:
 		_btn(prompt_quick, Meta.comp_de(k), func(): _answer(k))
 	_btn(prompt_quick, "Leer", func(): _answer(Vision.EMPTY))
+	var l := Label.new()
+	l.text = "Verbrauchsitems:"
+	l.add_theme_font_size_override("font_size", 12)
+	l.add_theme_color_override("font_color", Color("e8c27a"))
+	prompt_quick.add_child(l)
+	for k in Meta.CONSUMABLES.keys():
+		_btn(prompt_quick, Meta.CONSUMABLES[k], func(): _answer(k))
 
 func _prompt_typed(s: String) -> void:
 	for c in prompt_sugg.get_children():
@@ -711,11 +771,12 @@ func _prompt_submit(s: String) -> void:
 	if prompt.is_empty():
 		return
 	if prompt["kind"] == "num":
-		if vision.learn_number(prompt["glyphs"], s):
+		var msg := vision.learn_number(prompt["glyphs"], s, prompt.get("meta", []))
+		if msg == "":
 			_close_prompt()
 			_refresh_all()
 		else:
-			prompt_q.text = "Die Anzahl passt nicht: ich sehe %d Zeichen. Bitte genau so eintippen, wie es im Bild steht." % prompt["glyphs"].size()
+			prompt_q.text = msg
 		return
 	var names: Array = {"shop": Meta.unit_names, "aug": Meta.aug_names, "item": Meta.item_names}[prompt["kind"]]
 	var n := _match(s, names)

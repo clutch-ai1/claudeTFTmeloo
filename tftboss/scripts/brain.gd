@@ -10,6 +10,7 @@ var shop: Array = ["", "", "", "", ""]
 var owned: Dictionary = {}       # Unit -> Anzahl Kopien
 var comps_have: Dictionary = {}  # Komponente -> Anzahl
 var items_have: Array = []       # fertige Items auf der Bank
+var consumables: Array = []      # Verbrauchsitems (Duplicator, Remover ...)
 var my_augs: Array = []
 var aug_offer: Array = []        # 3 Augment-Namen, wenn gerade eine Wahl offen ist
 
@@ -32,6 +33,7 @@ func reset() -> void:
 	owned.clear()
 	comps_have.clear()
 	items_have.clear()
+	consumables.clear()
 	my_augs.clear()
 	aug_offer.clear()
 	target = {}
@@ -189,8 +191,10 @@ func advise() -> Array:
 		out.append({"k": "info", "t": "Warte auf das Spiel. Ich lese Stage, Gold und Shop, sobald sie zu sehen sind."})
 		return out
 
-	# 2. Items
+	# 2. Items und Verbrauchsitems
 	for line in item_advice():
+		out.append({"k": "item", "t": line})
+	for line in consumable_advice():
 		out.append({"k": "item", "t": line})
 
 	# 3. Shop
@@ -388,3 +392,44 @@ func _missing_three_stars() -> Array:
 		if Meta.cost(u) <= 3 and owned.get(u, 0) < 9 and not u in m:
 			m.push_front(u)
 	return m
+
+func consumable_advice() -> Array:
+	var lines := []
+	if target.is_empty() or consumables.is_empty():
+		return lines
+	var carry: Array = target.get("carry", [])
+	var main_carry: String = carry[0] if carry.size() > 0 else ""
+	var board := late_board(target)
+	# Beste Unit zum Kopieren: die mit den meisten Kopien, Carrys zuerst
+	var dup_best := func(max_cost: int) -> String:
+		var best := ""
+		var bs := -1.0
+		for u in owned.keys():
+			if not u in board or Meta.cost(u) > max_cost:
+				continue
+			var n: int = owned[u]
+			if n >= 9:
+				continue
+			var sc := float(n) + (3.0 if u in carry else 0.0) + (1.0 if n in [2, 5, 8] else 0.0)
+			if sc > bs:
+				bs = sc
+				best = u
+		return best
+	for c in consumables:
+		match c:
+			"Champion Duplicator":
+				var u: String = dup_best.call(7)
+				lines.append("Duplicator auf %s benutzen" % u if u != "" else "Duplicator aufheben, bis du eine Unit der Comp hast")
+			"Lesser Champion Duplicator", "Neeko's Help":
+				var u2: String = dup_best.call(3)
+				lines.append("%s auf %s benutzen" % [Meta.comp_de(c), u2] if u2 != "" else "%s aufheben (nur für 1 bis 3 Kosten)" % Meta.comp_de(c))
+			"Masterwork Upgrade", "Lucky Item Chest", "Radiant Lucky Item Chest", "Dr. Mundo's Record Contract":
+				if main_carry != "":
+					lines.append("%s auf %s benutzen%s" % [Meta.comp_de(c), main_carry, "" if owned.has(main_carry) else " (sobald du ihn hast)"])
+			"Magnetic Remover":
+				lines.append("Item-Entferner aufheben: damit Items von einer Unit holen, die nicht ins Endboard gehört")
+			"Reforger", "Salvager":
+				lines.append("%s auf Items benutzen, die %s nicht braucht" % [Meta.comp_de(c), target["name"]])
+			"Training Dummy":
+				lines.append("Trainingspuppe vorne hinstellen, damit sie Schaden schluckt")
+	return lines

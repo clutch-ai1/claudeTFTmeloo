@@ -11,7 +11,7 @@ func _ready():
 	var v = m.vision
 	var L = func(p): return Image.load_from_file("/home/claude/tbtest/" + p)
 	for pair in [["g34.png","34"],["s32.png","3-2"],["l7.png","7"]]:
-		v.learn_number(v.read_number("t", L.call(pair[0]))["glyphs"], pair[1])
+		var rr = v.read_number("t" + pair[0], L.call(pair[0])); v.learn_number(rr["glyphs"], pair[1], rr["meta"])
 	m.rects = {"stage":[0.78125,0.01953,0.0547,0.0293],"gold":[0.78125,0.1172,0.0547,0.0293],"level":[0.78125,0.1953,0.0547,0.0293],"shop":[0.4375,0.8594,0.5469,0.1074],"items":[0.046875, 0.390625, 0.03125, 0.234375]}
 	m.running = true
 	W.grab_focus()

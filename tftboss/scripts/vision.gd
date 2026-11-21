@@ -169,10 +169,12 @@ func read_number(slot_key: String, img: Image) -> Dictionary:
 	cache[slot_key] = {"h": hsh, "r": r}
 	return r
 
+const NOISE := "_"
+
 func _read_number(g: Image, d: PackedByteArray) -> Dictionary:
 	var w := g.get_width()
 	var h := g.get_height()
-	var none := {"text": "", "ok": false, "glyphs": []}
+	var none := {"text": "", "ok": false, "glyphs": [], "meta": []}
 	if w < 3 or h < 3:
 		return none
 	var mx := 0
@@ -182,8 +184,6 @@ func _read_number(g: Image, d: PackedByteArray) -> Dictionary:
 	if mx < 110:
 		return none
 	var th := int(mx * 0.62)
-	var y0 := h
-	var y1 := -1
 	var colink := PackedInt32Array()
 	colink.resize(w)
 	for y in h:
@@ -191,14 +191,8 @@ func _read_number(g: Image, d: PackedByteArray) -> Dictionary:
 		for x in w:
 			if d[row + x] >= th:
 				colink[x] += 1
-				if y < y0:
-					y0 = y
-				if y > y1:
-					y1 = y
-	if y1 < 0 or y1 - y0 + 1 < 4:
-		return none
-	var line_h := y1 - y0 + 1
-	var runs := []
+	# Zusammenhängende Spalten = ein Zeichen (oder ein Fremdteil)
+	var blobs := []
 	var x := 0
 	while x < w:
 		if colink[x] > 0:
@@ -208,24 +202,65 @@ func _read_number(g: Image, d: PackedByteArray) -> Dictionary:
 				ink += colink[x]
 				x += 1
 			if ink >= 3:
-				runs.append([xs, x - 1])
+				var y0 := h
+				var y1 := -1
+				for yy in h:
+					var row2 := yy * w
+					for xx in range(xs, x):
+						if d[row2 + xx] >= th:
+							y0 = mini(y0, yy)
+							y1 = maxi(y1, yy)
+							break
+				blobs.append({"x0": xs, "x1": x - 1, "y0": y0, "y1": y1, "ink": ink, "edge": xs == 0 or x - 1 == w - 1})
 		else:
 			x += 1
-	if runs.size() > 6:
+	if blobs.is_empty():
 		return none
+	# Höhe der Ziffern = höchstes Teil, das nicht am Rand klebt
+	var tall := 0
+	for b in blobs:
+		if not b["edge"] or blobs.size() == 1:
+			tall = maxi(tall, b["y1"] - b["y0"] + 1)
+	if tall < 4:
+		return none
+	var keep := []
+	for b in blobs:
+		var bh: int = b["y1"] - b["y0"] + 1
+		var bw: int = b["x1"] - b["x0"] + 1
+		# Angeschnittene Teile am Rand weg, wenn es noch andere Zeichen gibt
+		if b["edge"] and blobs.size() > 1:
+			continue
+		var is_dash: bool = bw >= bh * 1.3 and bh <= tall * 0.4
+		if bh >= tall * 0.55 or is_dash:
+			keep.append(b)
+	if keep.is_empty() or keep.size() > 6:
+		return none
+	var ly0 := h
+	var ly1 := -1
+	for b in keep:
+		if b["y1"] - b["y0"] + 1 >= tall * 0.55:
+			ly0 = mini(ly0, b["y0"])
+			ly1 = maxi(ly1, b["y1"])
+	var line_h := ly1 - ly0 + 1
 	var glyphs := []
-	for r in runs:
-		glyphs.append(_glyph_sig(d, w, r[0], r[1], y0, y1, th, line_h))
+	var meta := []
+	for b in keep:
+		glyphs.append(_glyph_sig(d, w, b["x0"], b["x1"], ly0, ly1, th, line_h))
+		meta.append(b["ink"])
 	var text := ""
-	var ok := glyphs.size() > 0
+	var ok := false
+	var unknown := false
 	for s in glyphs:
 		var c := classify("glyph", s, 52.0)
 		if c["l"] == "":
-			ok = false
+			unknown = true
 			text += "?"
-		else:
+		elif c["l"] != NOISE:
 			text += c["l"]
-	return {"text": text, "ok": ok, "glyphs": glyphs}
+			ok = true
+	if unknown:
+		ok = false
+	return {"text": text, "ok": ok, "glyphs": glyphs, "meta": meta}
 
 static func _glyph_sig(d: PackedByteArray, w: int, x0: int, x1: int, y0: int, y1: int, th: int, line_h: int) -> PackedByteArray:
 	var gw := x1 - x0 + 1
@@ -245,16 +280,42 @@ static func _glyph_sig(d: PackedByteArray, w: int, x0: int, x1: int, y0: int, y1
 		out.append(aspect)
 	return out
 
-func learn_number(glyphs: Array, text: String) -> bool:
+## Lernt die Zeichen. Sind es mehr Teile als Zeichen, werden die kleinsten als Störung gemerkt.
+## Ergebnis: "" wenn gelernt, sonst ein Hinweis, was nicht passt.
+func learn_number(glyphs: Array, text: String, meta: Array = []) -> String:
 	var t := text.replace(" ", "")
-	if t.length() != glyphs.size():
-		return false
+	if t == "":
+		return "Bitte eintippen, was dasteht."
+	if t.length() > glyphs.size():
+		return "Ich sehe nur %d Zeichen, du hast %d getippt. Zieh den Rahmen etwas größer, mit ein bisschen Abstand um die Zahl." % [glyphs.size(), t.length()]
+	var labels := []
+	labels.resize(glyphs.size())
+	if t.length() == glyphs.size():
+		for i in glyphs.size():
+			labels[i] = t[i]
+	else:
+		# die kleinsten Teile sind Störungen (z. B. ein Stück vom Gold-Symbol)
+		var idx := range(glyphs.size())
+		var ink: Array = meta if meta.size() == glyphs.size() else idx.map(func(_i): return 0)
+		var by_size := idx.duplicate()
+		by_size.sort_custom(func(a, b): return ink[a] < ink[b])
+		var noise := {}
+		for k in glyphs.size() - t.length():
+			noise[by_size[k]] = true
+		var ci := 0
+		for i in glyphs.size():
+			if noise.has(i):
+				labels[i] = NOISE
+			else:
+				labels[i] = t[ci]
+				ci += 1
 	for i in glyphs.size():
 		var s: PackedByteArray = glyphs[i]
-		var same: Array = db["glyph"].filter(func(e): return e["l"] == t[i])
-		if same.size() >= MAX_PER_LABEL:
+		var lab: String = labels[i]
+		var same: Array = db["glyph"].filter(func(e): return e["l"] == lab)
+		if same.size() >= MAX_PER_LABEL * 2:
 			db["glyph"].erase(same[0])
-		db["glyph"].append({"l": t[i], "s": s})
+		db["glyph"].append({"l": lab, "s": s})
 	cache.clear()
 	save_db()
-	return true
+	return ""
