@@ -344,8 +344,16 @@ func shop_advice() -> Array:
 			prio = 1.5 + have
 			why = "Paar, wird 2 Sterne" if have == 2 else "Paar"
 		elif sn <= 32 and c <= 3 and plan != "loss":
-			prio = 0.8
-			why = "Board stärker machen"
+			var shared := 0
+			var tr := comp_traits(target) if not target.is_empty() else {}
+			for t in Meta.units[u]["t"]:
+				if tr.has(t):
+					shared += 1
+			var ust = Meta.units[u].get("st")
+			var good: bool = typeof(ust) == TYPE_DICTIONARY and float(ust.get("avg", 9.0)) <= 4.4
+			if shared > 0 or good or sn <= 22:
+				prio = 0.8 + shared * 0.4 + (0.3 if good else 0.0)
+				why = "passt zu den Traits" if shared > 0 else ("starke Unit" if good else "Board füllen")
 		if have >= 8:
 			prio = 0.0
 		if prio > 0.0:
@@ -353,9 +361,9 @@ func shop_advice() -> Array:
 	cand.sort_custom(func(a, b): return a["prio"] > b["prio"])
 	var g := gold
 	var keep := _keep_gold(sn)
-	var fill_left := maxi(0, level + 1 - owned.size())
+	var fill_left := maxi(0, level + 3 - owned.size())
 	for x in cand:
-		if x["why"] == "Board stärker machen":
+		if x["why"] in ["passt zu den Traits", "starke Unit", "Board füllen"]:
 			if fill_left <= 0:
 				continue
 			fill_left -= 1
@@ -450,6 +458,19 @@ func update_plan() -> void:
 		return
 	var st := strength()
 	var wc := win_chance
+	var known := owned.size() >= 2 or not comps_have.is_empty() or not items_have.is_empty()
+	if not known and wc < 0.0:
+		# Ohne Wissen über das Board nur nach Ergebnissen entscheiden, sonst normal spielen
+		if win_streak() >= 2:
+			plan = "win"
+			plan_why = "Zwei Siege in Folge: Winstreak."
+		elif loss_streak() >= 3:
+			plan = "loss"
+			plan_why = "Drei Niederlagen in Folge: Lossstreak, Gold sparen."
+		else:
+			plan = ""
+			plan_why = "Board noch unbekannt: normal leveln und Board aufbauen."
+		return
 	if plan == "" and wc >= 0.0:
 		if wc >= 0.55:
 			plan = "win"
