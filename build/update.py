@@ -305,6 +305,8 @@ if SHEETS and DOCS:
     print('Icons:',len(um),'Units,',len(imap),'Items')
 json.dump(out,open('data.json','w'),ensure_ascii=False,separators=(',',':'))
 import os;print(os.path.getsize('data.json'))
+if DOCS:
+    import shutil;shutil.copy('data.json',os.path.join(DOCS,'data.json'))  # fuer TFT Boss (Godot)
 print([u['n'] for u in UN if u['l']])
 print(len(allitems), allitems)
 
