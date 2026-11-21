@@ -15,21 +15,25 @@ EINMAL KALIBRIEREN (im laufenden Spiel)
 1. Ein Spiel starten, bis der Shop zu sehen ist.
 2. Im Boss-Fenster "Kalibrieren" drücken. Das Fenster verschwindet kurz und macht ein Bild vom Bildschirm.
 3. Rahmen ziehen und jeweils Enter drücken:
-   Shop (alle 5 Karten) > Gold-Zahl > Level-Zahl (nur die Zahl) > Stage (z. B. 3-2) > Augments (nur wenn gerade eine Wahl offen ist, sonst Leertaste).
-   Die Augment-Karten kannst du später bei einer Augment-Wahl nochmal kalibrieren.
+   Shop (alle 5 Karten) > Gold-Zahl > Level-Zahl (nur die Zahl) > Stage (z. B. 3-2) > Item-Plätze links (alle, auch leere)
+   > Augments (nur wenn gerade eine Wahl offen ist, sonst "Überspringen").
+   Einzelne Bereiche kannst du später neu setzen: Kalibrieren, bei den anderen einfach "Überspringen" drücken.
 
 DIE ERSTEN SPIELE: KURZ HELFEN
 - Das Programm kennt die Bilder am Anfang noch nicht. Bei einer neuen Shop-Karte fragt es einmal "Welcher Champion ist das?":
   2 bis 3 Buchstaben tippen und den Namen anklicken. Danach erkennt es die Karte selbst.
 - Genauso bei Zahlen: einmal eintippen, was dasteht (z. B. 34 oder 3-2). Nach ein paar Mal kennt es alle Ziffern.
-- "Nicht fragen (30 s)" drücken, wenn du gerade keine Zeit hast.
+- "Später (30 s)" drücken, wenn du gerade keine Zeit hast. "Kein Spielbild, ignorieren" für Bilder aus Menüs oder Ladebildschirmen.
+- Es fragt nur, wenn gerade ein Spiel läuft (Stage erkannt) und das Bild kurz still steht.
 - Nach 2 bis 3 Spielen fragt es kaum noch.
 
 WAS ES DIR SAGT
 - JETZT MACHEN: Augment nehmen, Items bauen, welchen Shop-Platz kaufen, Level hoch (F), rollen (D) oder Gold sparen.
 - ZIEL-COMP: welche Comp gespielt wird. Ab Stage 3-1 ist sie fest.
 - Käufe zählt es selbst (Karte verschwindet aus dem Shop). Verkaufst du etwas, klick die Unit in "Meine Units" an.
-- Komponenten trägst du selbst ein (Linksklick +1, Rechtsklick -1). Die sieht es auf der Bank noch nicht.
+- Items links neben der Bank erkennt es selbst (Komponenten und fertige Items). Beim ersten Mal fragt es pro Item einmal nach,
+  dafür gibt es Schnellknöpfe für alle Komponenten und "Leer".
+- Kompakt: zeigt nur noch "JETZT MACHEN", gut für den Stream.
 - Neues Spiel erkennt es an Stage 1-1, sonst "Neues Spiel" drücken.
 
 DATEN

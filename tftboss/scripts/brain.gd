@@ -9,6 +9,7 @@ var gold := -1
 var shop: Array = ["", "", "", "", ""]
 var owned: Dictionary = {}       # Unit -> Anzahl Kopien
 var comps_have: Dictionary = {}  # Komponente -> Anzahl
+var items_have: Array = []       # fertige Items auf der Bank
 var my_augs: Array = []
 var aug_offer: Array = []        # 3 Augment-Namen, wenn gerade eine Wahl offen ist
 
@@ -30,6 +31,7 @@ func reset() -> void:
 	shop = ["", "", "", "", ""]
 	owned.clear()
 	comps_have.clear()
+	items_have.clear()
 	my_augs.clear()
 	aug_offer.clear()
 	target = {}
@@ -115,6 +117,18 @@ func score_comp(c: Dictionary) -> float:
 				if av.get(k, 0) > 0:
 					av[k] -= 1
 					total += 0.9 if i == 0 else 0.6
+	# Fertige Items, die ein Carry oder Tank der Comp will
+	var wanted := []
+	for u in c.get("carry", []) + c.get("tank", []).slice(0, 1):
+		wanted.append_array(items_for(c, u))
+	for it in items_have:
+		if it in wanted:
+			wanted.erase(it)
+			total += 1.6
+		elif it.ends_with("Emblem"):
+			var tname: String = str(it).trim_suffix(" Emblem")
+			if comp_traits(c).has(tname):
+				total += 2.0
 	# Augments
 	var tr := comp_traits(c)
 	var board := late_board(c)
@@ -225,6 +239,15 @@ func item_advice() -> Array:
 	var lines := []
 	if target.is_empty():
 		return lines
+	# Fertige Items zuerst verteilen
+	var given := {}
+	for it in items_have:
+		for u in target.get("carry", []) + target.get("tank", []).slice(0, 1):
+			if it in items_for(target, u) and not given.has(it + u):
+				given[it + u] = true
+				var who: String = u if owned.has(u) else "deinen stärksten Carry, später an %s" % u
+				lines.append("Item geben: %s auf %s" % [it, who])
+				break
 	var av := comps_have.duplicate()
 	var order: Array = []
 	for u in target.get("carry", []):
@@ -244,7 +267,7 @@ func item_advice() -> Array:
 			if ok:
 				av[r[0]] -= 1
 				av[r[1]] -= 1
-				var who: String = u if owned.has(u) else "die Unit, die %s gerade hält (später weitergeben)" % u
+				var who: String = u if owned.has(u) else "deinen stärksten Carry, später an %s" % u
 				lines.append("Item bauen: %s (%s + %s) auf %s" % [it, Meta.comp_de(r[0]), Meta.comp_de(r[1]), who])
 	return lines
 

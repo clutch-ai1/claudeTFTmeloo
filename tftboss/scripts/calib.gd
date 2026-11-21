@@ -11,9 +11,10 @@ const STEPS := [
 	["gold", "Zieh einen Rahmen eng um deine Gold-Zahl."],
 	["level", "Zieh einen Rahmen eng um die Level-Zahl. Nur die Zahl, ohne „Lvl.“."],
 	["stage", "Zieh einen Rahmen eng um die Stage-Anzeige oben, zum Beispiel 3-2."],
+	["items", "Zieh einen Rahmen um die Item-Plätze links neben der Bank. Alle Plätze von oben bis unten, auch die leeren."],
 	["augs", "Nur wenn gerade eine Augment-Wahl offen ist: Rahmen um alle 3 Augment-Karten. Sonst „Überspringen“."],
 ]
-const COLORS := {"shop": Color("7be07b"), "gold": Color("f5c542"), "level": Color("6fd3ff"), "stage": Color("ff9a4a"), "augs": Color("c48cff")}
+const COLORS := {"items": Color("ff6fae"), "shop": Color("7be07b"), "gold": Color("f5c542"), "level": Color("6fd3ff"), "stage": Color("ff9a4a"), "augs": Color("c48cff")}
 
 var img: Image
 var rects := {}
@@ -142,9 +143,29 @@ func _draw() -> void:
 		var col: Color = COLORS.get(k, Color.WHITE)
 		draw_rect(rr, col, false, 3.0)
 		draw_string(ThemeDB.fallback_font, rr.position + Vector2(4, -6), k, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, col)
-		var parts := 5 if k == "shop" else (3 if k == "augs" else 1)
-		for i in range(1, parts):
-			var x := rr.position.x + rr.size.x * i / parts
-			draw_line(Vector2(x, rr.position.y), Vector2(x, rr.end.y), col, 1.0)
+		for sr in Calib.split(k, rr):
+			draw_rect(sr, col, false, 1.0)
 	if drag_from.x >= 0:
 		draw_rect(Rect2(drag_from.min(drag_to), (drag_from - drag_to).abs()), Color.WHITE, false, 2.0)
+
+## Teilt einen Bereich in seine Plätze auf (Shop 5, Augments 3, Items automatisch nach Form).
+static func split(key: String, r: Rect2) -> Array:
+	var out := []
+	var n := 1
+	var vertical := false
+	match key:
+		"shop":
+			n = 5
+		"augs":
+			n = 3
+		"items":
+			vertical = r.size.y >= r.size.x
+			var a := maxf(r.size.x, r.size.y)
+			var b := maxf(minf(r.size.x, r.size.y), 0.0001)
+			n = clampi(int(round(a / b)), 1, 12)
+	for i in n:
+		if vertical:
+			out.append(Rect2(r.position.x, r.position.y + r.size.y * i / n, r.size.x, r.size.y / n))
+		else:
+			out.append(Rect2(r.position.x + r.size.x * i / n, r.position.y, r.size.x / n, r.size.y))
+	return out

@@ -17,7 +17,7 @@ func _ready():
 	print("rects nach Ziehen: ", c.rects, " size ", c.size, " main ", m.size)
 	print("hit: ", get_viewport().gui_get_hovered_control() if get_viewport().has_method("gui_get_hovered_control") else "")
 	get_viewport().get_texture().get_image().save_png("/tmp/cal2.png")
-	for i in 5: c._next()
+	for i in 6: c._next()
 	await get_tree().create_timer(0.5).timeout
 	print("fertig: calib=", m.calib, " rects=", m.rects.keys(), " win ", get_window().size)
 	get_tree().quit()

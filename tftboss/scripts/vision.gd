@@ -1,19 +1,28 @@
 class_name Vision
 extends RefCounted
 ## Liest Bildausschnitte. Lernt einmal, was wo zu sehen ist, und erkennt es danach selbst.
+## Schnell: ein Platz wird nur neu verglichen, wenn sich sein Bild wirklich verändert hat.
 
-const PATH := "user://gelernt.json"
-const CARD_W := 24
-const CARD_H := 16
+const PATH := "user://gelernt_v2.json"
+const CARD_W := 16
+const CARD_H := 12
+const ICON := 12
 const GLYPH_W := 8
 const GLYPH_H := 12
-const MAX_PER_LABEL := 5
+const MAX_PER_LABEL := 4
 
 const EMPTY := "(leer)"
 const IGNORE := "(ignorieren)"
+const KINDS := ["shop", "aug", "item", "glyph"]
 
 ## kind -> Array von {"l": Label, "s": PackedByteArray}
-var db := {"shop": [], "aug": [], "glyph": []}
+var db := {}
+## Platz-Schlüssel -> {"s": letzter Fingerabdruck, "r": letztes Ergebnis}
+var cache := {}
+
+func _init() -> void:
+	for k in KINDS:
+		db[k] = []
 
 func load_db() -> void:
 	if not FileAccess.file_exists(PATH):
@@ -21,14 +30,14 @@ func load_db() -> void:
 	var j = JSON.parse_string(FileAccess.get_file_as_string(PATH))
 	if typeof(j) != TYPE_DICTIONARY:
 		return
-	for k in db.keys():
+	for k in KINDS:
 		db[k] = []
 		for e in j.get(k, []):
 			db[k].append({"l": str(e["l"]), "s": Marshalls.base64_to_raw(e["s"])})
 
 func save_db() -> void:
 	var out := {}
-	for k in db.keys():
+	for k in KINDS:
 		out[k] = []
 		for e in db[k]:
 			out[k].append({"l": e["l"], "s": Marshalls.raw_to_base64(e["s"])})
@@ -39,27 +48,30 @@ func save_db() -> void:
 func count(kind: String) -> int:
 	var seen := {}
 	for e in db[kind]:
-		seen[e["l"]] = true
+		if e["l"] != EMPTY and e["l"] != IGNORE:
+			seen[e["l"]] = true
 	return seen.size()
 
 func forget_all() -> void:
-	db = {"shop": [], "aug": [], "glyph": []}
+	for k in KINDS:
+		db[k] = []
+	cache.clear()
 	save_db()
 
-# ---------------------------------------------------------------- Karten
+# ---------------------------------------------------------------- Fingerabdrücke
 
-## Kleiner Fingerabdruck eines Bildausschnitts. Helligkeit und Kontrast werden
-## ausgeglichen, damit abgedunkelte Shop-Karten (zu wenig Gold) trotzdem passen.
-static func card_sig(img: Image) -> PackedByteArray:
+## Helligkeit und Kontrast werden ausgeglichen, damit abgedunkelte Karten
+## (zu wenig Gold) oder Hover-Effekte trotzdem passen.
+static func norm_sig(img: Image, w: int, h: int) -> PackedByteArray:
 	var c := img.duplicate() as Image
 	c.convert(Image.FORMAT_RGB8)
-	c.resize(CARD_W, CARD_H, Image.INTERPOLATE_BILINEAR)
+	c.resize(w, h, Image.INTERPOLATE_BILINEAR)
 	var d := c.get_data()
 	var n := d.size()
-	var mean := 0.0
+	var sum := 0
 	for v in d:
-		mean += v
-	mean /= n
+		sum += v
+	var mean := float(sum) / n
 	var var_ := 0.0
 	for v in d:
 		var_ += (v - mean) * (v - mean)
@@ -70,92 +82,122 @@ static func card_sig(img: Image) -> PackedByteArray:
 		out[i] = clampi(int((d[i] - mean) / sd * 45.0 + 128.0), 0, 255)
 	return out
 
-## Streuung der Helligkeit. Ein leerer Shop-Platz ist fast einfarbig.
+## Streuung der Helligkeit. Ein leerer Platz ist fast einfarbig.
 static func spread(img: Image) -> float:
 	var c := img.duplicate() as Image
 	c.convert(Image.FORMAT_L8)
-	c.resize(32, 20, Image.INTERPOLATE_BILINEAR)
+	c.resize(24, 16, Image.INTERPOLATE_BILINEAR)
 	var d := c.get_data()
-	var mean := 0.0
+	var sum := 0
 	for v in d:
-		mean += v
-	mean /= d.size()
+		sum += v
+	var mean := float(sum) / d.size()
 	var s := 0.0
 	for v in d:
 		s += (v - mean) * (v - mean)
 	return sqrt(s / d.size())
 
-static func dist(a: PackedByteArray, b: PackedByteArray) -> float:
-	if a.size() != b.size() or a.size() == 0:
+## Mittlerer Abstand. Bricht ab, sobald es schlechter als `stop` wird.
+static func dist(a: PackedByteArray, b: PackedByteArray, stop: float = 9999.0) -> float:
+	var n := a.size()
+	if n != b.size() or n == 0:
 		return 999.0
+	var lim := int(stop * n)
 	var s := 0
-	for i in a.size():
+	var i := 0
+	while i < n:
 		s += absi(a[i] - b[i])
-	return float(s) / a.size()
+		if (i & 63) == 63 and s > lim:
+			return 999.0
+		i += 1
+	return float(s) / n
 
-## Bestes Label für einen Fingerabdruck. Ergebnis: {"l": Label oder "", "d": Abstand}
 func classify(kind: String, s: PackedByteArray, limit: float) -> Dictionary:
 	var best := ""
-	var bd := 999.0
+	var bd := limit
 	for e in db[kind]:
-		var d := dist(s, e["s"])
+		var d := dist(s, e["s"], bd)
 		if d < bd:
 			bd = d
 			best = e["l"]
-	if bd > limit:
-		return {"l": "", "d": bd}
 	return {"l": best, "d": bd}
 
 func learn(kind: String, s: PackedByteArray, label: String) -> void:
+	if s.is_empty():
+		return
 	var same: Array = db[kind].filter(func(e): return e["l"] == label)
 	if same.size() >= MAX_PER_LABEL:
 		db[kind].erase(same[0])
 	db[kind].append({"l": label, "s": s})
+	# Zwischenspeicher leeren, damit der Platz sofort neu erkannt wird
+	cache.clear()
 	save_db()
 
-## Liest einen Shop-Platz. Ergebnis: {"l": Unit / EMPTY / "", "s": Fingerabdruck}
-func read_card(kind: String, img: Image, empty_spread: float = 0.0) -> Dictionary:
+# ---------------------------------------------------------------- Karten, Augments, Items
+
+## Liest einen Platz. Ergebnis: {"l": Label / EMPTY / "", "s": Fingerabdruck, "new": ob neu verglichen}
+func read_slot(slot_key: String, kind: String, img: Image, empty_spread: float) -> Dictionary:
 	if empty_spread > 0.0 and spread(img) < empty_spread:
-		return {"l": EMPTY, "s": PackedByteArray()}
-	var s := card_sig(img)
-	var r := classify(kind, s, 26.0)
-	return {"l": r["l"], "s": s, "d": r["d"]}
+		return {"l": EMPTY, "s": PackedByteArray(), "new": false}
+	var w := CARD_W
+	var h := CARD_H
+	if kind == "item":
+		w = ICON
+		h = ICON
+	var s := norm_sig(img, w, h)
+	var c: Dictionary = cache.get(slot_key, {})
+	if not c.is_empty() and dist(s, c["s"], 6.0) < 6.0:
+		return c["r"]
+	var r := classify(kind, s, 16.0 if kind == "item" else 20.0)
+	var res := {"l": r["l"], "s": s, "new": true}
+	cache[slot_key] = {"s": s, "r": res}
+	return res
 
 # ---------------------------------------------------------------- Zahlen
 
 ## Liest Zahlen wie Gold, Level oder "3-2". Ergebnis:
-## {"text": erkannter Text oder "", "ok": alles erkannt, "glyphs": [Fingerabdrücke]}
-func read_number(img: Image) -> Dictionary:
+## {"text": erkannter Text, "ok": alles erkannt, "glyphs": [Fingerabdrücke]}
+func read_number(slot_key: String, img: Image) -> Dictionary:
 	var g := img.duplicate() as Image
 	g.convert(Image.FORMAT_L8)
+	var d := g.get_data()
+	var hsh := hash(d)
+	var c: Dictionary = cache.get(slot_key, {})
+	if not c.is_empty() and c["h"] == hsh:
+		return c["r"]
+	var r := _read_number(g, d)
+	cache[slot_key] = {"h": hsh, "r": r}
+	return r
+
+func _read_number(g: Image, d: PackedByteArray) -> Dictionary:
 	var w := g.get_width()
 	var h := g.get_height()
-	var d := g.get_data()
+	var none := {"text": "", "ok": false, "glyphs": []}
 	if w < 3 or h < 3:
-		return {"text": "", "ok": false, "glyphs": []}
+		return none
 	var mx := 0
 	for v in d:
-		mx = maxi(mx, v)
+		if v > mx:
+			mx = v
 	if mx < 110:
-		return {"text": "", "ok": false, "glyphs": []}
+		return none
 	var th := int(mx * 0.62)
-	# Zeilen mit Schrift bestimmen die Höhe der Textzeile
 	var y0 := h
 	var y1 := -1
 	var colink := PackedInt32Array()
 	colink.resize(w)
 	for y in h:
+		var row := y * w
 		for x in w:
-			if d[y * w + x] >= th:
+			if d[row + x] >= th:
 				colink[x] += 1
-				y0 = mini(y0, y)
-				y1 = maxi(y1, y)
-	if y1 < 0:
-		return {"text": "", "ok": false, "glyphs": []}
+				if y < y0:
+					y0 = y
+				if y > y1:
+					y1 = y
+	if y1 < 0 or y1 - y0 + 1 < 4:
+		return none
 	var line_h := y1 - y0 + 1
-	if line_h < 4:
-		return {"text": "", "ok": false, "glyphs": []}
-	# Zeichen = zusammenhängende Spalten mit Schrift
 	var runs := []
 	var x := 0
 	while x < w:
@@ -169,6 +211,8 @@ func read_number(img: Image) -> Dictionary:
 				runs.append([xs, x - 1])
 		else:
 			x += 1
+	if runs.size() > 6:
+		return none
 	var glyphs := []
 	for r in runs:
 		glyphs.append(_glyph_sig(d, w, r[0], r[1], y0, y1, th, line_h))
@@ -186,11 +230,13 @@ func read_number(img: Image) -> Dictionary:
 static func _glyph_sig(d: PackedByteArray, w: int, x0: int, x1: int, y0: int, y1: int, th: int, line_h: int) -> PackedByteArray:
 	var gw := x1 - x0 + 1
 	var gh := y1 - y0 + 1
-	var im := Image.create(gw, gh, false, Image.FORMAT_L8)
+	var raw := PackedByteArray()
+	raw.resize(gw * gh)
 	for yy in gh:
+		var src := (y0 + yy) * w + x0
 		for xx in gw:
-			var v := d[(y0 + yy) * w + x0 + xx]
-			im.set_pixel(xx, yy, Color(1, 1, 1) if v >= th else Color(0, 0, 0))
+			raw[yy * gw + xx] = 255 if d[src + xx] >= th else 0
+	var im := Image.create_from_data(gw, gh, false, Image.FORMAT_L8, raw)
 	im.resize(GLYPH_W, GLYPH_H, Image.INTERPOLATE_BILINEAR)
 	var out := im.get_data()
 	# Seitenverhältnis mit hineinrechnen, sonst sehen "1" und "-" gleich aus
@@ -204,5 +250,11 @@ func learn_number(glyphs: Array, text: String) -> bool:
 	if t.length() != glyphs.size():
 		return false
 	for i in glyphs.size():
-		learn("glyph", glyphs[i], t[i])
+		var s: PackedByteArray = glyphs[i]
+		var same: Array = db["glyph"].filter(func(e): return e["l"] == t[i])
+		if same.size() >= MAX_PER_LABEL:
+			db["glyph"].erase(same[0])
+		db["glyph"].append({"l": t[i], "s": s})
+	cache.clear()
+	save_db()
 	return true

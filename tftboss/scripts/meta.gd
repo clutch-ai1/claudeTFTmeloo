@@ -14,6 +14,7 @@ var aug_names: Array = []
 var unit_names: Array = []
 var recipes: Dictionary = {}    # Item -> [Komponente, Komponente]
 var components: Array = []
+var item_names: Array = []      # fertige Items (ohne Komponenten)
 var traits: Dictionary = {}     # Trait -> [Stufen]
 var source := ""
 
@@ -74,6 +75,17 @@ func _apply(txt: String) -> bool:
 			cs[c] = true
 	components = cs.keys()
 	components.sort()
+	var low := {}
+	for c in components:
+		low[c.to_lower()] = true
+	item_names = []
+	for it in j.get("items", recipes.keys()):
+		if not low.has(str(it).to_lower()):
+			item_names.append(str(it))
+	for it in recipes.keys():
+		if not it in item_names:
+			item_names.append(it)
+	item_names.sort()
 	return true
 
 func updated_text() -> String:
