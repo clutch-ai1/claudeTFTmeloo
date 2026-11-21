@@ -594,10 +594,16 @@ func _close_prompt() -> void:
 
 # ================================================================= Kalibrieren
 
+var calib: Calib = null
+var saved_win := {}
+
 func _start_calibration() -> void:
+	if calib != null:
+		return
 	running = false
 	_update_run_btn()
 	var win := get_window()
+	saved_win = {"pos": win.position, "size": win.size}
 	win.mode = Window.MODE_MINIMIZED
 	await get_tree().create_timer(1.2).timeout
 	var img := DisplayServer.screen_get_image(screen_idx)
@@ -605,17 +611,28 @@ func _start_calibration() -> void:
 	if img == null or img.is_empty():
 		lbl_seen.text = "Kann den Bildschirm nicht lesen."
 		return
-	var c := Calib.new()
-	c.setup(img, rects)
-	c.current_screen = screen_idx
-	c.position = DisplayServer.screen_get_position(screen_idx)
-	c.size = DisplayServer.screen_get_size(screen_idx)
-	c.finished.connect(func(r):
+	# Das eigene Fenster wird kurz bildschirmfüllend und zeigt das Bild zum Rahmenziehen
+	win.current_screen = screen_idx
+	win.borderless = true
+	win.position = DisplayServer.screen_get_position(screen_idx)
+	win.size = DisplayServer.screen_get_size(screen_idx)
+	win.move_to_foreground()
+	win.grab_focus()
+	calib = Calib.new()
+	add_child(calib)
+	calib.setup(img, rects)
+	calib.finished.connect(func(r):
 		rects = r
-		_save_settings()
-		running = true
-		_update_run_btn()
-		_refresh_all())
-	add_child(c)
-	c.popup()
-	c.grab_focus()
+		_end_calibration())
+	calib.cancelled.connect(_end_calibration)
+
+func _end_calibration() -> void:
+	calib = null
+	var win := get_window()
+	win.borderless = false
+	win.size = saved_win.get("size", Vector2i(460, 820))
+	win.position = saved_win.get("pos", Vector2i(100, 100))
+	_save_settings()
+	running = true
+	_update_run_btn()
+	_refresh_all()
