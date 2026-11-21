@@ -16,7 +16,9 @@ KALIBRIEREN (im laufenden Spiel, jeder Bereich einzeln)
    Shop, Gold, Level, Stage, Item-Plätze oder Augments. Ein Haken zeigt, was schon gespeichert ist.
 2. Es geht ein eigenes Fenster "Kalibrieren" mit einem Bild deines Bildschirms auf. Rahmen ziehen:
    der Rahmen ist sofort gespeichert. "Speichern" (oder Enter) oder das X schließt das Fenster.
-   Shop: alle 5 Karten. Gold, Level, Stage: eng um die Zahl. Item-Plätze: alle Plätze links neben der Bank, auch leere.
+   Shop: alle 5 Karten. Gold, Level, Stage: mit etwas Abstand um die Zahl.
+   Item-Plätze: von der Oberkante des obersten bis zur Unterkante des untersten Platzes (10 Plätze).
+   Die dünnen Linien müssen zwischen den Plätzen liegen, sonst mit − und + die Anzahl ändern.
 3. Fertig, der Bereich ist gespeichert. Die anderen machst du, wenn sie gerade zu sehen sind,
    zum Beispiel Augments erst bei der nächsten Augment-Wahl.
    Liegt das Hilfe-Panel im Weg, rutscht es von selbst in die andere Ecke.

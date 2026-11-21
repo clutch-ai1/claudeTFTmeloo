@@ -477,7 +477,8 @@ func _crop(img: Image, key: String) -> Image:
 func _slots(img: Image, key: String) -> Array:
 	var whole := _crop(img, key)
 	var out := []
-	for sr in Calib.split(key, Rect2(Vector2.ZERO, Vector2(whole.get_size()))):
+	var r: Array = rects[key]
+	for sr in Calib.split(key, Rect2(Vector2.ZERO, Vector2(whole.get_size())), int(r[4]) if r.size() > 4 else 0):
 		var ri := Rect2i(sr)
 		ri.size = ri.size.max(Vector2i(2, 2))
 		out.append(whole.get_region(ri.intersection(Rect2i(Vector2i.ZERO, whole.get_size()))))

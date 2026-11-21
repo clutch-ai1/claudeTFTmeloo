@@ -14,7 +14,7 @@ const STEPS := [
 	["gold", "Zieh einen Rahmen eng um deine Gold-Zahl."],
 	["level", "Zieh einen Rahmen eng um die Level-Zahl. Nur die Zahl, ohne „Lvl.“."],
 	["stage", "Zieh einen Rahmen eng um die Stage-Anzeige oben, zum Beispiel 3-2."],
-	["items", "Zieh einen Rahmen um die Item-Plätze links neben der Bank. Alle Plätze von oben bis unten, auch die leeren."],
+	["items", "Rahmen von der Oberkante des obersten Item-Platzes bis zur Unterkante des untersten ziehen, auch über die leeren. Die dünnen Linien müssen zwischen den Plätzen liegen. Wenn nicht: mit − und + die Anzahl ändern."],
 	["augs", "Rahmen um alle 3 Augment-Karten (geht nur, solange eine Augment-Wahl offen ist)."],
 ]
 const COLORS := {"items": Color("ff6fae"), "shop": Color("7be07b"), "gold": Color("f5c542"), "level": Color("6fd3ff"), "stage": Color("ff9a4a"), "augs": Color("c48cff")}
@@ -26,6 +26,8 @@ var only := ""
 var drag_from := Vector2(-1, -1)
 var drag_to := Vector2(-1, -1)
 var info: Label
+var slot_row: HBoxContainer
+var slot_lbl: Label
 var panel: PanelContainer
 var layer: Control
 
@@ -72,6 +74,26 @@ func setup(screen_img: Image, old: Dictionary, key: String = "") -> void:
 		btn.pressed.connect(b[1])
 		h.add_child(btn)
 	v.add_child(h)
+	slot_row = HBoxContainer.new()
+	var minus := Button.new()
+	minus.text = "  −  "
+	minus.add_theme_font_size_override("font_size", 18)
+	minus.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+	minus.focus_mode = Control.FOCUS_NONE
+	minus.pressed.connect(func(): _slots_add(-1))
+	slot_lbl = Label.new()
+	slot_lbl.add_theme_font_size_override("font_size", 18)
+	var plus := Button.new()
+	plus.text = "  +  "
+	plus.add_theme_font_size_override("font_size", 18)
+	plus.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+	plus.focus_mode = Control.FOCUS_NONE
+	plus.pressed.connect(func(): _slots_add(1))
+	slot_row.add_child(minus)
+	slot_row.add_child(slot_lbl)
+	slot_row.add_child(plus)
+	slot_row.mouse_filter = Control.MOUSE_FILTER_PASS
+	v.add_child(slot_row)
 	panel.add_child(v)
 	# Nur die Knöpfe fangen die Maus, sonst kann man auch durch das Panel hindurch Rahmen ziehen
 	panel.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -87,8 +109,25 @@ func setup(screen_img: Image, old: Dictionary, key: String = "") -> void:
 	add_child(layer)
 	_update_info()
 
+func _slots_add(d: int) -> void:
+	if not rects.has("items"):
+		return
+	var r: Array = rects["items"]
+	var n: int = int(r[4]) if r.size() > 4 else ITEM_SLOTS
+	n = clampi(n + d, 1, 16)
+	if r.size() > 4:
+		r[4] = n
+	else:
+		r.append(n)
+	changed.emit(rects)
+	_update_info()
+
 func _update_info() -> void:
 	var s: Array = STEPS[step]
+	if slot_row:
+		slot_row.visible = s[0] == "items"
+		var cnt: int = int(rects["items"][4]) if rects.has("items") and rects["items"].size() > 4 else ITEM_SLOTS
+		slot_lbl.text = "  Item-Plätze: %d  " % cnt
 	info.remove_theme_color_override("font_color")
 	if only != "":
 		var st := "Rahmen gesetzt. „Speichern“ oder Enter drücken, oder neu ziehen." if rects.has(only) else "Mit der Maus einen Rahmen ziehen, dann „Speichern“."
@@ -113,7 +152,11 @@ func _gui_input(e: InputEvent) -> void:
 			var b := _norm(drag_to)
 			var r := Rect2(a.min(b), (a - b).abs())
 			if r.size.x > 0.003 and r.size.y > 0.003:
-				rects[STEPS[step][0]] = [r.position.x, r.position.y, r.size.x, r.size.y]
+				var key: String = STEPS[step][0]
+				var cnt: int = int(rects[key][4]) if rects.has(key) and rects[key].size() > 4 else 0
+				rects[key] = [r.position.x, r.position.y, r.size.x, r.size.y]
+				if key == "items":
+					rects[key].append(cnt if cnt > 0 else ITEM_SLOTS)
 				changed.emit(rects)
 				var px := Rect2(drag_from.min(drag_to), (drag_from - drag_to).abs())
 				if px.intersects(panel.get_rect()):
@@ -196,13 +239,15 @@ func _draw_layer() -> void:
 		var col: Color = COLORS.get(k, Color.WHITE)
 		layer.draw_rect(rr, col, false, 3.0)
 		layer.draw_string(ThemeDB.fallback_font, rr.position + Vector2(4, -6), NAMES.get(k, k), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, col)
-		for sr in Calib.split(k, rr):
+		for sr in Calib.split(k, rr, int(r[4]) if r.size() > 4 else 0):
 			layer.draw_rect(sr, col, false, 1.0)
 	if drag_from.x >= 0:
 		layer.draw_rect(Rect2(drag_from.min(drag_to), (drag_from - drag_to).abs()), Color.WHITE, false, 2.0)
 
 ## Teilt einen Bereich in seine Plätze auf (Shop 5, Augments 3, Items automatisch nach Form).
-static func split(key: String, r: Rect2) -> Array:
+const ITEM_SLOTS := 10
+
+static func split(key: String, r: Rect2, count: int = 0) -> Array:
 	var out := []
 	var n := 1
 	var vertical := false
@@ -213,9 +258,7 @@ static func split(key: String, r: Rect2) -> Array:
 			n = 3
 		"items":
 			vertical = r.size.y >= r.size.x
-			var a := maxf(r.size.x, r.size.y)
-			var b := maxf(minf(r.size.x, r.size.y), 0.0001)
-			n = clampi(int(round(a / b)), 1, 12)
+			n = count if count > 0 else ITEM_SLOTS
 	for i in n:
 		if vertical:
 			out.append(Rect2(r.position.x, r.position.y + r.size.y * i / n, r.size.x, r.size.y / n))
