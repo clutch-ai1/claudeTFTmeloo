@@ -24,6 +24,9 @@ var scouting := false
 var scouted_stage := ""
 var stage_changed_ms := 0
 var btn_scout: Button
+const REC_MAX := 200
+var rec_count := 0
+var rec_stage := ""
 var lbl_auto: RichTextLabel
 var brain := Brain.new()
 var rects := {}
@@ -726,6 +729,9 @@ func _tick() -> void:
 	if not active and rects.has("stage"):
 		seen.append("warte auf ein Spiel")
 	auto_last_img_size = img.get_size()
+	if auto_on and not scouting and brain.stage != "" and rec_stage != brain.stage and Time.get_ticks_msec() - stage_changed_ms > 2500:
+		rec_stage = brain.stage
+		_record(img, "eigenes")
 	if changed:
 		_refresh_all()
 		changed = false
@@ -1160,6 +1166,7 @@ func _scout(manual: bool = false) -> void:
 		var shot := DisplayServer.screen_get_image(screen_idx)
 		if shot == null or shot.is_empty():
 			continue
+		_record(shot, "gegner%d" % (i + 1))
 		var ts := _trait_score(shot, true)
 		if ts["ok"]:
 			scores.append(ts["score"])
@@ -1183,3 +1190,20 @@ func _avg(a: Array) -> float:
 	for x in a:
 		s += float(x)
 	return s / maxf(1.0, float(a.size()))
+
+# ================================================================= Aufnahmen
+
+## Speichert Bilder für den späteren Board-Scanner: Desktop\TFT Boss\aufnahmen
+func _rec_dir() -> String:
+	var d := OS.get_system_dir(OS.SYSTEM_DIR_DESKTOP).path_join("TFT Boss").path_join("aufnahmen")
+	DirAccess.make_dir_recursive_absolute(d)
+	return d
+
+func _record(img: Image, what: String) -> void:
+	if img == null or img.is_empty() or rec_count >= REC_MAX:
+		return
+	var st := brain.stage.replace("-", "_") if brain.stage != "" else "x"
+	var t := Time.get_datetime_string_from_system().replace(":", "").replace("-", "").replace("T", "_")
+	var path := _rec_dir().path_join("%s_%s_%s.jpg" % [t, st, what])
+	if img.save_jpg(path, 0.9) == OK:
+		rec_count += 1

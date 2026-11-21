@@ -77,3 +77,7 @@ SCOUTEN UND SIEGCHANCE
 - Aus deinen Punkten gegen die der Gegner rechnet er deine Siegchance. Ab 55 % Winstreak, unter 42 % Lossstreak.
 - Der Autopilot scoutet einmal pro PvP-Runde von selbst, etwa 3 Sekunden lang. Mit "Jetzt scouten" geht es auch ohne Autopilot.
 - Damit er dich in der Liste findet, muss "Mein Leben" und "Leben aller Spieler" kalibriert sein.
+
+AUFNAHMEN
+- Läuft der Autopilot, speichert er pro Runde ein Bild deines Boards und beim Scouten ein Bild jedes Gegner-Boards
+  nach Desktop\TFT Boss\aufnahmen (höchstens 200 pro Start). Daraus wird der Board-Scanner (Sterne, Items, Units) gebaut.
