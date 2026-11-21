@@ -177,3 +177,32 @@ static func trait_power(counts: Dictionary) -> float:
 		else:
 			sc += weights[mini(reached, weights.size() - 1)]
 	return sc
+
+
+## Wo ist der Spieler gerade? Bekommt die Texte der Menü-Bereiche (btn, btn_bin, mid, head, menu, cards).
+## Ergebnis: "match", "queue", "lobby", "modes", "home" oder "" (nichts erkannt)
+static func phase(T: Dictionary) -> String:
+	var mid := str(T.get("mid", "")).to_upper()
+	var btn := (str(T.get("btn", "")) + " " + str(T.get("btn_bin", ""))).to_upper()
+	var head := str(T.get("head", "")).to_upper()
+	var menu := str(T.get("menu", "")).to_upper()
+	var cards := str(T.get("cards", "")).to_upper()
+	if _any(mid + " " + cards, ["MATCH FOUND", "MATCH GEFUNDEN", "ACCEPT", "ANNEHMEN", "SPIEL GEFUNDEN"]):
+		return "match"
+	var rx := RegEx.create_from_string("\\d:\\d\\d")
+	if _any(btn, ["ESTIMATED", "GESCH"]) or rx.search(btn) != null:
+		return "queue"
+	if _any(head, ["NORMAL", "RANKED", "DOUBLE", "TOCKER", "HYPER", "RANGLISTE", "TURBO"]) or _any(btn, ["START"]):
+		return "lobby"
+	if _any(menu, ["TOUR COLLECTION", "STORE", "LOADOUTS", "LEADERBOARD", "SAMMLUNG", "SHOP", "BESTENLISTE"]) or _any(btn, ["PLAY", "SPIELEN"]):
+		if _any(cards, ["RANKED", "DOUBLE", "TOCKER", "RANGLISTE"]):
+			return "modes"
+		return "home"
+	return ""
+
+static func _any(t: String, words: Array) -> bool:
+	var t2 := t.replace(" ", "")
+	for w in words:
+		if t.contains(w) or t2.contains(str(w).replace(" ", "")):
+			return true
+	return false

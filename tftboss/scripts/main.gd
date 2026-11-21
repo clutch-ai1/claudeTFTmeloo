@@ -21,6 +21,11 @@ var auto_log: Array = []
 var auto_last_img_size := Vector2i.ZERO
 var btn_auto: Button
 var scouting := false
+var phase := ""                  # home, modes, lobby, queue, match, loading, game
+var phase_ms := 0
+var menu_ms := -100000
+const PHASE_DE := {"home": "Hauptmenü", "modes": "Modus-Auswahl", "lobby": "Lobby (noch nicht in der Warteschlange)", "queue": "In der Warteschlange", "match": "Match gefunden", "loading": "Ladebildschirm", "game": "Im Spiel", "": "unbekannt"}
+const MENU_RECTS := {"btn": [0.81, 0.86, 0.16, 0.10], "mid": [0.40, 0.42, 0.22, 0.36], "head": [0.0, 0.0, 0.15, 0.05], "menu": [0.02, 0.30, 0.24, 0.37], "cards": [0.33, 0.42, 0.35, 0.42]}
 var trait_block_ms := 0
 var last_action_ms := 0
 var last_shot_ms := 0
@@ -99,7 +104,7 @@ func _ready() -> void:
 	timer.start()
 	Meta.loaded.connect(_refresh_all)
 	_refresh_all()
-	_log_file("Start, Version 8, Bildschirm %d" % screen_idx)
+	_log_file("Start, Version 9, Bildschirm %d" % screen_idx)
 	if OS.get_name() == "Windows" and pilot.start():
 		await get_tree().create_timer(2.5).timeout
 		var st0 := pilot.state()
@@ -648,6 +653,7 @@ func _tick() -> void:
 		var res := _ocr_tick(img)
 		done_ocr = res["done"]
 		last_shot_ms = shot_ms
+		_update_phase(img)
 		if res["changed"]:
 			changed = true
 		seen.append_array(res["seen"])
@@ -1151,7 +1157,7 @@ func _autopilot_step() -> void:
 	if now < auto_next_ms:
 		return
 	if not _in_game():
-		_auto_status("Wartet auf ein Spiel (Stage nicht erkannt).")
+		_auto_status("Wartet auf ein Spiel. Gerade: %s" % PHASE_DE.get(phase, phase))
 		return
 	if scouting:
 		_auto_status("Scoutet die Gegner ...")
@@ -1375,6 +1381,55 @@ func _record(img: Image, what: String) -> void:
 		rec_count += 1
 
 # ================================================================= Texterkennung (OCR)
+
+## Erkennt Hauptmenü, Lobby, Warteschlange, Match gefunden, Ladebildschirm und Spiel
+func _update_phase(img: Image) -> void:
+	var now := Time.get_ticks_msec()
+	var p := phase
+	if _in_game():
+		p = "game"
+	elif now - menu_ms > 2000:
+		menu_ms = now
+		var keys := []
+		var paths := []
+		var W := img.get_width()
+		var H := img.get_height()
+		for k in MENU_RECTS.keys():
+			var r: Array = MENU_RECTS[k]
+			var box := Rect2i(int(r[0] * W), int(r[1] * H), int(r[2] * W), int(r[3] * H))
+			var crop := img.get_region(box)
+			keys.append(k)
+			paths.append(_ocr_png(crop, "menu_" + k, 2))
+			if k == "btn":
+				keys.append("btn_bin")
+				paths.append(_ocr_png(_contrast(crop), "menu_btn_bin", 3))
+		var texts := pilot.ocr(paths)
+		if texts.size() != keys.size():
+			return
+		var T := {}
+		for i in keys.size():
+			T[keys[i]] = str(texts[i]) if not str(texts[i]).begins_with("ERR") else ""
+		p = OcrRead.phase(T)
+		if p == "":
+			# Nichts Bekanntes zu sehen: nach "Match gefunden" ist das der Ladebildschirm
+			if phase in ["match", "loading"] and now - phase_ms < 240000:
+				p = "loading"
+			elif phase == "game":
+				p = "game"   # kurzer Übergang im Spiel (Karussell, Animation)
+			else:
+				p = ""
+	else:
+		return
+	if p != phase:
+		var old := phase
+		if p == "game" and old in ["match", "loading", "queue", "lobby", "home", "modes"]:
+			_new_game()
+			_log_file("Neues Spiel erkannt, alles zurückgesetzt.")
+		phase = p
+		phase_ms = now
+		_log_file("Bildschirm: " + PHASE_DE.get(p, p))
+		if not auto_on:
+			_auto_status("Bildschirm: " + PHASE_DE.get(p, p))
 
 func _ocr_dir() -> String:
 	var d := ProjectSettings.globalize_path("user://ocr")
