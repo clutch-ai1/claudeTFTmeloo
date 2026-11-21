@@ -324,6 +324,25 @@ h2,h3{font-family:var(--display);letter-spacing:.4px;margin:0;line-height:1.05;t
 .mform{display:flex;flex-direction:column;gap:10px}.mform .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .mtab{width:100%;border-collapse:collapse;font-size:13px}.mtab th,.mtab td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}.mtab td.n{text-align:right;font-variant-numeric:tabular-nums}
 .good{color:#8fc98a}.bad{color:#ff8a8a}
+.qwrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.qtop{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.qscore{display:flex;gap:16px;font-size:13px;color:var(--muted)}.qscore b{font-family:var(--display);font-size:22px;color:var(--accent);margin-right:4px}
+.qcard{padding:22px;display:flex;flex-direction:column;align-items:center;gap:16px}
+.qimg{width:150px;height:150px;border-radius:16px;object-fit:cover;border:3px solid var(--line);background:var(--panel-2);display:grid;place-items:center;font-family:var(--display);font-size:56px;color:var(--muted)}
+.qimg.c1{border-color:#9aa4b1}.qimg.c2{border-color:#3fbf6e}.qimg.c3{border-color:#3d8ee8}.qimg.c4{border-color:#c25fe6}.qimg.c5,.qimg.c7{border-color:#f2c14e}
+.qname{font-family:var(--display);font-size:28px;min-height:36px}
+.qq{width:100%;display:flex;flex-direction:column;gap:8px}.qq .flabel{min-width:0}
+.qopts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.qopt{cursor:pointer;padding:9px 16px;border-radius:9px;background:var(--panel-2);border:2px solid var(--line);font-weight:600;font-size:14.5px;color:var(--ink)}
+.qopt:hover{border-color:var(--muted)}
+.qopt[aria-pressed="true"]{border-color:var(--accent);background:rgba(242,193,78,.14)}
+.qopt.ok{border-color:#3fbf6e;background:rgba(63,191,110,.22)}
+.qopt.wrong{border-color:#ff6b6b;background:rgba(255,107,107,.2)}
+.qopt.miss{border-color:#3fbf6e;border-style:dashed}
+.qopt:disabled{cursor:default;opacity:1}
+.qres{font-family:var(--display);font-size:26px;min-height:32px}.qres.ok{color:#3fbf6e}.qres.no{color:#ff6b6b}
+.qact{display:flex;gap:8px}
+.qhint{font-size:12px;color:var(--muted);text-align:center}
 .rtab th,.rtab td{border:1px solid var(--line);padding:4px;text-align:center}
 .rtab th{background:var(--panel-2);font-weight:600;white-space:nowrap}
 .rtab td .it{margin:auto;width:26px;height:26px;font-size:9px}
@@ -371,6 +390,7 @@ body.ov .wrap{max-width:460px;padding:8px}
       <a href="#builder" data-v="builder">Builder</a>
       <a href="#overlay" data-v="overlay">Overlay</a>
       <a href="#myg" data-v="myg">Meine Spiele</a>
+      <a href="#quiz" data-v="quiz">Quiz</a>
     </nav>
   </div>
 
@@ -458,6 +478,11 @@ body.ov .wrap{max-width:460px;padding:8px}
       </div>
     </div>
   </section>
+  <section id="view-quiz" class="hidden"><div class="qwrap">
+    <div class="qtop"><div class="qscore" id="qz-score"></div><div style="display:flex;gap:6px;flex-wrap:wrap" id="qz-set"></div></div>
+    <div class="panel qcard" id="qz-card"></div>
+    <div class="qhint">Tasten: 1 bis 5 und 7 für die Kosten, Enter zum Prüfen und Weiter.</div>
+  </div></section>
   <section id="view-overlay" class="hidden">
     <div class="ovbar"><select class="inp" id="ov-comp" aria-label="Comp für das Overlay"></select><a href="#comps" class="btn small">Zur vollen Seite</a></div>
     <div id="ov-body"></div>
@@ -1240,9 +1265,71 @@ $("#view-myg").addEventListener("click",e=>{
     store.set("tft19-mygames",MYMAN);MYFORM.p=0;$("#myg-form").dataset.ready="";renderMyg();toast("Spiel gespeichert");
   }
 });
+
+/* ---------- Quiz ---------- */
+const QZ_COSTS=[1,2,3,4,5,7];
+const qz={u:null,cost:0,tr:new Set(),opts:[],done:false,ok:false,mode:store.get("tft19-qzmode","both"),deck:[]};
+let QZS=store.get("tft19-qzstats",{right:0,total:0,streak:0,best:0});
+const TRAIT_COUNT={};UL.forEach(u=>u.t.forEach(t=>TRAIT_COUNT[t]=(TRAIT_COUNT[t]||0)+1));
+const COMMON_TRAITS=Object.keys(TRAIT_COUNT).filter(t=>TRAIT_COUNT[t]>1);
+function qzShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function qzNext(){
+  if(!qz.deck.length)qz.deck=qzShuffle(UL.filter(u=>u.c>0).map(u=>u.n));
+  qz.u=U[qz.deck.pop()];qz.cost=0;qz.tr=new Set();qz.done=false;qz.ok=false;
+  const right=qz.u.t.slice();
+  // ähnliche Traits als Ablenkung: zuerst welche von Units mit gleichen Kosten
+  const near=qzShuffle(COMMON_TRAITS.filter(t=>!right.includes(t)&&UL.some(x=>x.c===qz.u.c&&x.t.includes(t))));
+  const far=qzShuffle(COMMON_TRAITS.filter(t=>!right.includes(t)&&!near.includes(t)));
+  qz.opts=qzShuffle([...right,...near.slice(0,4),...far].slice(0,Math.max(8,right.length+5)));
+  renderQuiz();
+}
+function qzCheck(){
+  if(qz.done){qzNext();return}
+  const needT=qz.mode!=="cost",needC=qz.mode!=="traits";
+  if(needC&&!qz.cost){toast("Wähle zuerst die Kosten");return}
+  if(needT&&!qz.tr.size){toast("Wähle mindestens einen Trait");return}
+  const okC=!needC||qz.cost===qz.u.c;
+  const right=new Set(qz.u.t);
+  const okT=!needT||(qz.tr.size===right.size&&[...qz.tr].every(t=>right.has(t)));
+  qz.ok=okC&&okT;qz.done=true;
+  QZS.total++;if(qz.ok){QZS.right++;QZS.streak++;QZS.best=Math.max(QZS.best,QZS.streak)}else QZS.streak=0;
+  store.set("tft19-qzstats",QZS);
+  renderQuiz();
+}
+function renderQuiz(){
+  if(!qz.u){qzNext();return}
+  const u=qz.u,img=ICONS[u.n]||SITEICONS[u.n];
+  $("#qz-score").innerHTML=`<span><b>${QZS.right}</b>von ${QZS.total} richtig</span><span><b>${QZS.total?Math.round(QZS.right/QZS.total*100):0}%</b>Quote</span><span><b>${QZS.streak}</b>Serie</span><span><b>${QZS.best}</b>Rekord</span>`;
+  chipRow("#qz-set",[["both","Kosten + Traits"],["cost","Nur Kosten"],["traits","Nur Traits"]],qz.mode,"qzmode");
+  const showName=qz.done||!img;
+  const costBtns=QZ_COSTS.map(c=>{let cls="";if(qz.done){if(c===u.c)cls=qz.cost===c?"ok":"miss";else if(c===qz.cost)cls="wrong"}
+    return `<button class="qopt ${cls}" data-qzc="${c}" aria-pressed="${qz.cost===c}" ${qz.done?"disabled":""}>${c} Gold</button>`}).join("");
+  const trBtns=qz.opts.map(t=>{const sel=qz.tr.has(t),is=u.t.includes(t);let cls="";if(qz.done){if(is)cls=sel?"ok":"miss";else if(sel)cls="wrong"}
+    return `<button class="qopt ${cls}" data-qzt="${esc(t)}" aria-pressed="${sel}" ${qz.done?"disabled":""}>${esc(t)}</button>`}).join("");
+  const res=qz.done?(qz.ok?'<div class="qres ok">Richtig!</div>':`<div class="qres no">Leider falsch</div><div class="muted" style="font-size:13.5px">${esc(u.n)}: ${u.c} Gold, ${u.t.map(esc).join(", ")}</div>`):'<div class="qres"></div>';
+  $("#qz-card").innerHTML=`${img?`<img class="qimg c${qz.done?u.c:0}" src="${img}" alt="Welcher Champion?" draggable="false">`:`<div class="qimg c${qz.done?u.c:0}">?</div>`}
+    <div class="qname">${showName?esc(u.n):"Wer ist das?"}</div>
+    ${qz.mode!=="traits"?`<div class="qq"><div class="flabel" style="text-align:center">Kosten</div><div class="qopts">${costBtns}</div></div>`:""}
+    ${qz.mode!=="cost"?`<div class="qq"><div class="flabel" style="text-align:center">Traits (alle richtigen anklicken)</div><div class="qopts">${trBtns}</div></div>`:""}
+    ${res}
+    <div class="qact"><button class="btn primary" id="qz-go">${qz.done?"Weiter":"Prüfen"}</button>${qz.done?`<button class="btn" data-qzchamp="${esc(u.n)}">Champion ansehen</button>`:""}<button class="btn" id="qz-reset">Punkte zurücksetzen</button></div>`;
+}
+$("#view-quiz").addEventListener("click",e=>{
+  const m=e.target.closest("[data-qzmode]");if(m){qz.mode=m.dataset.qzmode;store.set("tft19-qzmode",qz.mode);qzNext();return}
+  const c=e.target.closest("[data-qzc]");if(c&&!qz.done){qz.cost=+c.dataset.qzc;renderQuiz();return}
+  const t=e.target.closest("[data-qzt]");if(t&&!qz.done){const n=t.dataset.qzt;qz.tr.has(n)?qz.tr.delete(n):qz.tr.add(n);renderQuiz();return}
+  const qc=e.target.closest("[data-qzchamp]");if(qc){st.champ=qc.dataset.qzchamp;location.hash="champs";return}
+  if(e.target.closest("#qz-go")){qzCheck();return}
+  if(e.target.closest("#qz-reset")){QZS={right:0,total:0,streak:0,best:0};store.set("tft19-qzstats",QZS);renderQuiz()}
+});
+document.addEventListener("keydown",e=>{
+  if(st.view!=="quiz"||e.target.closest&&e.target.closest("input,select,textarea"))return;
+  if(e.key==="Enter"){e.preventDefault();qzCheck();return}
+  const n=+e.key;if(!qz.done&&QZ_COSTS.includes(n)&&qz.mode!=="traits"){qz.cost=n;renderQuiz()}
+});
 /* ---------- Routing ---------- */
-const VIEWS=["comps","early","mid","late","champs","augs","unlocks","assist","items","roll","builder","overlay","myg"];
-const FULL=new Set(["assist","items","roll","overlay","myg"]);
+const VIEWS=["comps","early","mid","late","champs","augs","unlocks","assist","items","roll","builder","overlay","myg","quiz"];
+const FULL=new Set(["assist","items","roll","overlay","myg","quiz"]);
 function renderView(h){
   if(h in PH){st.phase=h;renderPhase()}
   if(h==="comps"){renderFilters();renderCards();renderDetail()}
@@ -1254,6 +1341,7 @@ function renderView(h){
   if(h==="roll")renderRoll();
   if(h==="overlay")renderOverlay();
   if(h==="myg")renderMyg();
+  if(h==="quiz")renderQuiz();
   if(h==="builder"){renderBoard();renderPool()}
   if(h!=="builder"&&!FULL.has(h))renderSide();
 }
@@ -1263,7 +1351,7 @@ function route(){
   document.querySelectorAll(".views a").forEach(a=>a.dataset.v===h?a.setAttribute("aria-current","page"):a.removeAttribute("aria-current"));
   const show=(id,on)=>$(id).classList.toggle("hidden",!on);
   show("#view-comps",h==="comps");show("#view-phase",h in PH);show("#view-builder",h==="builder");show("#view-champs",h==="champs");show("#view-augs",h==="augs");
-  show("#view-unlocks",h==="unlocks");show("#view-assist",h==="assist");show("#view-items",h==="items");show("#view-roll",h==="roll");show("#view-overlay",h==="overlay");show("#view-myg",h==="myg");
+  show("#view-unlocks",h==="unlocks");show("#view-assist",h==="assist");show("#view-items",h==="items");show("#view-roll",h==="roll");show("#view-overlay",h==="overlay");show("#view-myg",h==="myg");show("#view-quiz",h==="quiz");
   $("#layout").classList.toggle("hidden",h==="builder");$("#layout").classList.toggle("full",FULL.has(h));
   document.body.classList.toggle("ov",h==="overlay");
   renderView(h);
