@@ -31,6 +31,14 @@ public static class TB {
     Thread.Sleep(35);
     Send(new INPUT[] { M(right ? 0x0008u : 0x0002u) }); Thread.Sleep(45); Send(new INPUT[] { M(right ? 0x0010u : 0x0004u) });
   }
+  public static void Drag(int x1, int y1, int x2, int y2) {
+    if (!SetCursorPos(x1, y1)) Blocked++;
+    Thread.Sleep(60);
+    Send(new INPUT[] { M(0x0002u) }); Thread.Sleep(90);
+    for (int i = 1; i <= 12; i++) { SetCursorPos(x1 + (x2 - x1) * i / 12, y1 + (y2 - y1) * i / 12); Thread.Sleep(18); }
+    Thread.Sleep(80);
+    Send(new INPUT[] { M(0x0004u) });
+  }
   public static void Key(byte vk) {
     ushort sc = (ushort)MapVirtualKey(vk, 0);
     Send(new INPUT[] { K(sc, 0) }); Thread.Sleep(45); Send(new INPUT[] { K(sc, 0x0002) });
@@ -84,6 +92,8 @@ while ($true) {
     'click'  { [TB]::Click([int]$p[1], [int]$p[2], $false) }
     'rclick' { [TB]::Click([int]$p[1], [int]$p[2], $true) }
     'key'    { [TB]::Key([byte][int]$p[1]) }
+    'hoverkey' { [TB]::SetCursorPos([int]$p[1], [int]$p[2]) | Out-Null; Start-Sleep -Milliseconds 150; [TB]::Key([byte][int]$p[3]) }
+    'drag'   { [TB]::Drag([int]$p[1], [int]$p[2], [int]$p[3], [int]$p[4]) }
     'state'  { [Console]::Out.WriteLine(('{0}|{1}|{2}|{3}' -f ([TB]::GetAsyncKeyState(0x77) -band 1), [TB]::Blocked, [int]$admin, [TB]::Title())); [Console]::Out.Flush() }
     'move'   { [TB]::SetCursorPos([int]$p[1], [int]$p[2]) | Out-Null }
     'cursor' { [Console]::Out.WriteLine([TB]::Cursor()); [Console]::Out.Flush() }
@@ -102,6 +112,7 @@ while ($true) {
 
 const VK_D := 0x44
 const VK_F := 0x46
+const VK_E := 0x45
 
 var pipe: FileAccess = null
 var pid := -1
@@ -163,6 +174,12 @@ func click(p: Vector2i) -> void:
 
 func rclick(p: Vector2i) -> void:
 	_send("rclick %d %d" % [p.x, p.y])
+
+func hover_key(p: Vector2i, vk: int) -> void:
+	_send("hoverkey %d %d %d" % [p.x, p.y, vk])
+
+func drag(a: Vector2i, b: Vector2i) -> void:
+	_send("drag %d %d %d %d" % [a.x, a.y, b.x, b.y])
 
 func key(vk: int) -> void:
 	_send("key %d" % vk)

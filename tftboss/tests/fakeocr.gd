@@ -48,3 +48,7 @@ func ocr_lines(path: String) -> String:
 	return " # ".join(res)
 func rclick(p: Vector2i) -> void:
 	actions.append("rclick %d,%d" % [p.x, p.y])
+func drag(a: Vector2i, b: Vector2i) -> void:
+	actions.append("drag %d,%d->%d,%d" % [a.x, a.y, b.x, b.y])
+func hover_key(p: Vector2i, vk: int) -> void:
+	actions.append("hover %d,%d key %s" % [p.x, p.y, char(vk)])

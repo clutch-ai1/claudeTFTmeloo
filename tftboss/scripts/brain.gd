@@ -531,15 +531,15 @@ func update_plan() -> void:
 			plan_why = "Siegchance nur %d %% nach dem Scouten: Lossstreak, Gold sparen." % int(wc * 100)
 			return
 	if plan == "":
+		st = maxf(st, my_score)
 		if st >= 4.0 or win_streak() >= 2:
 			plan = "win"
-			plan_why = "Starkes Board (Stärke %.1f): Winstreak, früh leveln." % st
-		elif st < 2.5 or loss_streak() >= 2:
+			plan_why = "Starkes Board (Stärke %.1f) oder Siege in Folge: Winstreak, früh leveln." % st
+		elif loss_streak() >= 2 and st < 3.0:
 			plan = "loss"
-			plan_why = "Schwaches Board (Stärke %.1f): Lossstreak, Gold sparen, nicht leveln." % st
+			plan_why = "Schwaches Board und %d Niederlagen in Folge: Lossstreak, Gold sparen." % loss_streak()
 		else:
-			plan = "win" if win_streak() > loss_streak() else "loss"
-			plan_why = "Mittelstarkes Board (Stärke %.1f), Ergebnisse entscheiden: %s." % [st, "Winstreak" if plan == "win" else "Lossstreak"]
+			plan_why = "Normal spielen: stärkstes Board aufbauen, Items bauen, nach Plan leveln."
 		return
 	var hp_ok := hp < 0 or hp >= 60
 	if wc >= 0.0 and plan == "win" and wc < 0.35 and hp_ok and sn <= 31:

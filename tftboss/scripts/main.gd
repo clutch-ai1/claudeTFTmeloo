@@ -33,6 +33,25 @@ var last_action_ms := 0
 var last_shot_ms := 0
 var gold_fresh := false
 var gold_read_ms := -100000      # wann das Gold zuletzt wirklich gelesen wurde
+var hud := Hud.new()
+var hud_lobby: Array = []        # [{y, own, hp}] aus den Porträts rechts
+var hud_units := {"board": [], "bench": []}
+var hud_orbs: Array = []
+var hud_items: Array = []
+var hud_ms := 0
+var orb_walks := 0
+var orb_ms := 0
+var orb_stage := ""
+var orb_tries := {}              # grobe Position -> Versuche (unerreichbare Kugeln nicht ewig anlaufen)
+var item_ms := 0
+var item_holder := Vector2i(-1, -1)
+var item_given := 0
+var item_stage := ""
+var item_drags := 0
+var item_last_count := -1
+var item_fail := 0
+var panel_fix_ms := 0
+var sell_ms := 0
 var sweep: Array = []            # Punkte, zu denen der Little Legend läuft (Kugeln einsammeln)
 var sweep_ms := 0
 var carousel_ms := 0
@@ -110,7 +129,7 @@ func _ready() -> void:
 	timer.start()
 	Meta.loaded.connect(_refresh_all)
 	_refresh_all()
-	_log_file("Start, Version 13, Bildschirm %d" % screen_idx)
+	_log_file("Start, Version 14, Bildschirm %d" % screen_idx)
 	if OS.get_name() == "Windows" and pilot.start():
 		await get_tree().create_timer(2.5).timeout
 		var st0 := pilot.state()
@@ -661,6 +680,8 @@ func _tick() -> void:
 		done_ocr = res["done"]
 		last_shot_ms = shot_ms
 		_update_phase(img)
+		if _in_game() or phase == "game":
+			_hud_tick(img)
 		if res["changed"]:
 			changed = true
 		seen.append_array(res["seen"])
@@ -1241,6 +1262,8 @@ func _autopilot_step() -> void:
 					last_action_ms = now
 					_auto_status("Rollt.")
 					return
+	if _sell_step(now):
+		return
 	_auto_status("Nichts zu tun, wartet.")
 
 # ================================================================= Scouten
@@ -1269,31 +1292,10 @@ func _trait_score(img: Image, ask: bool) -> Dictionary:
 ## Klickt alle Gegner in der Spielerliste an, liest ihre Trait-Leiste und kehrt zum eigenen Board zurück.
 ## Die Klickpositionen kommen direkt aus der Texterkennung (Zeilenhöhe jedes Eintrags), nicht aus geschätzten Plätzen.
 func _lobby_entries(shot: Image) -> Array:
-	var box := _rect_px(shot, "lobby")
-	var txt := pilot.ocr_lines(_ocr_png(shot.get_region(box), "scout_lobby", 2))
-	if txt.begins_with("ERR") or txt == "":
-		return []
-	var raw := []
-	for e in OcrRead.lobby(txt):
-		if int(e["y"]) < 0:
-			continue
-		var nm := str(e["name"]).strip_edges()
-		if nm.length() <= 2:
-			nm = ""     # kein Name = das bin ich (oder OCR-Krümel)
-		raw.append({"name": nm, "hp": int(e["hp"]), "y": box.position.y + int(e["y"]) / 2})
-	# Zeilen, die fast übereinander liegen, sind ein Eintrag (z. B. Level-Abzeichen neben dem Leben)
 	var out := []
-	for e in raw:
-		if not out.is_empty() and absi(int(e["y"]) - int(out[-1]["y"])) < 35:
-			var o: Dictionary = out[-1]
-			if str(o["name"]) == "" and str(e["name"]) != "" or (str(o["name"]) == str(e["name"]) and int(e["hp"]) > int(o["hp"])):
-				out[-1] = e
-			continue
-		out.append(e)
-	# Klicken auf das Porträt rechts neben dem Leben, nicht auf den Namen
 	var W := shot.get_width()
-	for e in out:
-		e["p"] = DisplayServer.screen_get_position(screen_idx) + Vector2i(int(0.978 * W), int(e["y"]))
+	for e in hud.lobby(shot):
+		out.append({"name": "" if e["own"] else "Gegner", "own": e["own"], "hp": int(e["hp"]), "p": DisplayServer.screen_get_position(screen_idx) + Vector2i(int(0.978 * W), int(e["y"]))})
 	return out
 
 func _same_traits(a: Dictionary, b: Dictionary) -> bool:
@@ -1338,14 +1340,9 @@ func _scout(manual: bool = false) -> void:
 	var ents := _lobby_entries(shot0) if shot0 != null and not shot0.is_empty() else []
 	# Mich finden: Eintrag ohne Namen, sonst eindeutiges Leben
 	var me := -1
-	if my_name != "":
-		for i in ents.size():
-			if OcrRead.same_name(str(ents[i]["name"]), my_name):
-				me = i
-	if me < 0:
-		for i in ents.size():
-			if str(ents[i]["name"]).length() <= 1:
-				me = i
+	for i in ents.size():
+		if ents[i]["own"]:
+			me = i
 	if me < 0 and brain.hp >= 0:
 		var hits := []
 		for i in ents.size():
@@ -1359,7 +1356,7 @@ func _scout(manual: bool = false) -> void:
 		return
 	var scores := []
 	for i in ents.size():
-		if i == me or int(ents[i]["hp"]) <= 0:
+		if i == me or int(ents[i]["hp"]) == 0:
 			continue
 		pilot.click(ents[i]["p"])
 		await get_tree().create_timer(0.5).timeout
@@ -1524,20 +1521,43 @@ func _digits_selflearn(key: String, crop, ocr_val: int, maxv: int) -> int:
 		return int(r["text"])
 	return -1
 
-## Laufweg im Zickzack über das eigene Board (Bildschirm-Anteile), damit der Little Legend alle Kugeln aufsammelt
-const SWEEP := [[0.36, 0.60], [0.36, 0.42], [0.36, 0.24], [0.50, 0.24], [0.50, 0.42], [0.50, 0.60], [0.64, 0.60], [0.64, 0.42], [0.64, 0.24], [0.47, 0.55]]
+## Laufweg im Zickzack über das ganze eigene Board, falls Kugeln da liegen, die ich nicht sehe (graue)
+const SWEEP := [[0.29, 0.40], [0.29, 0.25], [0.40, 0.20], [0.40, 0.40], [0.40, 0.58], [0.52, 0.58], [0.52, 0.38], [0.52, 0.20], [0.64, 0.20], [0.64, 0.40], [0.64, 0.58], [0.72, 0.40], [0.72, 0.22], [0.50, 0.30]]
 
 func _plan_sweep() -> void:
 	sweep = SWEEP.duplicate()
 	sweep_ms = Time.get_ticks_msec() + 1500    # kurz warten, bis die Kugeln gelandet sind
+	orb_walks = 0
 
 func _screen_pt(fx: float, fy: float) -> Vector2i:
 	var sz := auto_last_img_size if auto_last_img_size.x > 0 else DisplayServer.screen_get_size(screen_idx)
 	return DisplayServer.screen_get_position(screen_idx) + Vector2i(int(fx * sz.x), int(fy * sz.y))
 
-## true, wenn gerade gelaufen wird (dann in diesem Schritt nichts anderes tun)
+func _img_to_screen(p: Vector2i) -> Vector2i:
+	return DisplayServer.screen_get_position(screen_idx) + p
+
+## Steht da eine Unit? (Rechtsklick auf eine Unit öffnet ihr Infofenster, das wollen wir nicht)
+func _near_unit(p: Vector2i) -> bool:
+	var W := float(maxi(1, auto_last_img_size.x))
+	for u in hud_units["board"] + hud_units["bench"]:
+		if (Vector2(u) - Vector2(p)).length() < 0.04 * W:
+			return true
+	return false
+
+func _safe_target(p: Vector2i) -> Vector2i:
+	if not _near_unit(p):
+		return p
+	var W := maxi(1, auto_last_img_size.x)
+	for off in [Vector2i(0, -1), Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1)]:
+		var q: Vector2i = p + off * int(0.035 * W)
+		if not _near_unit(q):
+			return q
+	return p + Vector2i(0, -int(0.05 * W))
+
+## true, wenn gerade gelaufen/gezogen wird (dann in diesem Schritt nichts anderes tun)
 func _legend_step(now: int) -> bool:
 	var sn := Brain.stage_num(brain.stage)
+	var sz := auto_last_img_size
 	# Karussell (2-4, 3-4, ...): immer wieder zur Mitte laufen, dann schnappt er sich eine Unit
 	if sn >= 24 and sn % 10 == 4 and now - stage_changed_ms < 30000:
 		if now > carousel_ms:
@@ -1547,14 +1567,107 @@ func _legend_step(now: int) -> bool:
 				_log("Karussell: läuft zur Mitte")
 		_auto_status("Karussell: holt sich eine Unit.")
 		return true
-	if sweep.is_empty() or now < sweep_ms:
+	if orb_stage != brain.stage:
+		orb_stage = brain.stage
+		orb_walks = 0
+		orb_tries.clear()
+	# Sichtbare Kugeln: direkt hinlaufen (jede höchstens 3-mal versuchen)
+	var cand := hud_orbs.filter(func(o): return int(orb_tries.get("%d_%d" % [o.x / 60, o.y / 60], 0)) < 3)
+	if not cand.is_empty() and orb_walks < 15 and now > orb_ms:
+		var o: Vector2i = cand[0]
+		var key := "%d_%d" % [o.x / 60, o.y / 60]
+		orb_tries[key] = int(orb_tries.get(key, 0)) + 1
+		pilot.rclick(_img_to_screen(_safe_target(o)))
+		orb_walks += 1
+		orb_ms = now + 1600
+		hud_orbs.erase(o)
+		_log("Läuft zur Kugel bei %d,%d" % [o.x, o.y])
+		_auto_status("Sammelt Kugeln ein.")
+		return true
+	if not sweep.is_empty() and now >= sweep_ms:
+		var p: Array = sweep.pop_front()
+		pilot.rclick(_img_to_screen(_safe_target(Vector2i(int(p[0] * sz.x), int(p[1] * sz.y)))))
+		sweep_ms = now + 1100
+		if sweep.size() == SWEEP.size() - 1:
+			_log("Läuft einmal übers Board (Kugeln)")
+		_auto_status("Sammelt Kugeln ein.")
+		return true
+	# Items von links auf den Carry ziehen
+	if _give_item(now):
+		return true
+	return false
+
+## Verkaufen (Maus über die Unit auf der Bank, dann E):
+## - Bank voll: eine Unit weg, damit wieder gekauft werden kann
+## - 1 Gold unter der nächsten Zinsstufe (9, 19, 29, 39, 49): eine Bank-Unit verkaufen, das bringt +1 Zins pro Runde
+func _sell_step(now: int) -> bool:
+	if now < sell_ms:
 		return false
-	var p: Array = sweep.pop_front()
-	pilot.rclick(_screen_pt(p[0], p[1]))
-	sweep_ms = now + 900
-	if sweep.size() == SWEEP.size() - 1:
-		_log("Sammelt Kugeln ein")
-	_auto_status("Sammelt Kugeln ein.")
+	var bench: Array = hud_units["bench"]
+	var sn := Brain.stage_num(brain.stage)
+	var why := ""
+	if bench.size() >= 9:
+		why = "Bank voll"
+	elif sn >= 21 and sn <= 46 and brain.gold >= 9 and brain.gold <= 49 and brain.gold % 10 == 9 and bench.size() >= 3:
+		why = "1 Gold bis zur nächsten Zinsstufe"
+	if why == "":
+		return false
+	var u: Vector2i = bench[0]
+	for b in bench:
+		if b.x > u.x:
+			u = b
+	pilot.hover_key(_img_to_screen(u), Autopilot.VK_E)
+	sell_ms = now + 4000
+	last_action_ms = now
+	brain.gold += 1
+	_log("Verkauft eine Bank-Unit (%s)" % why)
+	return true
+
+## Komponenten und Items auf eine Unit in der hintersten Reihe (= Carry-Platz) ziehen.
+func _give_item(now: int) -> bool:
+	var sn := Brain.stage_num(brain.stage)
+	if now < item_ms or hud_items.is_empty() or hud_units["board"].is_empty() or sn < 21:
+		return false
+	# Lossstreak früh: Komponenten halten (der Plan sagt, wann gebaut wird)
+	if brain.plan == "loss" and brain.loss_streak() >= 2 and sn <= 31 and (brain.hp < 0 or brain.hp >= 50):
+		return false
+	if item_stage != brain.stage:
+		item_stage = brain.stage
+		item_drags = 0
+		item_fail = 0
+		item_last_count = -1
+	# Ging das letzte Ziehen nicht durch (Item liegt noch da)? Nach 2 Fehlschlägen diese Runde aufhören.
+	if item_last_count >= 0 and hud_items.size() >= item_last_count:
+		item_fail += 1
+	if item_drags >= 8 or item_fail >= 2:
+		return false
+	var board: Array = hud_units["board"]
+	# Träger merken, solange dort noch eine Unit steht; nach 3 Items der nächste
+	var holder_ok := false
+	for u in board:
+		if item_holder.x >= 0 and (Vector2(u) - Vector2(item_holder)).length() < 0.03 * auto_last_img_size.x:
+			holder_ok = true
+	if not holder_ok or item_given >= 3:
+		var best := Vector2i(-1, -1)
+		for u in board:
+			if (Vector2(u) - Vector2(item_holder)).length() < 0.03 * auto_last_img_size.x and item_given >= 3:
+				continue
+			if best.x < 0 or u.y > best.y:
+				best = u
+		if best.x < 0:
+			return false
+		if best != item_holder:
+			item_holder = best
+			item_given = 0
+	var slot: Vector2i = hud_items[0]
+	item_last_count = hud_items.size()
+	item_drags += 1
+	pilot.drag(_img_to_screen(slot), _img_to_screen(item_holder))
+	item_given += 1
+	item_ms = now + 1800
+	hud_items.pop_front()
+	_log("Gibt ein Item an die Unit hinten (%d,%d)" % [item_holder.x, item_holder.y])
+	_auto_status("Gibt Items.")
 	return true
 
 ## Bilder nebeneinander in eine Zeile setzen (gleiche Höhe, Abstand dazwischen)
@@ -1583,11 +1696,11 @@ func _flame_color(crop: Image) -> int:
 	for y in crop.get_height():
 		for x in crop.get_width():
 			var c := crop.get_pixel(x, y)
-			if c.b > 0.67 and c.r < 0.43 and c.b - c.r > 0.35:
+			if c.b > 0.55 and c.b - c.r > 0.3 and c.b > c.g:
 				blue += 1
-			elif c.r > 0.75 and c.g < 0.47 and c.b < 0.35:
+			elif c.r > 0.7 and c.r - c.b > 0.35 and c.g < 0.65:
 				red += 1
-	var need := crop.get_width() * crop.get_height() / 60
+	var need := crop.get_width() * crop.get_height() / 150
 	if blue > need and blue > red * 2:
 		return -1
 	if red > need and red > blue * 2:
@@ -1613,6 +1726,48 @@ func _rect_px(img: Image, key: String) -> Rect2i:
 	var W := img.get_width()
 	var H := img.get_height()
 	return Rect2i(int(float(r[0]) * W), int(float(r[1]) * H), maxi(2, int(float(r[2]) * W)), maxi(2, int(float(r[3]) * H))).intersection(Rect2i(0, 0, W, H))
+
+## Liest Gold, Level, Streak, Leben, Spielerliste, Units, Kugeln und Items direkt aus den Pixeln
+func _hud_tick(img: Image) -> void:
+	var now := Time.get_ticks_msec()
+	# Gold: eigene Ziffernerkennung zuerst (Windows liest einzelne Ziffern nicht), Texterkennung zum Nachlernen
+	var gcrop := img.get_region(Hud.rect(img, Hud.R_GOLD))
+	var g := hud.read_int(gcrop)
+	if g >= 0 and g <= 300:
+		if g != brain.gold:
+			brain.gold = g
+		gold_fresh = true
+		gold_read_ms = now
+	elif gold_fresh and brain.gold >= 0:
+		hud.learn(gcrop, brain.gold)     # Texterkennung hatte es: Ziffern merken
+	var lv := hud.level(img)
+	if lv > 0 and lv != brain.level:
+		brain.level = lv
+	elif lv < 0 and brain.level > 0:
+		hud.learn(img.get_region(Hud.rect(img, Hud.R_LEVEL)), brain.level)
+	# Spielerliste an den Porträts
+	var lb := hud.lobby(img)
+	if lb.size() >= 2:
+		hud_lobby = lb
+		var hs := []
+		for e in lb:
+			if int(e["hp"]) >= 0:
+				hs.append(int(e["hp"]))
+			if e["own"] and int(e["hp"]) >= 0 and int(e["hp"]) <= 150:
+				brain.hp = int(e["hp"])
+		if hs.size() >= 2:
+			brain.lobby_hp = hs
+	# Board, Bank, Kugeln, Items (etwas seltener, kostet Zeit)
+	if now - hud_ms > 1500:
+		hud_ms = now
+		hud_units = Hud.units(img)
+		hud_orbs = Hud.orbs(img)
+		hud_items = Hud.item_slots(img)
+		# Infofenster einer Unit verdeckt die Spielerliste: wegklicken
+		if lb.size() < 2 and auto_on and now > panel_fix_ms and _in_game():
+			panel_fix_ms = now + 4000
+			pilot.click(_screen_pt(0.50, 0.16))
+			_log_file("Spielerliste verdeckt (Infofenster?), klicke daneben.")
 
 func _ocr_tick(img: Image) -> Dictionary:
 	var keys := []
@@ -1695,7 +1850,6 @@ func _ocr_tick(img: Image) -> Dictionary:
 		var g := OcrRead.gold(T["gold"])
 		if g < 0 and T.has("goldx"):
 			g = OcrRead.gold(OcrRead.after_level(T["goldx"]))
-		g = _digits_selflearn("gold", crops.get("gold"), g, 300)
 		if g >= 0:
 			out["done"]["gold"] = true
 			gold_fresh = true
@@ -1748,8 +1902,11 @@ func _ocr_tick(img: Image) -> Dictionary:
 		if nums.is_empty() and T.has("streakx"):
 			nums = OcrRead.ints(OcrRead.after_level(T["streakx"]))
 		if fcol != 0:
-			var sv0 := _digits_selflearn("streak", streak_crop, int(nums[0]) if nums.size() > 0 else -1, 30)
-			nums = [sv0] if sv0 >= 0 else []
+			var hs0 := hud.streak_num(img)
+			if hs0 >= 0:
+				nums = [hs0]
+			elif nums.size() > 0:
+				hud.learn(img.get_region(Hud.rect(img, Hud.R_STREAK)), int(nums[0]))
 		var sv := 0
 		if fcol != 0:
 			if nums.size() > 0 and int(nums[0]) >= 1 and int(nums[0]) <= 30:
