@@ -1,0 +1,26 @@
+; TFT Boss: die KI ist der Boss, du bist die Hände
+config_version=5
+
+[application]
+
+config/name="TFT Boss"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.5", "GL Compatibility")
+run/low_processor_mode=true
+config/icon="res://icon.svg"
+
+[autoload]
+
+Meta="*res://scripts/meta.gd"
+
+[display]
+
+window/size/viewport_width=460
+window/size/viewport_height=820
+window/size/always_on_top=true
+window/subwindows/embed_subwindows=false
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
