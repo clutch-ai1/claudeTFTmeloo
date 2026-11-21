@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Set 19 Comp-Planer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Fünf Bereiche oben (Comps, Early, Mid, Late, Builder). In jedem Bereich zuerst Filter-Buttons, dann Karten oder Boards. Nur dunkel. */
+:root{
+  --stage:#11101a; --panel:#1a1928; --panel-2:#232136; --line:#33304d;
+  --ink:#ecebf5; --muted:#9d9bba; --accent:#f2c14e;
+  --c1:#8f909e; --c2:#36b374; --c3:#3a86d9; --c4:#b15ae3; --c5:#f2c14e; --c7:#ff6fd2;
+  --bronze:#b9774a; --silver:#a9b4c2; --gold:#f2c14e; --prism:#ff8fe0;
+  --good:#4fd18b; --bad:#ff7b7b;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--stage);color:var(--ink);font-family:var(--body);font-size:14.5px;line-height:1.45}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1320px;margin:0 auto;padding:16px 18px 48px}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px;margin-bottom:14px}
+.top h1{font-family:var(--display);font-size:34px;margin:0;line-height:1}
+.top .meta{color:var(--muted);font-size:13px}
+.views{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+.views a{text-decoration:none;color:var(--ink);padding:9px 16px;border-radius:8px;background:var(--panel);border:1px solid var(--line);font-weight:600}
+.views a[aria-current="page"]{background:var(--accent);color:#1a1928;border-color:var(--accent)}
+.btn{cursor:pointer;background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:7px 12px;font-weight:500}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:#1a1928;border-color:var(--accent);font-weight:600}
+.btn.small{padding:3px 9px;font-size:12.5px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+h2,h3{font-family:var(--display);letter-spacing:.4px;margin:0;line-height:1.05;text-wrap:balance}
+.muted{color:var(--muted)}
+.hidden{display:none!important}
+
+/* Filterleisten */
+.filters{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.frow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.flabel{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;min-width:92px}
+.chip{cursor:pointer;padding:6px 12px;border-radius:20px;background:var(--panel);border:1px solid var(--line);font-size:13px;font-weight:500}
+.chip:hover{border-color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#1a1928}
+.chip.big{padding:9px 18px;font-size:14.5px;font-weight:600;border-radius:9px}
+.intro{color:var(--muted);max-width:90ch;margin:0 0 12px;font-size:13.5px}
+
+/* Unit-Kachel */
+.tile{--cc:var(--c1);position:relative;width:var(--s,52px);height:var(--s,52px);border-radius:8px;border:2px solid var(--cc);background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--cc) 55%,#1a1928),#14131f 80%);display:grid;place-items:center;flex:none}
+.tile img{width:100%;height:100%;object-fit:cover;border-radius:6px}
+.tile .ini{font-family:var(--display);font-weight:700;font-size:calc(var(--s,52px)*.38);color:#fff;text-shadow:0 1px 2px #0008}
+.tile .stars{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--gold);letter-spacing:-1px;text-shadow:0 1px 2px #000;white-space:nowrap}
+.tile .lock{position:absolute;top:-5px;left:-5px;width:calc(var(--s,52px)*.36);height:calc(var(--s,52px)*.36);min-width:14px;min-height:14px;border-radius:50%;background:#2b2a44;border:1.5px solid #c9c6ff;display:grid;place-items:center;box-shadow:0 1px 3px #000a}
+.tile .lock svg{width:62%;height:62%}
+.tile .its{position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);display:flex;gap:1px}
+.it{width:15px;height:15px;border-radius:3px;font-size:7.5px;font-weight:700;display:grid;place-items:center;color:#fff;border:1px solid #0006;flex:none}
+.it.img{padding:0;object-fit:cover;background:#000}
+.it.ad{background:#c9483f}.it.ap{background:#3d6fd1}.it.tank{background:#3b9a62}.it.util{background:#8a5cc2}.it.comp{background:#6b6880}
+.unitcap{font-size:11.5px;text-align:center;color:var(--muted);max-width:calc(var(--s,52px) + 8px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:9px}
+.urow{display:flex;flex-wrap:wrap;gap:14px 8px}
+.ucell{display:flex;flex-direction:column;align-items:center}
+
+/* Mini-Hexboard */
+.mb{--h:38px;display:flex;flex-direction:column;align-items:flex-start;padding:4px 0 6px}
+.mb .r{display:flex;gap:3px;margin-top:calc(var(--h)*-.22)}
+.mb .r:first-child{margin-top:0}
+.mb .r.o{margin-left:calc(var(--h)*.5 + 1.5px)}
+.mb .hx{width:var(--h);height:calc(var(--h)*1.15);clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);background:#2a2840;display:grid;place-items:center;position:relative}
+.mb .hx .tile{--s:calc(var(--h)*.82);border-radius:50%;border-width:2px}
+.mb .hx .tile img{border-radius:50%}
+.mb .hx .tile .lock,.mb .hx .tile .stars{display:none}
+.mb .hx .tile .its{bottom:-3px}
+.mb .hx .tile .its .it{width:calc(var(--h)*.27);height:calc(var(--h)*.27);font-size:6px}
+.mb.lg{--h:58px}
+.mb.lg .hx .tile .stars{display:block;top:-1px;font-size:10px}
+.mb.lg .hx .tile .lock{display:grid;top:0;left:0}
+.boardwrap-s{overflow-x:auto}
+.legend-front{font-size:11px;color:var(--muted)}
+
+/* Comp-Karten */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:18px}
+.card{cursor:pointer;text-align:left;padding:14px;display:flex;flex-direction:column;gap:10px}
+.card:hover{border-color:var(--muted)}
+.card[aria-selected="true"]{border-color:var(--accent);background:var(--panel-2)}
+.row1{display:flex;align-items:center;gap:10px}
+.tier{font-family:var(--display);font-weight:700;font-size:18px;min-width:30px;height:30px;border-radius:6px;display:grid;place-items:center;color:#1a1928;flex:none}
+.tier.S{background:#ff6b6b}.tier.A{background:#f2a64e}.tier.B{background:#e5d86a}.tier.C{background:#8fc98a}
+.card .nm{font-weight:600;font-size:15.5px;line-height:1.2}
+.sty{font-size:12px;color:var(--muted)}
+.kpis{display:flex;gap:14px;margin-left:auto;text-align:right}
+.kpis b{display:block;font-family:var(--display);font-size:20px;font-variant-numeric:tabular-nums;line-height:1}
+.kpis small{font-size:11px;color:var(--muted)}
+.card .urow{--s:32px;gap:4px}
+.card .tile .stars,.card .tile .its{display:none}
+.empty{color:var(--muted);padding:20px;text-align:center}
+
+/* Comp-Detail */
+.detail{padding:18px;display:flex;flex-direction:column;gap:16px;scroll-margin-top:10px}
+.dhead{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px}
+.dhead h2{font-size:30px}
+.dhead .kpis b{font-size:24px}
+.phasebar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.phasebar .sep{width:1px;height:26px;background:var(--line);margin:0 6px}
+.dgrid{display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:start}
+.alts{display:flex;flex-direction:column;gap:8px}
+.alt{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--panel-2);cursor:pointer;border:1px solid transparent;text-align:left}
+.alt[aria-pressed="true"]{border-color:var(--accent)}
+.alt .urow{--s:30px;gap:3px;flex:1}
+.alt .tile .stars,.alt .tile .its,.alt .tile .lock{display:none}
+.alt .num{font-family:var(--display);font-size:19px;font-variant-numeric:tabular-nums;text-align:right;min-width:54px}
+.alt .num small{display:block;font-family:var(--body);font-size:10.5px;color:var(--muted)}
+.tchips{display:flex;flex-wrap:wrap;gap:5px}
+.tchip{font-size:12px;padding:2px 8px;border-radius:20px;background:#0003;border:1px solid var(--line)}
+.tchip.b1{border-color:var(--bronze)}.tchip.b2{border-color:var(--silver)}.tchip.b3{border-color:var(--gold);color:var(--gold)}.tchip.b4{border-color:var(--prism);color:var(--prism)}
+.timeline{display:flex;flex-wrap:wrap;gap:6px}
+.tl{background:var(--panel-2);border-radius:7px;padding:5px 10px;font-size:12.5px;text-align:center}
+.tl b{display:block;font-family:var(--display);font-size:17px}
+.carries{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.carry{display:flex;gap:12px;align-items:center;background:var(--panel-2);border-radius:9px;padding:10px 12px}
+.carry .tile{--s:46px}
+.carry .tile .its{display:none}
+.carry b{display:block;margin-bottom:4px}
+.ilist{display:flex;flex-direction:column;gap:3px;font-size:12.5px}
+.ilist span{display:flex;gap:6px;align-items:center}
+.ilist .it{width:20px;height:20px;font-size:8.5px}
+.sect h3{font-size:21px;margin-bottom:8px}
+
+/* Phasen-Listen (Early/Mid/Late) */
+.plist{display:flex;flex-direction:column;gap:10px}
+.pitem{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:center;padding:12px 14px}
+.pitem .info{display:flex;flex-direction:column;gap:6px;min-width:0}
+.pitem .to{font-size:13px}
+.pitem .to button{all:unset;cursor:pointer;color:var(--accent);font-weight:600}
+.pitem .nums{display:flex;gap:16px;text-align:right}
+.pitem .nums b{display:block;font-family:var(--display);font-size:22px;font-variant-numeric:tabular-nums;line-height:1}
+.pitem .nums small{font-size:11px;color:var(--muted)}
+.pitem .acts{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.prio{font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.prio span{display:inline-flex;gap:4px;align-items:center;color:var(--ink)}
+
+/* Builder */
+.bgrid{display:grid;grid-template-columns:240px minmax(0,1fr) 270px;gap:12px;align-items:start}
+.traits{padding:12px;display:flex;flex-direction:column;gap:6px;max-height:680px;overflow:auto}
+.traits h3,.editor h3,.pool h3{font-size:20px;margin-bottom:4px}
+.tr{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:grid;grid-template-columns:30px 1fr;gap:8px;align-items:center;padding:5px 6px;border-radius:6px;background:var(--panel-2)}
+.tr.off{opacity:.55}
+.tr:hover{outline:1px solid var(--muted)}
+.tr.pick{outline:2px solid var(--accent);opacity:1}
+.tr .cnt{font-family:var(--display);font-weight:700;font-size:17px;width:30px;height:30px;display:grid;place-items:center;border-radius:6px;background:#0004;color:var(--muted)}
+.tr.b1 .cnt{background:var(--bronze);color:#1a1928}.tr.b2 .cnt{background:var(--silver);color:#1a1928}.tr.b3 .cnt{background:var(--gold);color:#1a1928}.tr.b4 .cnt{background:var(--prism);color:#1a1928}
+.tr .tn{font-weight:600;font-size:13px}
+.tr .bp{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tr .bp b{color:var(--ink)}
+.thead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tsub{font-size:12px;color:var(--muted);margin-top:10px;text-transform:uppercase;letter-spacing:.6px}
+.tall{display:flex;flex-wrap:wrap;gap:5px}
+.tchip.pickable{cursor:pointer;color:var(--ink);font:inherit;font-size:12px}
+.tchip.on{border-color:var(--accent);color:var(--accent)}
+.bwrap{padding:14px;display:flex;flex-direction:column;gap:10px}
+.bbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bbar .lvlinfo{font-family:var(--display);font-size:20px;margin-right:auto}
+.bbar input{background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:7px 10px;color:var(--ink);width:160px}
+.board{display:flex;flex-direction:column;align-items:center;padding:10px 0 14px;overflow-x:auto}
+.hrow{display:flex;gap:6px;margin-top:-14px}
+.hrow:first-child{margin-top:0}
+.hrow.odd{transform:translateX(37px)}
+.hex{width:68px;height:78px;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);background:#2a2840;display:grid;place-items:center;cursor:pointer;position:relative;border:none;padding:0}
+.hex:hover,.hex.over{background:#3a3760}
+.hex.sel{background:var(--accent)}
+.hex .tile{--s:50px;border-radius:50%}
+.hex .tile img{border-radius:50%}
+.hex .tile .stars{top:-2px}
+.hex .tile .its{bottom:-4px}
+.rowlbl{font-size:11px;color:var(--muted);text-align:center}
+.editor{padding:12px;display:flex;flex-direction:column;gap:10px}
+.ehead{display:flex;gap:10px;align-items:center}
+.ehead .tile{--s:56px}
+.ehead b{font-size:16px}
+.ehead small{display:block;color:var(--muted);font-size:12px}
+.seg{display:flex;gap:4px}
+.seg button{flex:1;cursor:pointer;padding:6px;border-radius:6px;background:var(--panel-2);border:1px solid var(--line);color:var(--gold)}
+.seg button[aria-pressed="true"]{background:var(--gold);color:#1a1928}
+.slots{display:flex;flex-direction:column;gap:6px}
+.slots select{width:100%;background:var(--panel-2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px}
+.unlocktxt{font-size:12px;background:#2b2a44;border-radius:6px;padding:6px 8px;color:#d9d6ff}
+.pool{padding:12px;margin-top:12px}
+.pfilters{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px}
+.pfilters input,.pfilters select{background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:6px 10px;color:var(--ink)}
+.pgrid{display:flex;flex-wrap:wrap;gap:12px 8px}
+.pgrid .ucell{cursor:grab;--s:48px;background:none;border:none;padding:0}
+.pgrid .tile .stars,.pgrid .tile .its{display:none}
+.saved{display:flex;flex-direction:column;gap:6px}
+.saved div{display:flex;gap:6px;align-items:center}
+.saved span{flex:1;font-size:13px}
+.dim{opacity:.22;filter:grayscale(1)}
+.hex.dim{opacity:.35}
+.over{outline:2px dashed var(--accent);outline-offset:2px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--accent);color:#1a1928;padding:8px 16px;border-radius:8px;font-weight:600;display:none;z-index:10}
+.note{font-size:12.5px;color:var(--muted);max-width:95ch;margin-top:22px;display:flex;flex-direction:column;gap:6px}
+.iconbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+/* Layout mit rechter Info-Leiste */
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+.layout.full{grid-template-columns:minmax(0,1fr)}
+.layout.full .lside{display:none}
+.lside{position:sticky;top:10px;max-height:calc(100vh - 20px);overflow:auto;display:flex;flex-direction:column;gap:12px;padding-bottom:6px}
+.sbox{padding:14px;display:flex;flex-direction:column;gap:10px}
+.sbox h3{font-size:20px}
+.inp{background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:7px 10px;color:var(--ink);font:inherit;font-size:13.5px}
+.sgrid{display:flex;flex-wrap:wrap;gap:5px}
+.sgrid button{all:unset;cursor:pointer;border-radius:8px}
+.sgrid button:focus-visible{outline:2px solid var(--accent)}
+.sgrid .tile{--s:38px}
+.sgrid .tile .stars,.sgrid .tile .its{display:none}
+.sgrid button[aria-pressed="true"] .tile{box-shadow:0 0 0 2px var(--accent)}
+.chead{display:flex;gap:12px;align-items:center}
+.chead .tile{--s:64px}
+.chead h3{font-size:26px}
+.chead small{display:block;color:var(--muted);font-size:12.5px}
+.statrow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.stat{background:var(--panel-2);border-radius:8px;padding:7px 8px;text-align:center}
+.stat b{display:block;font-family:var(--display);font-size:20px;font-variant-numeric:tabular-nums;line-height:1.05}
+.stat small{font-size:10.5px;color:var(--muted)}
+.abil{background:var(--panel-2);border-radius:8px;padding:9px 11px;font-size:12.5px;white-space:pre-line;color:#d7d5ea}
+.abil b{display:block;color:var(--ink);font-size:13.5px;margin-bottom:3px;white-space:normal}
+.lbl{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.clist{display:flex;flex-direction:column;gap:6px}
+.crow{all:unset;cursor:pointer;display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:7px 9px;border-radius:8px;background:var(--panel-2)}
+.crow:hover{outline:1px solid var(--muted)}
+.crow .nm{font-weight:600;font-size:13.5px;line-height:1.2}
+.crow .sub{font-size:11.5px;color:var(--muted)}
+.crow .av{font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums;text-align:right}
+.crow .av small{display:block;font-family:var(--body);font-size:10px;color:var(--muted)}
+.role{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:4px;vertical-align:1px}
+.role.carry{background:#c9483f;color:#fff}.role.tank{background:#3b9a62;color:#fff}
+/* Rollen in Comp-Detail */
+.roles{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.rolecard{display:flex;gap:12px;align-items:center;background:var(--panel-2);border-radius:10px;padding:10px 12px;border-left:4px solid var(--line)}
+.rolecard.carry{border-left-color:#c9483f}.rolecard.tank{border-left-color:#3b9a62}
+.rolecard .tile{--s:50px}
+.rolecard .tile .its{display:none}
+.rolecard .rl{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+.rolecard b{display:block;font-size:15px}
+.rolecard button{all:unset;cursor:pointer}
+/* Augments */
+.rar{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:4px;color:#1a1928}
+.rar.Silver{background:#b9c3cf}.rar.Gold{background:#f2c14e}.rar.Prismatic{background:linear-gradient(90deg,#ff9ad9,#9ad0ff,#b6ff9a)}
+.auglist{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.aug{all:unset;box-sizing:border-box;cursor:pointer;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.aug:hover{border-color:var(--muted)}
+.aug[aria-pressed="true"]{border-color:var(--accent);background:var(--panel-2)}
+.aug .an{font-weight:600;font-size:14.5px;display:flex;gap:8px;align-items:center;justify-content:space-between}
+.aug .ad{font-size:12.5px;color:#cfcde3;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.aug .am{font-size:11.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px}
+.augrows{display:flex;flex-direction:column;gap:6px}
+.augrow{all:unset;cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:8px 10px;border-radius:8px;background:var(--panel-2)}
+.augrow:hover{outline:1px solid var(--muted)}
+.augrow .ad{font-size:12px;color:var(--muted)}
+.chgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.chcard{all:unset;box-sizing:border-box;cursor:pointer;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;gap:10px;align-items:center}
+.chcard:hover{border-color:var(--muted)}
+.chcard[aria-pressed="true"]{border-color:var(--accent);background:var(--panel-2)}
+.chcard .tile{--s:44px}
+.chcard .tile .stars,.chcard .tile .its{display:none}
+.chcard b{display:block;font-size:13.5px;line-height:1.2}
+.chcard small{display:block;font-size:11.5px;color:var(--muted)}
+.notebox{font-size:12.5px;color:var(--muted);background:var(--panel-2);border-radius:8px;padding:8px 10px}
+
+/* Weitere Bereiche */
+.favbtn{all:unset;cursor:pointer;font-size:18px;line-height:1;color:var(--muted);padding:2px 4px}
+.favbtn[aria-pressed="true"]{color:var(--gold)}
+.trend{font-size:11px;font-family:var(--body);font-weight:600;margin-left:4px}
+.trend.up{color:var(--good)}.trend.down{color:var(--bad)}
+.notes{width:100%;min-height:70px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:8px 10px;font:inherit;font-size:13.5px;resize:vertical}
+.ulist{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.ucard{all:unset;box-sizing:border-box;cursor:pointer;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
+.ucard:hover{border-color:var(--muted)}
+.ucard .tile{--s:46px}.ucard .tile .stars,.ucard .tile .its{display:none}
+.ucard b{font-size:14.5px}
+.ucard .cond{font-size:12.5px;color:#d9d6ff;margin:3px 0}
+.ucard .meta{font-size:11.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px}
+.agrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;align-items:start}
+.compsel{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}
+.cs{display:flex;align-items:center;gap:6px;background:var(--panel-2);border-radius:8px;padding:5px 6px;border:1px solid transparent}
+.cs.has{border-color:var(--accent)}
+.cs .it{width:24px;height:24px;font-size:9px}
+.cs span.nm{flex:1;font-size:12px;line-height:1.15}
+.cs button{all:unset;cursor:pointer;width:22px;height:22px;border-radius:5px;background:#0004;display:grid;place-items:center;font-weight:700}
+.cs button:hover{background:#0008}
+.cs b{min-width:14px;text-align:center;font-variant-numeric:tabular-nums}
+.res{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.rcard{padding:14px;display:flex;flex-direction:column;gap:10px}
+.rcard .rk{font-family:var(--display);font-size:28px;color:var(--accent);line-height:1}
+.why{font-size:12.5px;color:#cfcde3;display:flex;flex-direction:column;gap:3px}
+.why span::before{content:"✓ ";color:var(--good)}
+.why span.no::before{content:"· ";color:var(--muted)}
+.buildnow{background:#1f3a2c;border-radius:8px;padding:8px 10px;font-size:13px;display:flex;flex-direction:column;gap:4px}
+.buildnow b{color:var(--good)}
+.rtab{border-collapse:collapse;font-size:12px}
+.rtab th,.rtab td{border:1px solid var(--line);padding:4px;text-align:center}
+.rtab th{background:var(--panel-2);font-weight:600;white-space:nowrap}
+.rtab td .it{margin:auto;width:26px;height:26px;font-size:9px}
+.rtab.odds td,.rtab.odds th{padding:3px 6px}
+.rtab.odds input{width:44px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);border-radius:4px;padding:2px 4px;text-align:right}
+.form{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;align-items:center;font-size:13.5px}
+.form select,.form input{background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;color:var(--ink);font:inherit}
+.big{font-family:var(--display);font-size:46px;line-height:1;color:var(--accent)}
+.bar{height:10px;border-radius:5px;background:var(--panel-2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.ovbar{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+body.ov .top,body.ov .note,body.ov .lside{display:none!important}
+body.ov .wrap{max-width:460px;padding:8px}
+.ovc{display:flex;flex-direction:column;gap:10px}
+.ovc h2{font-size:24px}
+.ovc .mb{--h:46px}
+.ovc .mb .hx .tile .stars{display:block;top:-1px;font-size:9px}
+.ovc .rolecard{padding:8px}
+.ovc .roles{grid-template-columns:1fr}
+.aug-in{display:flex;gap:6px;align-items:center}
+.aug-in input{flex:1}
+@media (max-width:1100px){.layout{grid-template-columns:1fr}.lside{position:static;max-height:none}}
+@media (max-width:1050px){.bgrid{grid-template-columns:1fr}.traits{max-height:none}.dgrid{grid-template-columns:1fr}.pitem{grid-template-columns:1fr}.pitem .acts{align-items:flex-start;flex-direction:row}}
+@media (prefers-reduced-motion:no-preference){.card,.hex,.btn,.chip{transition:background .12s,border-color .12s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Set 19 Comp-Planer</h1>
+      <div class="meta" id="meta"></div>
+    </div>
+    <nav class="views" aria-label="Bereiche">
+      <a href="#comps" data-v="comps">Comps</a>
+      <a href="#early" data-v="early">Early Game</a>
+      <a href="#mid" data-v="mid">Mid Game</a>
+      <a href="#late" data-v="late">Late Game</a>
+      <a href="#champs" data-v="champs">Champions</a>
+      <a href="#augs" data-v="augs">Augments</a>
+      <a href="#unlocks" data-v="unlocks">Unlocks</a>
+      <a href="#assist" data-v="assist">Assistent</a>
+      <a href="#items" data-v="items">Item-Rechner</a>
+      <a href="#roll" data-v="roll">Reroll-Rechner</a>
+      <a href="#builder" data-v="builder">Builder</a>
+      <a href="#overlay" data-v="overlay">Overlay</a>
+    </nav>
+  </div>
+
+  <div class="layout" id="layout">
+  <div class="lmain">
+  <section id="view-comps">
+    <div class="filters">
+      <div class="frow"><span class="flabel">Anzeigen</span><span id="f-show"></span></div>
+      <div class="frow"><span class="flabel">Tier</span><span id="f-tier"></span></div>
+      <div class="frow"><span class="flabel">Spielweise</span><span id="f-style"></span></div>
+      <div class="frow"><span class="flabel">Sortieren</span><span id="f-sort"></span></div>
+    </div>
+    <div class="cards" id="cards" role="tablist" aria-label="Comps"></div>
+    <div class="panel detail" id="detail"></div>
+  </section>
+
+  <section id="view-phase" class="hidden">
+    <p class="intro" id="phase-intro"></p>
+    <div class="filters">
+      <div class="frow"><span class="flabel">Level</span><span id="ph-level"></span></div>
+      <div class="frow"><span class="flabel">Tier der Comp</span><span id="ph-tier"></span></div>
+      <div class="frow"><span class="flabel">Spielweise</span><span id="ph-style"></span></div>
+    </div>
+    <div class="plist" id="plist"></div>
+  </section>
+
+  <section id="view-champs" class="hidden">
+    <div class="filters">
+      <div class="frow"><span class="flabel">Kosten</span><span id="ch-cost"></span></div>
+      <div class="frow"><span class="flabel">Rolle</span><span id="ch-role"></span></div>
+      <div class="frow"><span class="flabel">Suchen</span><input id="ch-search" class="inp" placeholder="Name oder Trait" aria-label="Champion suchen"><select id="ch-trait" class="inp" aria-label="Trait"><option value="">Alle Traits</option></select><span class="flabel" style="min-width:auto;margin-left:10px">Sortieren</span><span id="ch-sort"></span></div>
+    </div>
+    <div class="chgrid" id="chgrid"></div>
+  </section>
+  <section id="view-augs" class="hidden">
+    <p class="intro" id="aug-intro"></p>
+    <div class="filters">
+      <div class="frow"><span class="flabel">Seltenheit</span><span id="au-rar"></span></div>
+      <div class="frow"><span class="flabel">Kategorie</span><span id="au-cat"></span></div>
+      <div class="frow"><span class="flabel">Suchen</span><input id="au-search" class="inp" placeholder="Name, Trait oder Champion" aria-label="Augment suchen"></div>
+    </div>
+    <div class="auglist" id="auglist"></div>
+  </section>
+  <section id="view-unlocks" class="hidden">
+    <p class="intro">Alle Champions, die du erst freischalten musst, mit der genauen Bedingung aus den offiziellen Set-Daten. „Ab Level“ heißt: Die Unit taucht erst ab diesem Level im Shop auf.</p>
+    <div class="filters">
+      <div class="frow"><span class="flabel">Kosten</span><span id="ul-cost"></span></div>
+      <div class="frow"><span class="flabel">Sortieren</span><span id="ul-sort"></span></div>
+    </div>
+    <div class="ulist" id="ulist"></div>
+  </section>
+  <section id="view-assist" class="hidden">
+    <p class="intro">Trag ein, was du gerade hast. Der Assistent sucht die Comps, die am besten zu deinen Items, Units und Augment-Optionen passen, und sagt dir, was du jetzt bauen solltest. Deine Eingaben bleiben gespeichert, bis du sie zurücksetzt.</p>
+    <div class="agrid">
+      <div class="panel sbox"><div class="thead"><h3>1. Deine Komponenten</h3><button class="btn small" id="as-reset">Alles zurücksetzen</button></div><div class="compsel" id="as-comps"></div></div>
+      <div class="panel sbox"><h3>2. Deine Units</h3><input class="inp" id="as-uq" placeholder="Unit suchen und anklicken" aria-label="Unit suchen"><div class="sgrid" id="as-ugrid"></div><div class="lbl">Ausgewählt</div><div class="urow" id="as-upicked" style="--s:38px;gap:10px 6px"></div></div>
+      <div class="panel sbox"><h3>3. Augment-Auswahl</h3><p class="muted" style="font-size:12.5px;margin:0">Bis zu 3 Augments eintragen, die dir gerade angeboten werden.</p><div id="as-augs" style="display:flex;flex-direction:column;gap:6px"></div><datalist id="auglistdl"></datalist></div>
+    </div>
+    <div id="as-result" style="margin-top:14px"></div>
+  </section>
+  <section id="view-items" class="hidden">
+    <p class="intro">Klick deine Komponenten an. Du siehst sofort, welche fertigen Items du bauen kannst und welche Carrys in den aktuellen Comps genau diese Items wollen. Darunter steht die komplette Rezept-Tabelle.</p>
+    <div class="panel sbox"><div class="thead"><h3>Deine Komponenten</h3><button class="btn small" id="it-reset">Zurücksetzen</button></div><div class="compsel" id="it-comps"></div></div>
+    <div id="it-result" style="margin-top:14px"></div>
+    <div class="panel sbox" style="margin-top:14px"><h3>Alle Rezepte</h3><div style="overflow-x:auto"><table class="rtab" id="rtab"></table></div></div>
+  </section>
+  <section id="view-roll" class="hidden">
+    <p class="intro">Wie wahrscheinlich findest du die Kopien, die du brauchst? Der Rechner simuliert 4.000 Rolldowns mit deinem Gold, inklusive Kaufkosten und Pool-Größe aus den Set-19-Daten.</p>
+    <div class="agrid">
+      <div class="panel sbox"><h3>Eingaben</h3><div class="form" id="rl-form"></div><button class="btn primary" id="rl-run">Berechnen</button></div>
+      <div class="panel sbox"><h3>Ergebnis</h3><div id="rl-out"><p class="muted" style="margin:0">Eingaben wählen und „Berechnen“ klicken.</p></div></div>
+      <div class="panel sbox"><h3>Shop-Chancen pro Level</h3><div class="notebox" id="rl-note"></div><div style="overflow-x:auto"><table class="rtab odds" id="rl-odds"></table></div></div>
+    </div>
+  </section>
+  <section id="view-overlay" class="hidden">
+    <div class="ovbar"><select class="inp" id="ov-comp" aria-label="Comp für das Overlay"></select><a href="#comps" class="btn small">Zur vollen Seite</a></div>
+    <div id="ov-body"></div>
+  </section>
+  </div>
+  <aside class="lside" id="side" aria-label="Info"></aside>
+  </div>
+
+  <section id="view-builder" class="hidden">
+    <div class="bgrid">
+      <div class="panel traits" id="traits"></div>
+      <div class="panel bwrap">
+        <div class="bbar">
+          <span class="lvlinfo" id="lvlinfo">0 Units</span>
+          <input id="bname" placeholder="Name der Comp" aria-label="Name der Comp">
+          <button class="btn primary" id="bsave">Speichern</button>
+          <button class="btn" id="bcopy">Kopieren</button>
+          <button class="btn" id="bitems">Beste Items für alle</button>
+          <button class="btn" id="bclear">Leeren</button>
+        </div>
+        <div class="rowlbl">Vorne (zum Gegner)</div>
+        <div class="board" id="board"></div>
+        <div class="rowlbl">Hinten</div>
+      </div>
+      <div class="panel editor" id="editor"></div>
+    </div>
+    <div class="panel pool">
+      <div class="pfilters">
+        <h3 style="margin:0 8px 0 0">Units</h3>
+        <input id="psearch" placeholder="Suchen" aria-label="Unit suchen">
+        <span id="pcost"></span>
+        <select id="ptrait" aria-label="Trait hervorheben"><option value="">Alle Traits</option></select>
+      </div>
+      <div class="pgrid" id="pgrid"></div>
+      <p class="muted" style="font-size:12.5px;margin:12px 0 0">Klick auf eine Unit setzt sie an ihre beste Position, oder zieh sie auf ein Feld. Klick auf eine Unit im Board öffnet rechts Sterne und Items. Klick links auf einen Trait hebt die passenden Units hervor.</p>
+    </div>
+  </section>
+
+  <div class="note">
+    <div class="iconbar">
+      <span>Eigene Bilder:</span>
+      <label class="btn primary" for="sheetfile">Unit-Screenshot importieren</label>
+      <input type="file" id="sheetfile" accept="image/*" class="hidden">
+      <label class="btn primary" for="itemsheetfile">Item-Screenshot importieren</label>
+      <input type="file" id="itemsheetfile" accept="image/*" class="hidden">
+      <label class="btn" for="iconfile">Einzelne Bilder laden</label>
+      <input type="file" id="iconfile" accept="image/*" multiple class="hidden">
+      <button class="btn" id="iconclear">Bilder entfernen</button>
+      <span id="iconinfo"></span>
+    </div>
+    <div>Bilder einzeln: Rechtsklick auf ein Icon → „Bild kopieren“, hier mit der Maus über die Kachel und Strg+V. Oder Bilddatei direkt auf eine Kachel ziehen. Die Bilder bleiben nur in deinem Browser.</div>
+    <div>Dieser Planer ist ein privates Fan-Projekt und wird nicht von Riot Games unterstützt oder befürwortet. Teamfight Tactics und alle zugehörigen Inhalte gehören Riot Games, Inc.</div>
+    <div>Alle Zahlen: MetaTFT, PBE Patch 19.1, letzte 3 Tage. Positionen sind die Felder, auf denen die Unit in dieser Comp am häufigsten steht. Items sind der Build mit dem besten Ergebnis bei genug Spielen. Unit-Daten und Unlock-Bedingungen aus den offiziellen Set-Daten. <a href="https://www.metatft.com/pbe-comps">MetaTFT PBE Comps</a></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const DATA=__DATA__;
+
+/* ---------- Grunddaten ---------- */
+const UL=DATA.units;const U={};UL.forEach(u=>U[u.n]=u);
+const TB=DATA.traits;const COMPS=DATA.comps;const BEST=DATA.best;
+const TNOTE={"K/DA":"zählt Sterne"};
+const IKIND={};
+[["ad",["B.F. Sword","Recurve Bow","Infinity Edge","Guinsoo's Rageblade","Last Whisper","Deathblade","Bloodthirster","Edge of Night","Giant Slayer","Kraken's Fury","Red Buff","Sterak's Gage","Titan's Resolve","Statikk Shiv"]],
+ ["ap",["Needlessly Large Rod","Tear of the Goddess","Jeweled Gauntlet","Rabadon's Deathcap","Spear of Shojin","Morellonomicon","Void Staff","Archangel's Staff","Blue Buff","Striker's Flail","Nashor's Tooth","Hextech Gunblade"]],
+ ["tank",["Chain Vest","Negatron Cloak","Giant's Belt","Ionic Spark","Crownguard","Gargoyle Stoneplate","Warmog's Armor","Spirit Visage","Adaptive Helm","Protector's Vow","Steadfast Heart","Bramble Vest","Dragon's Claw","Sunfire Cape","Evenshroud"]]
+].forEach(([k,l])=>l.forEach(n=>IKIND[ikey(n)]=k));
+function ikey(n){return String(n).toLowerCase().replace(/[^a-z]/g,"")}
+const ITEM_SHEET=["Protector's Vow","Steadfast Heart","Gargoyle Stoneplate","Bramble Vest","Spirit Visage","Warmog's Armor","Crownguard","Dragon's Claw",
+"Sunfire Cape","Morellonomicon","Ionic Spark","Evenshroud","Last Whisper","Red Buff","Hextech Gunblade","Striker's Flail","Guinsoo's Rageblade","Giant Slayer","Thief's Gloves","Hand of Justice",
+"Infinity Edge","Deathblade","Kraken's Fury","Archangel's Staff","Rabadon's Deathcap","Void Staff","Nashor's Tooth","Jeweled Gauntlet","Blue Buff","Adaptive Helm","Spear of Shojin","Bloodthirster","Sterak's Gage","Edge of Night","Quicksilver","Titan's Resolve",
+"B.F. Sword","Recurve Bow","Needlessly Large Rod","Tear of the Goddess","Chain Vest","Negatron Cloak","Giant's Belt","Spatula","Sparring Gloves","Frying Pan"];
+const ITEMS=(()=>{const seen=new Set(),out=[];[...DATA.items,...ITEM_SHEET].forEach(n=>{const k=ikey(n);if(!seen.has(k)){seen.add(k);out.push(n)}});return out})();
+const FRONT=new Set(["Frontman","Bodyguard","Juggernaut"]);
+const STYLE_LABEL=s=>({"lvl 5":"Reroll Level 5","lvl 6":"Reroll Level 6","lvl 7":"Reroll Level 7","Standard":"Standard leveln","Fast 8":"Schnell auf 8","Fast 9":"Schnell auf 9"}[s]||s);
+const STYLE_GROUP=s=>s.startsWith("lvl")?"reroll":s==="Standard"?"standard":"fast";
+
+/* ---------- Hilfen ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pct=v=>(v*100).toFixed(1).replace(".",",")+" %";
+const num=v=>String(v).replace(".",",");
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}};
+let ICONS=store.get("tft19-icons",{});
+const SITEICONS=DATA.siteIcons||{};const SITEITEMS={};Object.entries(DATA.siteItems||{}).forEach(([k,v])=>SITEITEMS[ikey(k)]=v);
+let IICONS_RAW=store.get("tft19-itemicons",{});let IICONS={};const reIicons=()=>{IICONS={};Object.entries(IICONS_RAW).forEach(([k,v])=>IICONS[ikey(k)]=v)};reIicons();
+function toast(t){const el=$("#toast");el.textContent=t;el.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(()=>el.style.display="none",2200)}
+function initials(n){const w=n.replace(/[^A-Za-z ]/g,"").split(" ").filter(Boolean);return w.length>1?(w[0][0]+w[1][0]):n.slice(0,2)}
+function iab(n){const w=n.replace(/[^A-Za-z ]/g,"").split(" ").filter(Boolean);return (w.length>1?w.map(x=>x[0]).join(""):w[0].slice(0,2)).slice(0,3).toUpperCase()}
+function itemBadge(i){const im=IICONS[ikey(i)]||SITEITEMS[ikey(i)];const k=IKIND[ikey(i)]||(/emblem/i.test(i)?"util":"comp");return im?`<img class="it img" src="${im}" alt="${esc(i)}" title="${esc(i)}" draggable="false">`:`<span class="it ${k}" title="${esc(i)}">${iab(i)}</span>`}
+const LOCK=`<span class="lock" title="Muss freigeschaltet werden"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7.5" rx="1.5" fill="#c9c6ff"/><path d="M5.2 7V5.2a2.8 2.8 0 0 1 5.6 0V7" fill="none" stroke="#c9c6ff" stroke-width="1.8"/></svg></span>`;
+function tile(name,{stars=0,items=[]}={}){
+  const u=U[name]||{c:1,l:0,t:[]};const img=ICONS[name]||SITEICONS[name];
+  return `<div class="tile" style="--cc:var(--c${u.c})" title="${esc(name)} · ${u.c} Gold${u.t.length?" · "+esc(u.t.join(", ")):""}${u.l&&u.u?" · Unlock: "+esc(u.u):""}">${img?`<img src="${img}" alt="" draggable="false">`:`<span class="ini">${esc(initials(name))}</span>`}${stars?`<span class="stars">${"★".repeat(stars)}</span>`:""}${u.l?LOCK:""}${items&&items.length?`<span class="its">${items.map(itemBadge).join("")}</span>`:""}</div>`;
+}
+const ucell=(n,o)=>`<div class="ucell">${tile(n,o)}<div class="unitcap">${esc(n)}</div></div>`;
+function traitCountsOf(list){ // list: [{n,s}]
+  const cnt={},seen={};
+  list.forEach(b=>{const u=U[b.n];if(!u)return;u.t.forEach(t=>{if(t==="K/DA"){cnt[t]=(cnt[t]||0)+(b.s||1);return}seen[t]=seen[t]||new Set();if(!seen[t].has(b.n)){seen[t].add(b.n);cnt[t]=(cnt[t]||0)+1}})});
+  return cnt;
+}
+function traitTiers(cnt){
+  return Object.entries(cnt).map(([t,n])=>{const bp=TB[t]||[1];let lvl=0;bp.forEach((b,i)=>{if(n>=b)lvl=i+1});const rank=lvl===0?0:(bp.length===1?3:Math.min(4,Math.ceil(lvl/bp.length*4)));return {t,n,bp,lvl,rank}})
+    .sort((a,b)=>(b.lvl>0)-(a.lvl>0)||b.rank-a.rank||b.n-a.n);
+}
+const traitChips=list=>traitTiers(traitCountsOf(list)).filter(x=>x.lvl).map(x=>`<span class="tchip b${x.rank}">${x.n} ${esc(x.t)}</span>`).join("");
+
+/* Positionen: gewünschtes Feld, sonst nächstes freies */
+function placeUnits(names,comp){
+  const occ={},out={};
+  const want=n=>{const p=comp&&comp.pos[n];if(p)return p;const u=U[n];return u&&u.t.some(t=>FRONT.has(t))?[0,3]:[3,3]};
+  const order=names.slice().sort((a,b)=>((comp&&comp.items[b]?comp.items[b].n:0)-(comp&&comp.items[a]?comp.items[a].n:0)));
+  order.forEach(n=>{let [r,c]=want(n);if(occ[r+"-"+c]){let best=null,bd=99;for(let rr=0;rr<4;rr++)for(let cc=0;cc<7;cc++){if(occ[rr+"-"+cc])continue;const d=Math.abs(rr-r)*2.2+Math.abs(cc-c);if(d<bd){bd=d;best=[rr,cc]}}[r,c]=best}occ[r+"-"+c]=n;out[n]=[r,c]});
+  return out;
+}
+function miniBoard(names,comp,{withItems=false,stars=false,lg=false}={}){
+  const p=placeUnits(names,comp);const grid={};Object.entries(p).forEach(([n,[r,c]])=>grid[r+"-"+c]=n);
+  let h=`<div class="mb${lg?" lg":""}" aria-label="Board mit Positionen">`;
+  for(let r=0;r<4;r++){h+=`<div class="r${r%2?" o":""}">`;for(let c=0;c<7;c++){const n=grid[r+"-"+c];h+=`<div class="hx">${n?tile(n,{stars:stars&&comp?comp.stars[n]||0:0,items:withItems&&comp&&comp.items[n]?comp.items[n].i:[]}):""}</div>`}h+="</div>"}
+  return h+"</div>";
+}
+
+/* ---------- Comps ---------- */
+const st={tier:"Alle",style:"alle",sort:"avg",comp:COMPS[0].id,phase:"late",lvl:"",ptier:"Alle",pstyle:"alle",view:"comps",champ:null,aug:null};
+const chipRow=(id,opts,cur,attr)=>{$(id).innerHTML=opts.map(([v,l])=>`<button class="chip" data-${attr}="${esc(v)}" aria-pressed="${v===cur}">${esc(l)}</button>`).join(" ")};
+const TIERS=[["Alle","Alle"],["S","S"],["A","A"],["B","B"],["C","C"]];
+const STYLES=[["alle","Alle"],["reroll","Reroll"],["standard","Standard"],["fast","Schnell auf 8/9"]];
+function filteredComps(tier,style){return COMPS.filter(c=>(tier==="Alle"||c.tier===tier)&&(style==="alle"||STYLE_GROUP(c.style)===style))}
+let FAV=store.get("tft19-fav",[]);let NOTES=store.get("tft19-notes",{});
+const isFav=c=>FAV.includes(c.name);
+function toggleFav(name){FAV=FAV.includes(name)?FAV.filter(x=>x!==name):[...FAV,name];store.set("tft19-fav",FAV)}
+const trendHtml=(tr,suffix="")=>tr==null||Math.abs(tr)<0.02?"":`<span class="trend ${tr<0?"up":"down"}" title="Veränderung Ø Platz seit ${DATA.trendH||24} Std.${suffix}">${tr<0?"▲":"▼"}${num(Math.abs(tr).toFixed(2))}</span>`;
+function renderFilters(){
+  chipRow("#f-show",[["alle","Alle"],["fav","Nur Favoriten"+(FAV.length?" ("+FAV.length+")":"")]],st.show||"alle","show");
+  chipRow("#f-tier",TIERS,st.tier,"tier");chipRow("#f-style",STYLES,st.style,"style");
+  chipRow("#f-sort",[["avg","Ø Platz"],["top4","Top 4"],["win","Win Rate"],["pick","Beliebtheit"]],st.sort,"sort");
+}
+function renderCards(){
+  let list=filteredComps(st.tier,st.style);if(st.show==="fav")list=list.filter(isFav);
+  const k=st.sort;list=list.slice().sort((a,b)=>k==="avg"?a.avg-b.avg:b[k]-a[k]);
+  if(list.length&&!list.some(c=>c.id===st.comp))st.comp=list[0].id;
+  $("#cards").innerHTML=list.map(c=>`<div class="panel card" role="tab" tabindex="0" data-id="${c.id}" aria-selected="${c.id===st.comp}">
+  <div class="row1"><span class="tier ${c.tier}">${c.tier}</span><div><div class="nm">${esc(c.name)}</div><div class="sty">${esc(STYLE_LABEL(c.style))}</div></div>
+  <div class="kpis"><div><b>${num(c.avg)}${trendHtml(c.tr)}</b><small>Ø Platz</small></div><div><b>${pct(c.top4)}</b><small>Top 4</small></div></div><button class="favbtn" data-fav="${esc(c.name)}" aria-pressed="${isFav(c)}" aria-label="Favorit">${isFav(c)?"★":"☆"}</button></div>
+  <div class="urow">${c.core.map(n=>tile(n)).join("")}</div></div>`).join("")||`<div class="empty">${st.show==="fav"?"Noch keine Favoriten. Klick bei einer Comp auf den Stern.":"Keine Comp passt zu diesen Filtern."}</div>`;
+}
+const PH={early:{lv:["4","5","6"],label:"Early",src:"early"},mid:{lv:["7","8"],label:"Mid",src:"opts"},late:{lv:["9","10"],label:"Late",src:"opts"}};
+function boardsFor(c,lvl){const src=PH[phaseOf(lvl)].src;return (c[src][lvl]||[])}
+function phaseOf(l){return +l<=6?"early":+l<=8?"mid":"late"}
+let detailPick={lvl:null,i:0};
+function firstLvl(c,phase){return PH[phase].lv.find(l=>boardsFor(c,l).length)}
+
+function roleCard(c,u,kind,i){const it=c.items[u]?c.items[u].i:(BEST[u]||[]);
+  return `<div class="rolecard ${kind}"><button data-champ="${esc(u)}" title="Infos zu ${esc(u)}">${tile(u)}</button><div><span class="rl">${kind==="carry"?(i?"Zweiter Carry":"Main Carry"):"Main Tank"}</span><b>${esc(u)}</b><div class="ilist">${it.map(x=>`<span>${itemBadge(x)}${esc(x)}</span>`).join("")}</div></div></div>`}
+function augSection(c){const r=augsForComp(c);
+  if(!r.list.length)return '<p class="muted" style="font-size:13px;margin:0">Keine passenden Augments gefunden.</p>';
+  return `${r.real?"":'<p class="muted" style="font-size:12.5px;margin:0 0 8px">Auf dem PBE gibt es noch keine Augment-Platzierungen. Hier stehen Augments, die über Trait oder Champion zu dieser Comp passen. Mit echten Daten werden sie automatisch nach Platzierung sortiert.</p>'}
+  <div class="auglist" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))">${r.list.map(x=>`<button class="aug" data-goaug="${esc(x.a.n)}"><span class="an"><span>${esc(x.a.n)}</span><span class="rar ${x.a.r}">${RAR_DE[x.a.r]||x.a.r}</span></span><span class="ad">${esc(de(x.a.d||""))}</span>${x.avg!=null?`<span class="am"><span>Ø ${num(x.avg)} in dieser Comp · ${x.n.toLocaleString("de-DE")} Spiele</span></span>`:""}</button>`).join("")}</div>`}
+function renderDetail(){
+  const c=COMPS.find(x=>x.id===st.comp);const d=$("#detail");
+  if(!c){d.innerHTML="";return}
+  if(!detailPick.lvl||!boardsFor(c,detailPick.lvl).length){detailPick={lvl:firstLvl(c,"late")||firstLvl(c,"mid")||firstLvl(c,"early"),i:0}}
+  const lvl=detailPick.lvl,phase=phaseOf(lvl),boards=boardsFor(c,lvl),b=boards[detailPick.i]||boards[0];
+  const isEarly=phase==="early";
+  const bar=["early","mid","late"].map((p,pi)=>(pi?'<span class="sep"></span>':"")+PH[p].lv.map(l=>{const has=boardsFor(c,l).length;return `<button class="chip${has?"":" dim"}" data-dlvl="${l}" aria-pressed="${l===lvl}" ${has?"":"disabled"}>${PH[p].label} · Level ${l}</button>`}).join(" ")).join("");
+  const lvTimes=c.lv.map(x=>`<div class="tl"><b>Level ${x.l}</b>${esc(x.s)}</div>`).join("");
+  const finals=c.final.map(x=>`<div class="tl"><b>Level ${x.l}</b>${pct(x.pct)} · Ø ${num(x.avg)}</div>`).join("");
+  const carries=Object.entries(c.items).filter(([u])=>c.core.includes(u)||(b&&b.u.includes(u))).sort((a,b)=>b[1].n-a[1].n).slice(0,6);
+  d.innerHTML=`<div class="dhead"><span class="tier ${c.tier}" style="min-width:42px;height:42px;font-size:24px">${c.tier}</span>
+  <div><h2>${esc(c.name)}</h2><div class="sty">${esc(STYLE_LABEL(c.style))} · ${num(c.pick)} pro Lobby gespielt</div></div>
+  <div class="kpis"><div><b>${num(c.avg)}${trendHtml(c.tr)}</b><small>Ø Platz</small></div><div><b>${pct(c.top4)}</b><small>Top 4</small></div><div><b>${pct(c.win)}</b><small>Win Rate</small></div></div>
+  <button class="favbtn" data-dfav="${esc(c.name)}" aria-pressed="${isFav(c)}" aria-label="Favorit" style="font-size:24px">${isFav(c)?"★":"☆"}</button><a class="btn" href="#overlay" data-ovsel="${c.id}">Overlay</a><button class="btn primary" id="toBuilder">Im Builder öffnen</button></div>
+  <div class="roles">${(c.carry||[]).map((u,i)=>roleCard(c,u,"carry",i)).join("")}${(c.tank||[]).slice(0,1).map((u,i)=>roleCard(c,u,"tank",i)).join("")}</div>
+  <div class="phasebar" role="group" aria-label="Phase und Level">${bar}</div>
+  <div class="dgrid">
+    <div><div class="boardwrap-s">${b?miniBoard(b.u,c,{withItems:!isEarly,stars:!isEarly,lg:true}):""}</div><div class="legend-front">Oben = vorne, zum Gegner</div></div>
+    <div class="alts"><div class="sect"><h3>${PH[phase].label} Game · Level ${lvl}</h3></div>
+      ${b?`<div class="tchips">${traitChips(b.u.map(n=>({n,s:isEarly?1:(c.stars[n]||1)})))}</div>`:""}
+      ${boards.map((o,i)=>`<button class="alt" data-alt="${i}" aria-pressed="${i===detailPick.i}"><div class="urow">${o.u.map(n=>tile(n)).join("")}</div><div class="num">${num(o.avg)}<small>Ø Platz</small></div>${o.win!=null?`<div class="num">${pct(o.win)}<small>Runden gewonnen</small></div>`:""}<div class="num">${o.n.toLocaleString("de-DE")}<small>Spiele</small></div></button>`).join("")}
+      ${isEarly?`<p class="muted" style="font-size:12.5px;margin:0">Early-Boards: Ø Platz am Spielende, wenn du so auf Level ${lvl} stehst. „Runden gewonnen“ zeigt, wie oft dieses Board seine Kämpfe gewinnt.</p>`:""}
+    </div>
+  </div>
+  <div class="sect"><h3>Wann leveln</h3><div class="timeline">${lvTimes}</div><p class="muted" style="font-size:12.5px;margin:8px 0 6px">So verteilen sich die End-Level:</p><div class="timeline">${finals}</div></div>
+  <div class="sect"><h3>${(()=>{const r=augsForComp(c);return r.real?"Beste Augments":"Passende Augments"})()}</h3>${augSection(c)}</div>
+  <div class="sect"><h3>Beste Items</h3><div class="carries">${carries.map(([u,x])=>`<div class="carry"><button data-champ="${esc(u)}" style="all:unset;cursor:pointer">${tile(u)}</button><div><b>${esc(u)}${roleTag(roleIn(c,u))}</b><div class="ilist">${x.i.map(i=>`<span>${itemBadge(i)}${esc(i)}</span>`).join("")}</div><small class="muted">Ø ${num(x.avg)} · ${x.n.toLocaleString("de-DE")} Spiele</small></div></div>`).join("")}</div></div>
+  <div class="sect"><h3>Meine Notizen</h3><textarea class="notes" id="cnote" placeholder="Eigene Notizen zu dieser Comp, z. B. gegen wen sie schwach ist. Wird in deinem Browser gespeichert.">${esc(NOTES[c.name]||"")}</textarea></div>`;
+  $("#cnote").oninput=e=>{NOTES[c.name]=e.target.value;store.set("tft19-notes",NOTES)};
+  $("#toBuilder").onclick=()=>{loadBoard(b?b.u:c.core,c,c.name+" · Level "+lvl);location.hash="builder"};
+}
+$("#f-tier").onclick=e=>{const b=e.target.closest("[data-tier]");if(b){st.tier=b.dataset.tier;renderFilters();renderCards();detailPick.lvl=null;renderDetail()}};
+$("#f-style").onclick=e=>{const b=e.target.closest("[data-style]");if(b){st.style=b.dataset.style;renderFilters();renderCards();detailPick.lvl=null;renderDetail()}};
+$("#f-show").onclick=e=>{const b=e.target.closest("[data-show]");if(b){st.show=b.dataset.show;renderFilters();renderCards();renderDetail()}};
+$("#f-sort").onclick=e=>{const b=e.target.closest("[data-sort]");if(b){st.sort=b.dataset.sort;renderFilters();renderCards()}};
+$("#cards").addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.classList.contains("card")){e.preventDefault();e.target.click()}});
+$("#cards").onclick=e=>{const f=e.target.closest("[data-fav]");if(f){toggleFav(f.dataset.fav);renderFilters();renderCards();renderDetail();return}const b=e.target.closest(".card");if(!b)return;st.comp=b.dataset.id;detailPick={lvl:null,i:0};renderCards();renderDetail();$("#detail").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})};
+$("#detail").addEventListener("click",e=>{const fv=e.target.closest("[data-dfav]");if(fv){toggleFav(fv.dataset.dfav);renderFilters();renderCards();renderDetail();return}const ov=e.target.closest("[data-ovsel]");if(ov){store.set("tft19-ov",ov.dataset.ovsel)}const l=e.target.closest("[data-dlvl]");if(l){detailPick={lvl:l.dataset.dlvl,i:0};renderDetail();return}const a=e.target.closest("[data-alt]");if(a){detailPick.i=+a.dataset.alt;renderDetail()}});
+
+/* ---------- Champions, Augments, Info-Leiste ---------- */
+/* Übersetzung über Claude (sample-Fähigkeit), Ergebnis im Browser gespeichert */
+let SAMPLE=null;let DE=store.get("tft19-de",{});const TRQ={};
+try{if(window.claude&&window.claude.use)window.claude.use("sample").then(s=>{SAMPLE=s;if(st.view==="augs"||st.champ)renderSide()}).catch(()=>{})}catch(e){}
+const de=t=>DE[t]||t;
+const trBtn=t=>!t||DE[t]||!SAMPLE?"":`<button class="btn small" data-tr="${esc(t)}">${TRQ[t]?"Übersetze …":"Auf Deutsch übersetzen"}</button>`;
+async function translate(t){if(!SAMPLE||TRQ[t])return;TRQ[t]=1;renderSide();
+  try{const r=await SAMPLE(`Übersetze diesen Text aus dem Spiel Teamfight Tactics ins Deutsche. Formuliere natürlich und locker, ohne Gedankenstriche. Lass Zahlen und Werte wie 40/60/500 genau so stehen. Namen von Champions, Traits und Items bleiben auf Englisch. Gib nur die Übersetzung aus, ohne Einleitung.\n\nText:\n${t}`,{modelTier:"quick"});
+    const out=(r&&r.text||"").trim();if(out){DE[t]=out;store.set("tft19-de",DE)}}
+  catch(e){toast(e&&e.code==="rate_limited"?"Gerade zu viele Anfragen, bitte kurz warten":"Übersetzung ging gerade nicht")}
+  delete TRQ[t];renderSide();if(st.view==="augs")renderAugs()}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-tr]");if(b){e.stopPropagation();translate(b.dataset.tr)}},true);
+
+const AUGS=DATA.augs||[];const AUGMAP={};AUGS.forEach(a=>AUGMAP[a.n]=a);
+const RAR_DE={Silver:"Silber",Gold:"Gold",Prismatic:"Prismatisch"};
+const lateBoard=c=>{for(const l of ["9","8","10","7"]){if((c.opts[l]||[]).length)return c.opts[l][0].u}return c.core};
+const activeTraits=names=>traitTiers(traitCountsOf(names.map(n=>({n,s:1})))).filter(x=>x.lvl).map(x=>x.t);
+const statLine=s=>s?`<div class="statrow"><div class="stat"><b>${num(s.avg)}</b><small>Ø Platz</small></div><div class="stat"><b>${pct(s.top4)}</b><small>Top 4</small></div><div class="stat"><b>${pct(s.win)}</b><small>Win Rate</small></div><div class="stat"><b>${s.freq!=null?pct(s.freq):s.n.toLocaleString("de-DE")}</b><small>${s.freq!=null?"der Boards":"Spiele"}</small></div></div>`:"";
+function roleIn(c,n){return c.carry&&c.carry.includes(n)?"carry":c.tank&&c.tank.includes(n)?"tank":""}
+const roleTag=r=>r==="carry"?'<span class="role carry">Carry</span>':r==="tank"?'<span class="role tank">Tank</span>':"";
+function compsWithUnit(n){
+  return COMPS.filter(c=>c.core.includes(n)||lateBoard(c).includes(n)||Object.values(c.opts).some(l=>l.some(o=>o.u.includes(n)))).sort((a,b)=>{const ra=roleIn(a,n)?0:1,rb=roleIn(b,n)?0:1;return ra-rb||a.avg-b.avg});
+}
+function augsForComp(c){
+  if(c.augs&&c.augs.length)return {real:true,list:c.augs.map(x=>({a:AUGMAP[x.a]||{n:x.a,r:"Gold",c:[],d:""},avg:x.avg,n:x.n}))};
+  const lb=lateBoard(c),tr=new Set(activeTraits(lb));
+  const list=AUGS.filter(a=>(a.t.some(t=>tr.has(t)))||(a.h.length&&lb.includes(a.h[0])));
+  list.sort((x,y)=>(y.h.length&&lb.includes(y.h[0]))-(x.h.length&&lb.includes(x.h[0]))||({Prismatic:0,Gold:1,Silver:2}[x.r]-{Prismatic:0,Gold:1,Silver:2}[y.r]));
+  return {real:false,list:list.slice(0,12).map(a=>({a}))};
+}
+function compsForAug(a){
+  const withStat=COMPS.map(c=>({c,s:(c.augs||[]).find(x=>x.a===a.n)})).filter(x=>x.s);
+  if(withStat.length)return {real:true,list:withStat.sort((x,y)=>x.s.avg-y.s.avg)};
+  const list=COMPS.filter(c=>{const lb=lateBoard(c);const tr=activeTraits(lb);return a.t.some(t=>tr.includes(t))||(a.h.length&&lb.includes(a.h[0]))}).sort((x,y)=>x.avg-y.avg);
+  return {real:false,list:list.map(c=>({c}))};
+}
+const compRow=(c,extra="")=>`<button class="crow" data-gocomp="${c.id}"><span class="tier ${c.tier}" style="min-width:24px;height:24px;font-size:14px">${c.tier}</span><span><span class="nm">${esc(c.name)}</span>${extra}<span class="sub" style="display:block">${esc(STYLE_LABEL(c.style))}</span></span><span class="av">${num(c.avg)}<small>Ø Platz</small></span></button>`;
+
+function champDetail(n){
+  const u=U[n];if(!u)return "";
+  const comps=compsWithUnit(n);const best=BEST[n]||[];
+  const heroAugs=AUGS.filter(a=>a.h.includes(n));
+  const trAugs=AUGS.filter(a=>a.t.some(t=>u.t.includes(t))&&a.c.includes("Trait")).slice(0,6);
+  return `<div class="panel sbox">
+    <div class="chead">${tile(n)}<div><h3>${esc(n)}</h3><small>${u.c} Gold${u.role?" · "+esc(u.role.label):""}</small></div></div>
+    <div class="tchips">${u.t.map(t=>`<span class="tchip">${esc(t)}</span>`).join("")}</div>
+    ${u.l?`<div class="unlocktxt">Freischalten: ${esc(u.u||"muss freigeschaltet werden")}</div>`:""}
+    ${u.st?`<div class="lbl">Stats (PBE, letzte 3 Tage) ${trendHtml(u.st.tr)}</div>${statLine(u.st)}`:""}
+    ${u.ab?`<div class="abil"><b>${esc(u.ab)}</b>${esc(de(u.abd||""))}</div>${trBtn(u.abd)}`:""}
+    ${best.length?`<div class="lbl">Beste Items</div><div class="ilist">${best.map(i=>`<span>${itemBadge(i)}${esc(i)}</span>`).join("")}</div>`:""}
+    <div class="lbl">Comps mit ${esc(n)} (${comps.length})</div>
+    <div class="clist">${comps.slice(0,10).map(c=>compRow(c,roleTag(roleIn(c,n)))).join("")||'<span class="muted" style="font-size:12.5px">In keiner der aktuellen Comps.</span>'}</div>
+    ${heroAugs.length||trAugs.length?`<div class="lbl">Passende Augments</div><div class="augrows">${[...heroAugs,...trAugs].map(a=>`<button class="augrow" data-goaug="${esc(a.n)}"><span><b style="font-size:13px">${esc(a.n)}</b> <span class="rar ${a.r}">${RAR_DE[a.r]||a.r}</span><span class="ad" style="display:block">${esc(a.c.join(", "))}</span></span>${a.st?`<span class="av">${num(a.st.avg)}</span>`:""}</button>`).join("")}</div>`:""}
+    <button class="btn" data-addb="${esc(n)}">Im Builder aufs Board setzen</button>
+  </div>`;
+}
+function augDetail(a){
+  const r=compsForAug(a);
+  return `<div class="panel sbox">
+    <div><h3>${esc(a.n)}</h3><div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="rar ${a.r}">${RAR_DE[a.r]||a.r}</span>${a.c.map(c=>`<span class="tchip">${esc(c)}</span>`).join("")}${a.rd.length?`<span class="muted" style="font-size:12px">Runde ${esc(a.rd.join(", "))}</span>`:""}</div></div>
+    <div class="abil">${esc(de(a.d)||"Keine Beschreibung.")}</div>${trBtn(a.d)}
+    ${a.t.length?`<div class="lbl">Trait</div><div class="tchips">${a.t.map(t=>`<span class="tchip">${esc(t)}</span>`).join("")}</div>`:""}
+    ${a.h.length?`<div class="lbl">Champion</div><button class="crow" data-champ="${esc(a.h[0])}" style="grid-template-columns:auto 1fr">${tile(a.h[0])}<span class="nm">${esc(a.h[0])}</span></button>`:""}
+    <div class="lbl">Platzierung</div>
+    ${a.st?statLine(a.st):`<div class="notebox">Für Augments liefert MetaTFT auf dem PBE noch keine Platzierungen. Sobald Daten da sind, erscheinen sie hier automatisch.</div>`}
+    <div class="lbl">${r.real?"Beste Comps mit diesem Augment":"Passende Comps (über Trait oder Champion)"}</div>
+    <div class="clist">${r.list.slice(0,10).map(x=>compRow(x.c,x.s?` <span class="muted" style="font-size:11.5px">· mit Augment Ø ${num(x.s.avg)}</span>`:"")).join("")||'<span class="muted" style="font-size:12.5px">Passt zu keiner bestimmten Comp, ist eher allgemein nutzbar.</span>'}</div>
+  </div>`;
+}
+
+/* Info-Leiste rechts */
+const side={cost:0,q:""};
+function sidePicker(){
+  return `<div class="panel sbox"><h3>Champions</h3>
+    <input class="inp" id="s-q" placeholder="Champion oder Trait suchen" aria-label="Champion suchen" value="${esc(side.q)}">
+    <div class="frow" id="s-cost">${[0,1,2,3,4,5,7].map(c=>`<button class="chip" data-scost="${c}" aria-pressed="${c===side.cost}">${c?c:"Alle"}</button>`).join("")}</div>
+    <div class="sgrid" id="s-grid"></div></div>`;
+}
+function renderSideGrid(){
+  const q=side.q.toLowerCase();const g=document.getElementById("s-grid");if(!g)return;
+  g.innerHTML=UL.filter(u=>(!side.cost||u.c===side.cost)&&(!q||u.n.toLowerCase().includes(q)||u.t.some(t=>t.toLowerCase().includes(q)))).sort((a,b)=>a.c-b.c||a.n.localeCompare(b.n))
+    .map(u=>`<button data-champ="${esc(u.n)}" data-unit="${esc(u.n)}" aria-pressed="${st.champ===u.n}" title="${esc(u.n)}">${tile(u.n)}</button>`).join("");
+}
+function renderSide(){
+  const s=$("#side");
+  if(st.view==="augs"){const a=AUGMAP[st.aug]||null;s.innerHTML=a?augDetail(a):`<div class="panel sbox"><h3>Augment wählen</h3><p class="muted" style="margin:0;font-size:13px">Klick links auf ein Augment, dann siehst du hier Beschreibung, Platzierung und passende Comps.</p></div>`;return}
+  const det=st.champ?champDetail(st.champ):"";
+  if(st.view==="champs"){s.innerHTML=det||`<div class="panel sbox"><h3>Champion wählen</h3><p class="muted" style="margin:0;font-size:13px">Klick links auf einen Champion für Stats, Fähigkeit, beste Items, Comps und passende Augments.</p></div>`;return}
+  s.innerHTML=det+sidePicker();renderSideGrid();
+}
+$("#side").addEventListener("input",e=>{if(e.target.id==="s-q"){side.q=e.target.value;renderSideGrid()}});
+$("#side").addEventListener("click",e=>{const c=e.target.closest("[data-scost]");if(c){side.cost=+c.dataset.scost;document.querySelectorAll("#s-cost .chip").forEach(b=>b.setAttribute("aria-pressed",b===c));renderSideGrid()}});
+
+/* Champions-Ansicht */
+const chf={cost:0,role:"alle",q:"",trait:"",sort:"avg"};
+$("#ch-trait").innerHTML+=[...new Set(UL.flatMap(u=>u.t))].sort((a,b)=>a.localeCompare(b)).map(t=>`<option>${esc(t)}</option>`).join("");
+function renderChamps(){
+  chipRow("#ch-cost",[[0,"Alle"],[1,"1"],[2,"2"],[3,"3"],[4,"4"],[5,"5"],[7,"7"]].map(([v,l])=>[String(v),l]),String(chf.cost),"chcost");
+  chipRow("#ch-role",[["alle","Alle"],["carry","Schaden"],["tank","Tank"],["unlock","Nur Unlocks"]],chf.role,"chrole");
+  chipRow("#ch-sort",[["avg","Ø Platz"],["freq","Beliebtheit"],["cost","Kosten"],["name","Name"]],chf.sort,"chsort");
+  const q=chf.q.toLowerCase();
+  let list=UL.filter(u=>(!chf.cost||u.c===chf.cost)&&(!chf.trait||u.t.includes(chf.trait))&&(!q||u.n.toLowerCase().includes(q)||u.t.some(t=>t.toLowerCase().includes(q)))
+    &&(chf.role==="alle"||(chf.role==="tank"&&u.role&&u.role.tank)||(chf.role==="carry"&&u.role&&!u.role.tank)||(chf.role==="unlock"&&u.l)));
+  const k=chf.sort;list.sort((a,b)=>k==="avg"?((a.st?a.st.avg:9)-(b.st?b.st.avg:9)):k==="freq"?((b.st?b.st.freq:0)-(a.st?a.st.freq:0)):k==="cost"?(a.c-b.c||a.n.localeCompare(b.n)):a.n.localeCompare(b.n));
+  $("#chgrid").innerHTML=list.map(u=>`<button class="chcard" data-champ="${esc(u.n)}" data-unit="${esc(u.n)}" aria-pressed="${st.champ===u.n}">${tile(u.n)}<span><b>${esc(u.n)}</b><small>${u.c} Gold · ${esc(u.role?u.role.label:"")}</small><small>${u.st?"Ø "+num(u.st.avg)+trendHtml(u.st.tr)+" · "+pct(u.st.top4)+" Top 4":"noch keine Stats"}</small></span></button>`).join("")||`<div class="empty">Kein Champion passt zu diesen Filtern.</div>`;
+}
+$("#view-champs").addEventListener("click",e=>{const t=e.target.closest("[data-chcost],[data-chrole],[data-chsort]");if(!t)return;
+  if(t.dataset.chcost!=null)chf.cost=+t.dataset.chcost;if(t.dataset.chrole)chf.role=t.dataset.chrole;if(t.dataset.chsort)chf.sort=t.dataset.chsort;renderChamps()});
+$("#ch-search").oninput=e=>{chf.q=e.target.value;renderChamps()};
+$("#ch-trait").onchange=e=>{chf.trait=e.target.value;renderChamps()};
+
+/* Augments-Ansicht */
+const auf={rar:"alle",cat:"alle",q:""};
+const AUGCATS=[...new Set(AUGS.flatMap(a=>a.c))].sort((a,b)=>a.localeCompare(b));
+function renderAugs(){
+  $("#aug-intro").textContent=`Alle ${AUGS.length} Augments aus Set 19. ${DATA.augstats?"Mit Platzierungen von MetaTFT.":"Auf dem PBE liefert MetaTFT noch keine Augment-Platzierungen. Sie erscheinen hier automatisch, sobald es Daten gibt. Bis dahin siehst du, welche Comps über Trait oder Champion zum Augment passen."} Die Beschreibungen stammen aus den offiziellen Set-Daten und sind auf Englisch. Klick ein Augment an und dann „Auf Deutsch übersetzen“, die Übersetzung bleibt in deinem Browser gespeichert.`;
+  chipRow("#au-rar",[["alle","Alle"],["Silver","Silber"],["Gold","Gold"],["Prismatic","Prismatisch"]],auf.rar,"aurar");
+  chipRow("#au-cat",[["alle","Alle"],...AUGCATS.map(c=>[c,c])],auf.cat,"aucat");
+  const q=auf.q.toLowerCase();
+  let list=AUGS.filter(a=>(auf.rar==="alle"||a.r===auf.rar)&&(auf.cat==="alle"||a.c.includes(auf.cat))&&(!q||a.n.toLowerCase().includes(q)||a.d.toLowerCase().includes(q)||a.t.some(t=>t.toLowerCase().includes(q))||a.h.some(h=>h.toLowerCase().includes(q))));
+  if(DATA.augstats)list.sort((x,y)=>(x.st?x.st.avg:9)-(y.st?y.st.avg:9));
+  $("#auglist").innerHTML=list.map(a=>`<button class="aug" data-goaug="${esc(a.n)}" aria-pressed="${st.aug===a.n}"><span class="an"><span>${esc(a.n)}</span><span class="rar ${a.r}">${RAR_DE[a.r]||a.r}</span></span><span class="ad">${esc(de(a.d))}</span><span class="am"><span>${esc(a.c.join(" · "))}</span>${a.t.length?`<span>Trait: ${esc(a.t.join(", "))}</span>`:""}${a.h.length?`<span>Champion: ${esc(a.h[0])}</span>`:""}${a.st?`<span>Ø ${num(a.st.avg)}</span>`:""}</span></button>`).join("")||`<div class="empty">Kein Augment gefunden.</div>`;
+}
+$("#view-augs").addEventListener("click",e=>{const t=e.target.closest("[data-aurar],[data-aucat]");if(!t)return;if(t.dataset.aurar)auf.rar=t.dataset.aurar;if(t.dataset.aucat)auf.cat=t.dataset.aucat;renderAugs()});
+$("#au-search").oninput=e=>{auf.q=e.target.value;renderAugs()};
+
+/* Gemeinsame Klicks: Champion, Comp, Augment, Builder */
+document.addEventListener("click",e=>{
+  const ch=e.target.closest("[data-champ]");if(ch&&!e.target.closest("#pgrid")){st.champ=ch.dataset.champ;renderSide();if(st.view==="champs")renderChamps();else document.querySelectorAll("#s-grid [data-champ]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.champ===st.champ));const sd=$("#side");if(sd.getBoundingClientRect().top<0||innerWidth<1100)sd.scrollIntoView({behavior:"auto",block:"start"});return}
+  const gc=e.target.closest("[data-gocomp]");if(gc){st.comp=gc.dataset.gocomp;detailPick={lvl:null,i:0};if(location.hash!=="#comps")location.hash="comps";else{renderCards();renderDetail()}setTimeout(()=>$("#detail").scrollIntoView(),60);return}
+  const ga=e.target.closest("[data-goaug]");if(ga){st.aug=ga.dataset.goaug;if(location.hash!=="#augs")location.hash="augs";else{renderAugs();renderSide()}return}
+  const ab=e.target.closest("[data-addb]");if(ab){placeOne(ab.dataset.addb);location.hash="builder";return}
+});
+
+/* ---------- Early / Mid / Late ---------- */
+const INTRO={
+ early:"Die besten Boards für den Spielstart. Wähl dein Level, dann siehst du, welche Units du stellen solltest, wie oft das Board seine Runden gewinnt und in welche Comp es führt. Dazu die Items, die du früh für den späteren Carry baust.",
+ mid:"Die besten Boards für Stage 4. Hier entscheidet sich, ob du rerollst oder weiter levelst. Items und Positionen sind direkt eingezeichnet.",
+ late:"Die stärksten fertigen Boards für das Endgame, mit Positionierung, Sternen und den besten Items pro Unit."};
+function renderPhase(){
+  const ph=st.phase,lvs=PH[ph].lv;if(!lvs.includes(st.lvl))st.lvl=lvs[0];
+  $("#phase-intro").textContent=INTRO[ph];
+  chipRow("#ph-level",lvs.map(l=>[l,"Level "+l]),st.lvl,"plvl");
+  $("#ph-level").querySelectorAll(".chip").forEach(b=>b.classList.add("big"));
+  chipRow("#ph-tier",TIERS,st.ptier,"ptier");chipRow("#ph-style",STYLES,st.pstyle,"pstyle");
+  const isEarly=ph==="early";const entries=[];
+  filteredComps(st.ptier,st.pstyle).forEach(c=>boardsFor(c,st.lvl).forEach((o,i)=>{if(o.n>=120)entries.push({c,o,i})}));
+  entries.sort((a,b)=>a.o.avg-b.o.avg);
+  const seen=new Set();const uniq=entries.filter(x=>{const k=x.o.u.slice().sort().join("|");if(seen.has(k))return false;seen.add(k);return true}).slice(0,24);
+  $("#plist").innerHTML=uniq.map(({c,o,i})=>{
+    const carries=Object.entries(c.items).sort((a,b)=>b[1].n-a[1].n).filter(([u])=>c.core.includes(u)).slice(0,2);
+    return `<div class="panel pitem">
+      <div class="boardwrap-s">${miniBoard(o.u,c,{withItems:!isEarly,stars:false})}</div>
+      <div class="info"><div class="urow" style="--s:34px;gap:12px 6px">${o.u.map(n=>ucell(n,{})).join("")}</div>
+        <div class="tchips">${traitChips(o.u.map(n=>({n,s:1})))}</div>
+        <div class="to">Führt zu <button data-goto="${c.id}" data-lvl="${st.lvl}" data-i="${i}">${esc(c.name)}</button> <span class="tier ${c.tier}" style="display:inline-grid;min-width:20px;height:20px;font-size:13px;vertical-align:middle">${c.tier}</span> <span class="muted">· ${esc(STYLE_LABEL(c.style))}</span></div>
+        ${isEarly&&carries.length?`<div class="prio">Items früh bauen für: ${carries.map(([u,x])=>`<span><b>${esc(u)}</b> ${x.i.map(itemBadge).join("")}</span>`).join(" ")}</div>`:""}
+      </div>
+      <div class="acts"><div class="nums"><div><b>${num(o.avg)}</b><small>Ø Platz</small></div>${o.win!=null?`<div><b>${pct(o.win)}</b><small>Runden gew.</small></div>`:""}<div><b>${o.n.toLocaleString("de-DE")}</b><small>Spiele</small></div></div>
+      <button class="btn small" data-build="${c.id}" data-lvl="${st.lvl}" data-i="${i}">Im Builder öffnen</button></div></div>`}).join("")||`<div class="empty panel">Für diese Filter gibt es auf Level ${st.lvl} noch keine Boards mit genug Spielen.</div>`;
+}
+$("#view-phase").addEventListener("click",e=>{
+  const t=e.target.closest("[data-plvl],[data-ptier],[data-pstyle],[data-goto],[data-build]");if(!t)return;
+  if(t.dataset.plvl){st.lvl=t.dataset.plvl;renderPhase()}
+  else if(t.dataset.ptier){st.ptier=t.dataset.ptier;renderPhase()}
+  else if(t.dataset.pstyle){st.pstyle=t.dataset.pstyle;renderPhase()}
+  else if(t.dataset.goto){st.comp=t.dataset.goto;detailPick={lvl:t.dataset.lvl,i:+t.dataset.i};location.hash="comps";setTimeout(()=>$("#detail").scrollIntoView(),50)}
+  else if(t.dataset.build){const c=COMPS.find(x=>x.id===t.dataset.build);const o=boardsFor(c,t.dataset.lvl)[+t.dataset.i];loadBoard(o.u,c,c.name+" · Level "+t.dataset.lvl,phaseOf(t.dataset.lvl)!=="early");location.hash="builder"}
+});
+
+/* ---------- Builder ---------- */
+const ROWS=4,COLS=7;
+let board=store.get("tft19-board2",{});let sel=null,poolCost=0,poolTrait="",poolSearch="";
+const ALLTRAITS=[...new Set(UL.flatMap(u=>u.t))].sort((a,b)=>a.localeCompare(b));
+function saveBoard(){store.set("tft19-board2",board)}
+function bestItemsFor(n,comp){return (comp&&comp.items[n]?comp.items[n].i:BEST[n]||[]).slice(0,3)}
+function loadBoard(names,comp,label,withItems=true){
+  board={};sel=null;const p=placeUnits(names,comp);
+  names.forEach(n=>{const [r,c]=p[n];board[r+"-"+c]={n,s:comp&&comp.stars[n]?Math.min(3,comp.stars[n]):2,i:withItems?bestItemsFor(n,comp):[]}});
+  $("#bname").value=label||"";renderBoard();
+}
+function renderTraits(){
+  const list=traitTiers(traitCountsOf(Object.values(board)));const cnt={};list.forEach(x=>cnt[x.t]=1);
+  const row=x=>`<button class="tr ${x.lvl?"b"+x.rank:"off"}${poolTrait===x.t?" pick":""}" data-trait="${esc(x.t)}" aria-pressed="${poolTrait===x.t}"><span class="cnt">${x.n}</span><div><div class="tn">${esc(x.t)}${TNOTE[x.t]?` <span class="muted" style="font-weight:400;font-size:11px">(${TNOTE[x.t]})</span>`:""}</div><div class="bp">${x.bp.map((b,i)=>i+1===x.lvl?`<b>${b}</b>`:b).join(" / ")}</div></div></button>`;
+  $("#traits").innerHTML=`<div class="thead"><h3>Traits</h3>${poolTrait?`<button class="btn small" data-clear="1">Auswahl aufheben</button>`:""}</div>`+
+    (list.length?list.map(row).join(""):`<p class="muted" style="font-size:13px;margin:0">Setz Units aufs Board, dann siehst du hier deine Traits.</p>`)+
+    `<div class="tsub">Alle Traits</div><div class="tall">${ALLTRAITS.filter(t=>!cnt[t]).map(t=>`<button class="tchip pickable${poolTrait===t?" on":""}" data-trait="${esc(t)}" aria-pressed="${poolTrait===t}">${esc(t)}</button>`).join("")}</div>`;
+}
+function pickTrait(t){poolTrait=poolTrait===t?"":t;$("#ptrait").value=poolTrait;renderTraits();renderPool();renderBoard(true)}
+$("#traits").addEventListener("click",e=>{const b=e.target.closest("[data-trait],[data-clear]");if(b)pickTrait(b.dataset.clear?poolTrait:b.dataset.trait)});
+function renderBoard(only){
+  let h="";
+  for(let r=0;r<ROWS;r++){h+=`<div class="hrow${r%2?" odd":""}">`;for(let c=0;c<COLS;c++){const k=r+"-"+c,b=board[k];const dim=b&&poolTrait&&!U[b.n].t.includes(poolTrait);
+    h+=`<button class="hex${sel===k?" sel":""}${dim?" dim":""}" data-k="${k}" aria-label="Feld ${r+1}-${c+1}${b?": "+esc(b.n):""}" ${b?'draggable="true"':""}>${b?tile(b.n,{stars:b.s,items:b.i}):""}</button>`}h+="</div>"}
+  $("#board").innerHTML=h;if(only)return;
+  const n=Object.keys(board).length;$("#lvlinfo").textContent=`${n} Units · Level ${Math.max(1,n)}`;
+  renderTraits();renderEditor();saveBoard();
+}
+function renderEditor(){
+  const b=sel&&board[sel];const saved=store.get("tft19-saved",[]);
+  let h=`<h3>Unit</h3>`;
+  if(!b)h+=`<p class="muted" style="font-size:13px;margin:0">Klick auf eine Unit im Board, um Sterne und Items einzustellen.</p>`;
+  else{const u=U[b.n];const best=BEST[b.n]||[];
+    h+=`<div class="ehead">${tile(b.n,{stars:b.s})}<div><b>${esc(b.n)}</b><small>${u.c} Gold</small><small>${esc(u.t.join(", "))}</small></div></div>
+    ${u.l?`<div class="unlocktxt">Unlock: ${esc(u.u||"muss freigeschaltet werden")}</div>`:""}
+    <div class="seg" role="group" aria-label="Sterne">${[1,2,3].map(s=>`<button data-star="${s}" aria-pressed="${b.s===s}">${"★".repeat(s)}</button>`).join("")}</div>
+    <div class="slots">${[0,1,2].map(i=>`<select data-slot="${i}" aria-label="Item ${i+1}"><option value="">Item ${i+1}: leer</option>${ITEMS.map(n=>`<option${b.i[i]&&ikey(b.i[i])===ikey(n)?" selected":""}>${esc(n)}</option>`).join("")}</select>`).join("")}</div>
+    ${best.length?`<div class="prio">Beste Items: ${best.map(itemBadge).join("")} <button class="btn small" id="ebest">Einsetzen</button></div>`:""}
+    <button class="btn" id="eremove">Vom Board nehmen</button>`}
+  h+=`<h3 style="margin-top:8px">Comps laden</h3><div class="saved">${COMPS.slice(0,12).map(c=>`<div><span><span class="tier ${c.tier}" style="display:inline-grid;min-width:18px;height:18px;font-size:12px;margin-right:6px">${c.tier}</span>${esc(c.name)}</span><button class="btn small" data-load="${c.id}">Laden</button></div>`).join("")}</div>`;
+  if(saved.length)h+=`<h3 style="margin-top:8px">Gespeichert</h3><div class="saved">${saved.map((s,i)=>`<div><span>${esc(s.name)}</span><button class="btn small" data-own="${i}">Laden</button><button class="btn small" data-del="${i}" aria-label="${esc(s.name)} löschen">×</button></div>`).join("")}</div>`;
+  $("#editor").innerHTML=h;
+}
+function placeOne(name,key){
+  if(!key){const used=new Set(Object.values(board).map(b=>b.n));const want=(()=>{for(const c of COMPS){if(c.pos[name]&&c.core.includes(name))return c.pos[name]}const u=U[name];return u.t.some(t=>FRONT.has(t))?[0,3]:[3,3]})();
+    let best=null,bd=99;for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){if(board[r+"-"+c])continue;const d=Math.abs(r-want[0])*2.2+Math.abs(c-want[1]);if(d<bd){bd=d;best=r+"-"+c}}key=best}
+  if(!key){toast("Board ist voll");return}
+  board[key]={n:name,s:1,i:[]};sel=key;renderBoard();
+}
+$("#board").addEventListener("click",e=>{const h=e.target.closest(".hex");if(!h)return;const k=h.dataset.k;
+  if(sel&&sel!==k&&board[sel]&&!board[k]){board[k]=board[sel];delete board[sel];sel=k}else sel=board[k]?k:null;renderBoard()});
+$("#board").addEventListener("dragstart",e=>{const h=e.target.closest(".hex");if(h)e.dataTransfer.setData("text/plain","move:"+h.dataset.k)});
+$("#board").addEventListener("dragover",e=>{const h=e.target.closest(".hex");if(h&&![...e.dataTransfer.types].includes("Files")){e.preventDefault();h.classList.add("over")}});
+$("#board").addEventListener("dragleave",e=>{const h=e.target.closest(".hex");if(h)h.classList.remove("over")});
+$("#board").addEventListener("drop",e=>{const h=e.target.closest(".hex");if(!h)return;const d=e.dataTransfer.getData("text/plain"),k=h.dataset.k;if(!/^(move|unit):/.test(d))return;e.preventDefault();
+  if(d.startsWith("move:")){const f=d.slice(5);if(f!==k){const tmp=board[k];board[k]=board[f];if(tmp)board[f]=tmp;else delete board[f];sel=k}}
+  else{board[k]={n:d.slice(5),s:1,i:[]};sel=k}renderBoard()});
+$("#editor").addEventListener("click",e=>{const t=e.target;
+  if(t.dataset.star&&sel){board[sel].s=+t.dataset.star;renderBoard()}
+  else if(t.id==="eremove"&&sel){delete board[sel];sel=null;renderBoard()}
+  else if(t.id==="ebest"&&sel){board[sel].i=(BEST[board[sel].n]||[]).slice();renderBoard()}
+  else if(t.dataset.load){const c=COMPS.find(x=>x.id===t.dataset.load);const lv=["9","8","10","7"].find(l=>(c.opts[l]||[]).length);loadBoard(lv?c.opts[lv][0].u:c.core,c,c.name+(lv?" · Level "+lv:""))}
+  else if(t.dataset.own){const s=store.get("tft19-saved",[])[+t.dataset.own];if(s){board=JSON.parse(JSON.stringify(s.board));sel=null;$("#bname").value=s.name;renderBoard()}}
+  else if(t.dataset.del){const s=store.get("tft19-saved",[]);s.splice(+t.dataset.del,1);store.set("tft19-saved",s);renderEditor()}});
+$("#editor").addEventListener("change",e=>{const t=e.target;if(t.dataset.slot&&sel){const i=board[sel].i.slice();i[+t.dataset.slot]=t.value;board[sel].i=i.filter(Boolean);renderBoard()}});
+$("#bclear").onclick=()=>{board={};sel=null;$("#bname").value="";renderBoard()};
+$("#bitems").onclick=()=>{Object.values(board).forEach(b=>{if(!b.i.length&&BEST[b.n])b.i=BEST[b.n].slice()});renderBoard();toast("Beste Items bei allen Units ohne Items eingesetzt")};
+$("#bsave").onclick=()=>{const name=$("#bname").value.trim()||"Meine Comp "+new Date().toLocaleDateString("de-DE");const s=store.get("tft19-saved",[]);s.push({name,board});toast(store.set("tft19-saved",s)?"Gespeichert":"Speichern geht in diesem Browser nicht");renderEditor()};
+$("#bcopy").onclick=async()=>{const txt=($("#bname").value||"Comp")+"\n"+Object.values(board).map(b=>`${b.n} ${"★".repeat(b.s)}${b.i.length?" ("+b.i.join(", ")+")":""}`).join("\n")+"\nTraits: "+traitTiers(traitCountsOf(Object.values(board))).filter(x=>x.lvl).map(x=>x.n+" "+x.t).join(", ");
+  try{await navigator.clipboard.writeText(txt);toast("In die Zwischenablage kopiert")}catch(e){toast("Kopieren ging nicht")}};
+$("#pcost").innerHTML=[0,1,2,3,4,5,7].map(c=>`<button class="chip" data-cost="${c}" aria-pressed="${c===0}">${c?c+" Gold":"Alle"}</button>`).join(" ");
+$("#ptrait").innerHTML+=ALLTRAITS.map(t=>`<option>${esc(t)}</option>`).join("");
+const POOL_ORDER=()=>UL.slice().sort((a,b)=>a.c-b.c||a.n.localeCompare(b.n)).map(u=>u.n);
+function renderPool(){
+  const q=poolSearch.toLowerCase();
+  let list=UL.filter(u=>(!poolCost||u.c===poolCost)&&(!q||u.n.toLowerCase().includes(q))).sort((a,b)=>a.c-b.c||a.n.localeCompare(b.n));
+  if(poolTrait)list.sort((a,b)=>(b.t.includes(poolTrait))-(a.t.includes(poolTrait))||a.c-b.c||a.n.localeCompare(b.n));
+  $("#pgrid").innerHTML=list.map(u=>`<button class="ucell${poolTrait&&!u.t.includes(poolTrait)?" dim":""}" draggable="true" data-unit="${esc(u.n)}" aria-label="${esc(u.n)} aufs Board">${tile(u.n)}<div class="unitcap">${esc(u.n)}</div></button>`).join("")||`<p class="muted">Keine Unit gefunden.</p>`;
+}
+$("#pcost").addEventListener("click",e=>{const b=e.target.closest("[data-cost]");if(!b)return;poolCost=+b.dataset.cost;$("#pcost").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));renderPool()});
+$("#ptrait").onchange=e=>{poolTrait="";pickTrait(e.target.value)};
+$("#psearch").oninput=e=>{poolSearch=e.target.value;renderPool()};
+$("#pgrid").addEventListener("click",e=>{const b=e.target.closest("[data-unit]");if(b)placeOne(b.dataset.unit)});
+$("#pgrid").addEventListener("dragstart",e=>{const b=e.target.closest("[data-unit]");if(b)e.dataTransfer.setData("text/plain","unit:"+b.dataset.unit)});
+
+/* ---------- Komponenten, Rezepte ---------- */
+const RECIPES=DATA.recipes||{};
+const COMPONENTS=["B.F. Sword","Recurve Bow","Needlessly Large Rod","Tear Of The Goddess","Chain Vest","Negatron Cloak","Giant's Belt","Sparring Gloves","Spatula","Frying Pan"].filter(n=>Object.values(RECIPES).some(r=>r.some(x=>ikey(x)===ikey(n))));
+const RK={};Object.entries(RECIPES).forEach(([it,r])=>RK[ikey(it)]=r.map(ikey));
+const recipeOf=item=>RK[ikey(item)]||null;
+const itemFor=(a,b)=>Object.keys(RECIPES).find(it=>{const r=RK[ikey(it)];return (r[0]===ikey(a)&&r[1]===ikey(b))||(r[0]===ikey(b)&&r[1]===ikey(a))});
+let OWN=store.get("tft19-own",{});
+const ownCount=c=>OWN[ikey(c)]||0;
+function compSel(id){
+  $(id).innerHTML=COMPONENTS.map(c=>{const n=ownCount(c);return `<div class="cs${n?" has":""}">${itemBadge(c)}<span class="nm">${esc(c)}</span><button data-cminus="${esc(c)}" aria-label="${esc(c)} weniger">−</button><b>${n}</b><button data-cplus="${esc(c)}" aria-label="${esc(c)} mehr">+</button></div>`}).join("");
+}
+function onCompClick(e,after){const p=e.target.closest("[data-cplus]"),m=e.target.closest("[data-cminus]");if(!p&&!m)return;const c=(p||m).dataset[p?"cplus":"cminus"];const k=ikey(c);OWN[k]=Math.max(0,(OWN[k]||0)+(p?1:-1));store.set("tft19-own",OWN);after()}
+function buildable(own){const out=[];const keys=Object.keys(RECIPES);keys.forEach(it=>{const [a,b]=RK[ikey(it)];if(a===b?(own[a]||0)>=2:(own[a]||0)>=1&&(own[b]||0)>=1)out.push(it)});return out}
+function usersOf(item){const res=[];COMPS.forEach(c=>Object.entries(c.items).forEach(([u,x])=>{if(x.i.some(i=>ikey(i)===ikey(item)))res.push({u,c,role:roleIn(c,u)})}));return res.sort((a,b)=>(a.role?0:1)-(b.role?0:1)||a.c.avg-b.c.avg)}
+
+/* ---------- Item-Rechner ---------- */
+function renderItems(){
+  compSel("#it-comps");
+  const own={};COMPONENTS.forEach(c=>own[ikey(c)]=ownCount(c));
+  const b=buildable(own).map(it=>({it,users:usersOf(it)})).sort((x,y)=>y.users.length-x.users.length);
+  $("#it-result").innerHTML=!Object.values(own).some(Boolean)?`<div class="notebox">Noch keine Komponenten ausgewählt.</div>`:!b.length?`<div class="notebox">Mit diesen Komponenten lässt sich noch kein fertiges Item bauen.</div>`:
+    `<div class="res">${b.map(x=>`<div class="panel rcard"><div style="display:flex;gap:10px;align-items:center"><span style="display:inline-block;transform:scale(1.7);margin:6px 8px">${itemBadge(x.it)}</span><div><b>${esc(x.it)}</b><div class="muted" style="font-size:12px">${RECIPES[x.it].map(esc).join(" + ")}</div></div></div>
+      <div class="lbl">Wer will das Item (${x.users.length})</div><div class="clist">${x.users.slice(0,6).map(y=>`<button class="crow" data-gocomp="${y.c.id}">${tile(y.u)}<span><span class="nm">${esc(y.u)}${roleTag(y.role)}</span><span class="sub" style="display:block">${esc(y.c.name)}</span></span><span class="av">${num(y.c.avg)}<small>Ø Comp</small></span></button>`).join("")||'<span class="muted" style="font-size:12.5px">Wird in den aktuellen Comps kaum gebaut.</span>'}</div></div>`).join("")}</div>`;
+  if(!$("#rtab").innerHTML){$("#rtab").innerHTML=`<tr><th></th>${COMPONENTS.map(c=>`<th title="${esc(c)}">${itemBadge(c)}</th>`).join("")}</tr>`+COMPONENTS.map(a=>`<tr><th style="text-align:left">${itemBadge(a)} ${esc(a)}</th>${COMPONENTS.map(b=>{const it=itemFor(a,b);return `<td>${it?itemBadge(it):""}</td>`}).join("")}</tr>`).join("")}
+}
+$("#it-comps").addEventListener("click",e=>onCompClick(e,renderItems));
+$("#it-reset").onclick=()=>{OWN={};store.set("tft19-own",OWN);renderItems()};
+
+/* ---------- Spiel-Assistent ---------- */
+let ASU=store.get("tft19-asunits",[]),ASA=store.get("tft19-asaugs",["","",""]);
+function compDemand(c){
+  const want=[];(c.carry||[]).forEach((u,i)=>{const it=(c.items[u]?c.items[u].i:BEST[u])||[];it.forEach(x=>want.push({item:x,u,w:i?0.7:1}))});
+  (c.tank||[]).slice(0,1).forEach(u=>{const it=(c.items[u]?c.items[u].i:BEST[u])||[];it.forEach(x=>want.push({item:x,u,w:0.5}))});
+  return want.filter(x=>recipeOf(x.item));
+}
+function scoreComp(c,own,units,augs){
+  const want=compDemand(c);const av={...own};let itemS=0,used=0,need=0;
+  want.forEach(x=>{recipeOf(x.item).forEach(k=>{need++;if((av[k]||0)>0){av[k]--;itemS+=x.w;used++}})});
+  const rel=new Set([...c.core,...lateBoard(c),...["4","5","6"].flatMap(l=>(c.early[l]||[]).flatMap(o=>o.u))]);
+  const um=units.filter(u=>rel.has(u));const unitS=um.reduce((s,u)=>s+(roleIn(c,u)?1.5:1),0);
+  const fit=augsForComp(c);let augBest=null,augS=0;
+  augs.filter(Boolean).forEach(n=>{const x=fit.list.find(y=>y.a.n===n);let s=0;if(x)s=fit.real?Math.max(0,(c.avg-x.avg))*2+0.5:1.2;if(s>augS){augS=s;augBest=n}});
+  const total=(4.6-c.avg)*2.2+itemS*0.9+unitS*0.7+augS;
+  // jetzt baubar
+  const av2={...own},now=[];
+  want.forEach(x=>{const r=recipeOf(x.item);const ok=r[0]===r[1]?(av2[r[0]]||0)>=2:(av2[r[0]]||0)>=1&&(av2[r[1]]||0)>=1;if(ok&&!now.some(n=>n.item===x.item&&n.u===x.u)){av2[r[0]]--;av2[r[1]]--;now.push(x)}});
+  return {c,total,itemS,used,need,um,augBest,now};
+}
+function renderAssist(){
+  compSel("#as-comps");
+  const q=($("#as-uq").value||"").toLowerCase();
+  $("#as-ugrid").innerHTML=UL.filter(u=>!q||u.n.toLowerCase().includes(q)).sort((a,b)=>a.c-b.c||a.n.localeCompare(b.n)).map(u=>`<button data-asu="${esc(u.n)}" data-unit="${esc(u.n)}" aria-pressed="${ASU.includes(u.n)}" title="${esc(u.n)}">${tile(u.n)}</button>`).join("");
+  $("#as-upicked").innerHTML=ASU.length?ASU.map(n=>`<button class="ucell" data-asu="${esc(n)}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center" title="Entfernen">${tile(n)}<div class="unitcap">${esc(n)} ✕</div></button>`).join(""):'<span class="muted" style="font-size:12.5px">Noch keine Units ausgewählt.</span>';
+  if(!$("#as-augs").children.length){$("#auglistdl").innerHTML=AUGS.map(a=>`<option value="${esc(a.n)}">`).join("");
+    $("#as-augs").innerHTML=[0,1,2].map(i=>`<div class="aug-in"><input class="inp" list="auglistdl" data-asa="${i}" placeholder="Augment ${i+1}" value="${esc(ASA[i]||"")}" aria-label="Augment ${i+1}"></div>`).join("")}
+  const own={};COMPONENTS.forEach(c=>own[ikey(c)]=ownCount(c));
+  const augs=ASA.filter(n=>AUGMAP[n]);
+  const res=COMPS.map(c=>scoreComp(c,own,ASU,augs)).sort((a,b)=>b.total-a.total).slice(0,3);
+  const anyInput=Object.values(own).some(Boolean)||ASU.length||augs.length;
+  // Augment-Empfehlung
+  let augRec="";
+  if(augs.length){
+    const rows=augs.map(n=>{const a=AUGMAP[n];const fitTop=res.find(r=>r.augBest===n);let basis,score;
+      if(a.st){score=10-a.st.avg;basis=`Ø Platz ${num(a.st.avg)} insgesamt`}else if(fitTop){score=5-res.indexOf(fitTop);basis=`passt zu ${fitTop.c.name}`}else{score=a.c.includes("Items")?1.5:a.c.includes("Gold")?1.2:1;basis="passt zu keiner der Top-Comps, eher allgemein"}
+      return {a,score,basis}}).sort((x,y)=>y.score-x.score);
+    augRec=`<div class="panel sbox"><h3>Augment-Empfehlung</h3><div class="augrows">${rows.map((r,i)=>`<button class="augrow" data-goaug="${esc(r.a.n)}"><span><b style="font-size:14px">${i===0?"★ ":""}${esc(r.a.n)}</b> <span class="rar ${r.a.r}">${RAR_DE[r.a.r]||r.a.r}</span><span class="ad" style="display:block">${esc(r.basis)}</span></span></button>`).join("")}</div>${augs.some(n=>!AUGMAP[n].st)?'<p class="muted" style="font-size:12px;margin:0">Ohne Augment-Platzierungen (PBE) bewertet der Assistent danach, wie gut das Augment zu den besten Comps für dich passt.</p>':""}</div>`;
+  }
+  $("#as-result").innerHTML=`${!anyInput?'<div class="notebox" style="margin-bottom:12px">Noch nichts eingetragen. Unten stehen die stärksten Comps allgemein. Trag Komponenten, Units oder Augments ein, dann passt der Assistent die Empfehlung an.</div>':""}
+  <div class="agrid" style="grid-template-columns:minmax(0,2fr) minmax(280px,1fr)"><div class="res">${res.map((r,i)=>{const c=r.c;return `<div class="panel rcard">
+    <div style="display:flex;align-items:center;gap:10px"><span class="rk">${i+1}</span><span class="tier ${c.tier}">${c.tier}</span><div style="flex:1"><b style="font-size:16px">${esc(c.name)}</b><div class="sty">${esc(STYLE_LABEL(c.style))} · Ø ${num(c.avg)}</div></div></div>
+    <div class="why">${r.need?`<span class="${r.used?"":"no"}">${r.used} von ${r.need} benötigten Komponenten für die Carry- und Tank-Items hast du schon</span>`:""}
+      <span class="${r.um.length?"":"no"}">${r.um.length?"Passende Units: "+r.um.map(esc).join(", "):"Keine deiner Units gehört zur Comp"}</span>
+      ${augs.length?`<span class="${r.augBest?"":"no"}">${r.augBest?"Augment passt: "+esc(r.augBest):"Keins der Augments passt direkt"}</span>`:""}</div>
+    ${r.now.length?`<div class="buildnow"><b>Jetzt bauen:</b>${r.now.map(x=>`<span>${itemBadge(x.item)} ${esc(x.item)} → ${esc(x.u)}</span>`).join("")}</div>`:""}
+    <div class="roles" style="grid-template-columns:1fr">${(c.carry||[]).slice(0,1).map(u=>roleCard(c,u,"carry",0)).join("")}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small" data-gocomp="${c.id}">Comp ansehen</button><button class="btn small" data-asbuild="${c.id}">Im Builder öffnen</button></div></div>`}).join("")}</div><div>${augRec}</div></div>`;
+}
+$("#as-comps").addEventListener("click",e=>onCompClick(e,renderAssist));
+$("#as-reset").onclick=()=>{OWN={};ASU=[];ASA=["","",""];store.set("tft19-own",OWN);store.set("tft19-asunits",ASU);store.set("tft19-asaugs",ASA);$("#as-augs").innerHTML="";$("#as-uq").value="";renderAssist()};
+$("#as-uq").oninput=()=>renderAssist();
+$("#view-assist").addEventListener("click",e=>{const u=e.target.closest("[data-asu]");if(u){const n=u.dataset.asu;ASU=ASU.includes(n)?ASU.filter(x=>x!==n):[...ASU,n];store.set("tft19-asunits",ASU);renderAssist();return}
+  const b=e.target.closest("[data-asbuild]");if(b){const c=COMPS.find(x=>x.id===b.dataset.asbuild);loadBoard(lateBoard(c),c,c.name);location.hash="builder"}});
+$("#as-augs").addEventListener("change",e=>{const i=e.target.dataset.asa;if(i==null)return;ASA[+i]=e.target.value;store.set("tft19-asaugs",ASA);renderAssist()});
+
+/* ---------- Unlocks ---------- */
+const ulf={cost:0,sort:"cost"};
+function renderUnlocks(){
+  chipRow("#ul-cost",[["0","Alle"],["1","1"],["2","2"],["3","3"],["4","4"],["5","5"],["7","7"]],String(ulf.cost),"ulcost");
+  chipRow("#ul-sort",[["cost","Kosten"],["avg","Ø Platz"],["lv","Mindest-Level"]],ulf.sort,"ulsort");
+  let list=UL.filter(u=>u.l&&(!ulf.cost||u.c===ulf.cost));
+  list.sort((a,b)=>ulf.sort==="avg"?((a.st?a.st.avg:9)-(b.st?b.st.avg:9)):ulf.sort==="lv"?((a.lv||0)-(b.lv||0)||a.c-b.c):(a.c-b.c||a.n.localeCompare(b.n)));
+  $("#ulist").innerHTML=list.map(u=>{const cs=compsWithUnit(u.n);return `<button class="ucard" data-champ="${esc(u.n)}">${tile(u.n)}<span><b>${esc(u.n)}</b> <span class="muted" style="font-size:12px">${u.c} Gold</span><div class="cond">${esc(u.u||"")}</div><div class="meta"><span>${u.lv?"ab Level "+u.lv:"kein Mindest-Level"}</span>${u.st?`<span>Ø ${num(u.st.avg)} · ${pct(u.st.top4)} Top 4</span>`:""}<span>${cs.length?"in "+cs.length+" Comps, z. B. "+esc(cs[0].name):"in keiner Top-Comp"}</span></div></span></button>`}).join("");
+}
+$("#view-unlocks").addEventListener("click",e=>{const t=e.target.closest("[data-ulcost],[data-ulsort]");if(!t)return;if(t.dataset.ulcost!=null)ulf.cost=+t.dataset.ulcost;if(t.dataset.ulsort)ulf.sort=t.dataset.ulsort;renderUnlocks()});
+
+/* ---------- Overlay ---------- */
+function renderOverlay(){
+  const sel=$("#ov-comp");const cur=store.get("tft19-ov",null)||st.comp;
+  const ordered=[...COMPS.filter(isFav),...COMPS.filter(c=>!isFav(c))];
+  sel.innerHTML=ordered.map(c=>`<option value="${c.id}" ${c.id===cur?"selected":""}>${isFav(c)?"★ ":""}${esc(c.tier+" · "+c.name)}</option>`).join("");
+  const c=COMPS.find(x=>x.id===sel.value)||COMPS[0];
+  const lb=lateBoard(c);const e5=(c.early["5"]||[])[0]||(c.early["4"]||[])[0];const fit=augsForComp(c).list.slice(0,4);
+  $("#ov-body").innerHTML=`<div class="ovc"><div style="display:flex;gap:10px;align-items:center"><span class="tier ${c.tier}">${c.tier}</span><div><h2>${esc(c.name)}</h2><div class="sty">${esc(STYLE_LABEL(c.style))} · Ø ${num(c.avg)} · ${pct(c.top4)} Top 4</div></div></div>
+   <div class="roles">${(c.carry||[]).map((u,i)=>roleCard(c,u,"carry",i)).join("")}${(c.tank||[]).slice(0,1).map(u=>roleCard(c,u,"tank",0)).join("")}</div>
+   <div class="panel sbox"><div class="lbl">Endboard</div>${miniBoard(lb,c,{withItems:true,stars:true})}</div>
+   <div class="panel sbox"><div class="lbl">Leveln</div><div class="timeline">${c.lv.map(x=>`<div class="tl"><b>${x.l}</b>${esc(x.s)}</div>`).join("")}</div>
+   ${e5?`<div class="lbl">Früh spielen</div><div class="urow" style="--s:34px;gap:10px 6px">${e5.u.map(n=>ucell(n,{})).join("")}</div>`:""}
+   ${fit.length?`<div class="lbl">Augments</div><div style="font-size:12.5px">${fit.map(x=>esc(x.a.n)).join(" · ")}</div>`:""}</div></div>`;
+}
+$("#ov-comp").onchange=e=>{store.set("tft19-ov",e.target.value);renderOverlay()};
+
+/* ---------- Reroll-Rechner ---------- */
+const ODDS_DEF={1:[100,0,0,0,0],2:[100,0,0,0,0],3:[75,25,0,0,0],4:[55,30,15,0,0],5:[45,33,20,2,0],6:[30,40,25,5,0],7:[19,30,40,10,1],8:[15,20,32,30,3],9:[10,17,25,33,15],10:[5,10,20,40,25],11:[1,2,12,50,35]};
+let ODDS=store.get("tft19-odds",null)||JSON.parse(JSON.stringify(ODDS_DEF));
+const rl=store.get("tft19-roll",{lvl:8,unit:"",goal:9,own:0,taken:0,gone:0,gold:50});
+function renderRoll(){
+  const shop=UL.filter(u=>u.c<=5).sort((a,b)=>a.c-b.c||a.n.localeCompare(b.n));
+  if(!rl.unit||!U[rl.unit]||U[rl.unit].c>5)rl.unit=(shop.find(u=>u.n==="Kobuko")||shop[0]).n;
+  $("#rl-form").innerHTML=`<label for="rl-lvl">Dein Level</label><select id="rl-lvl">${[3,4,5,6,7,8,9,10,11].map(l=>`<option ${l==rl.lvl?"selected":""}>${l}</option>`).join("")}</select>
+   <label for="rl-unit">Ziel-Unit</label><select id="rl-unit">${shop.map(u=>`<option ${u.n===rl.unit?"selected":""} value="${esc(u.n)}">${esc(u.n)} (${u.c})</option>`).join("")}</select>
+   <label for="rl-goal">Ziel</label><select id="rl-goal"><option value="3" ${rl.goal==3?"selected":""}>2 Sterne (3 Kopien)</option><option value="9" ${rl.goal==9?"selected":""}>3 Sterne (9 Kopien)</option></select>
+   <label for="rl-own">Kopien, die du hast</label><input id="rl-own" type="number" min="0" max="8" value="${rl.own}">
+   <label for="rl-taken">Kopien bei Gegnern</label><input id="rl-taken" type="number" min="0" max="20" value="${rl.taken}">
+   <label for="rl-gone">Andere Units gleicher Kosten weg</label><input id="rl-gone" type="number" min="0" max="200" value="${rl.gone}">
+   <label for="rl-gold">Gold zum Rollen</label><input id="rl-gold" type="number" min="0" max="300" value="${rl.gold}">`;
+  $("#rl-note").textContent="Für Set 19 sind die Shop-Chancen noch nicht bestätigt. Vorausgefüllt sind die Werte von Set 18. Du kannst sie in der Tabelle ändern, sobald die neuen Werte bekannt sind. Pool-Größen kommen aus den Set-19-Daten: "+[1,2,3,4,5].map(c=>`${c} Gold: ${DATA.pool[c]} Kopien × ${DATA.poolN[c]} Units`).join(", ")+".";
+  $("#rl-odds").innerHTML=`<tr><th>Level</th>${[1,2,3,4,5].map(c=>`<th>${c} Gold</th>`).join("")}</tr>`+Object.keys(ODDS).map(l=>`<tr><th>${l}</th>${ODDS[l].map((v,i)=>`<td><input type="number" min="0" max="100" data-odd="${l}-${i}" value="${v}" aria-label="Level ${l}, ${i+1} Gold"></td>`).join("")}</tr>`).join("")+`<tr><td colspan="6"><button class="btn small" id="rl-oddreset">Set-18-Werte wiederherstellen</button></td></tr>`;
+}
+function simRoll(gold,runs){
+  const u=U[rl.unit],c=u.c,need=+rl.goal,p=(ODDS[rl.lvl]||ODDS[8])[c-1]/100;
+  const pool=DATA.pool[c],nU=DATA.poolN[c];
+  let hit=0,copies=0;
+  for(let r=0;r<runs;r++){let g=gold,have=+rl.own,rem=Math.max(0,pool-have-rl.taken),tot=Math.max(1,pool*nU-have-rl.taken-rl.gone);
+    while(have<need&&g>=2){g-=2;for(let s=0;s<5&&have<need;s++){if(Math.random()<p&&Math.random()<rem/tot&&g>=c){g-=c;have++;rem--;tot--}}}
+    if(have>=need)hit++;copies+=have-rl.own}
+  return {p:hit/runs,copies:copies/runs};
+}
+function runRoll(){
+  const u=U[rl.unit];const pc=(ODDS[rl.lvl]||[])[u.c-1]||0;
+  if(!pc){$("#rl-out").innerHTML=`<div class="notebox">Auf Level ${rl.lvl} gibt es keine ${u.c}-Kosten-Units im Shop.</div>`;return}
+  if(+rl.own>=+rl.goal){$("#rl-out").innerHTML=`<div class="notebox">Du hast schon genug Kopien.</div>`;return}
+  const r=simRoll(+rl.gold,4000);const th={};
+  for(let g=0;g<=300;g+=10){const s=simRoll(g,600).p;[50,80,95].forEach(t=>{if(th[t]==null&&s*100>=t)th[t]=g})}
+  $("#rl-out").innerHTML=`<div style="display:flex;gap:14px;align-items:center">${tile(rl.unit)}<div><div class="big">${Math.round(r.p*100)} %</div><div class="muted" style="font-size:13px">Chance auf ${rl.goal==9?"3":"2"} Sterne ${esc(rl.unit)} mit ${rl.gold} Gold auf Level ${rl.lvl}</div></div></div>
+   <div class="bar" style="margin-top:8px"><i style="width:${Math.round(r.p*100)}%"></i></div>
+   <p style="font-size:13.5px;margin:10px 0 4px">Im Schnitt findest du <b>${num(r.copies.toFixed(1))}</b> Kopien.</p>
+   <div class="lbl">So viel Gold brauchst du</div><div class="statrow" style="grid-template-columns:repeat(3,1fr)">${[50,80,95].map(t=>`<div class="stat"><b>${th[t]!=null?th[t]:"300+"}</b><small>für ${t} %</small></div>`).join("")}</div>
+   <p class="muted" style="font-size:12px;margin:8px 0 0">Gerechnet mit ${pc} % Chance pro Shop-Slot auf ${u.c}-Kosten-Units, 2 Gold pro Reroll und ${u.c} Gold pro Kauf.</p>`;
+}
+$("#rl-form").addEventListener("change",e=>{const id=e.target.id.replace("rl-","");if(id in rl){rl[id]=id==="unit"?e.target.value:+e.target.value;store.set("tft19-roll",rl)}});
+$("#rl-run").onclick=runRoll;
+$("#rl-odds").addEventListener("change",e=>{const k=e.target.dataset.odd;if(!k)return;const [l,i]=k.split("-");ODDS[l][+i]=Math.max(0,Math.min(100,+e.target.value||0));store.set("tft19-odds",ODDS)});
+$("#rl-odds").addEventListener("click",e=>{if(e.target.id==="rl-oddreset"){ODDS=JSON.parse(JSON.stringify(ODDS_DEF));store.set("tft19-odds",ODDS);renderRoll()}});
+
+/* ---------- Eigene Bilder ---------- */
+
+const norm=s=>s.toLowerCase().replace(/[^a-z]/g,"");
+const NAMES=Object.keys(U).sort((a,b)=>norm(b).length-norm(a).length);
+function iconInfo(){const n=Object.keys(ICONS).length;$("#iconinfo").textContent=n?`${n} von ${Object.keys(U).length} Bildern geladen`:""}
+function shrink(blob){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{const s=Math.min(img.width,img.height),T=Math.min(s,128);const cv=document.createElement("canvas");cv.width=cv.height=T;const x=cv.getContext("2d");x.imageSmoothingQuality="high";x.drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,T,T);URL.revokeObjectURL(img.src);res(cv.toDataURL("image/png"))};img.onerror=rej;img.src=URL.createObjectURL(blob)})}
+async function setIcon(name,blob){try{ICONS[name]=await shrink(blob);store.set("tft19-icons",ICONS);iconInfo();rerender();toast(`Bild für ${name} gesetzt`);return true}catch(e){toast("Das Bild konnte nicht gelesen werden");return false}}
+async function byFilename(files){let ok=0;for(const f of files){if(!f.type.startsWith("image/"))continue;const fn=norm(f.name.replace(/\.[^.]+$/,""));const m=NAMES.find(n=>fn.includes(norm(n)));if(!m)continue;try{ICONS[m]=await shrink(f);ok++}catch(e){}}
+  if(!ok&&files.length===1){try{await importSheet(files[0]);return}catch(e){}}
+  store.set("tft19-icons",ICONS);iconInfo();rerender();toast(ok?`${ok} Bilder zugeordnet`:"Kein Dateiname passte zu einer Unit. Zieh das Bild direkt auf die Kachel.");}
+$("#iconfile").onchange=async e=>{await byFilename(e.target.files);e.target.value=""};
+$("#iconclear").onclick=()=>{ICONS={};IICONS_RAW={};reIicons();store.set("tft19-icons",ICONS);store.set("tft19-itemicons",IICONS_RAW);iconInfo();rerender()};
+
+
+/* Screenshot-Import: zerschneidet ein Raster aus Icons (Reihenfolge wie im Unit-Pool: Kosten, dann Name) */
+async function importSheet(file){
+  const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(file)});
+  const W=img.width,H=img.height,cv=document.createElement("canvas");cv.width=W;cv.height=H;const cx=cv.getContext("2d");cx.drawImage(img,0,0);
+  const d=cx.getImageData(0,0,W,H).data;
+  const px=(x,y)=>{const i=(y*W+x)*4;return [d[i],d[i+1],d[i+2]]};
+  const edge=[];for(let x=0;x<W;x+=2){edge.push(px(x,0),px(x,H-1))}for(let y=0;y<H;y+=2){edge.push(px(0,y),px(W-1,y))}
+  const med=k=>{const v=edge.map(e=>e[k]).sort((a,b)=>a-b);return v[v.length>>1]};const bg=[med(0),med(1),med(2)];
+  const M=new Uint8Array(W*H);for(let y=0;y<H;y++)for(let x=0;x<W;x++){const p=px(x,y);M[y*W+x]=Math.abs(p[0]-bg[0])+Math.abs(p[1]-bg[1])+Math.abs(p[2]-bg[2])>60?1:0}
+  const runs=(prof,th,min)=>{const r=[];let s=-1;prof.concat([0]).forEach((v,i)=>{if(v>th&&s<0)s=i;if(v<=th&&s>=0){if(i-s>=min)r.push([s,i]);s=-1}});return r};
+  const rp=[];for(let y=0;y<H;y++){let c=0;for(let x=0;x<W;x++)c+=M[y*W+x];rp.push(c/W)}
+  const rows=runs(rp,Math.max(...rp)*.45,8);if(rows.length<2)throw new Error("rows");
+  const y0=rows[0][0],S=rows[0][1]-rows[0][0],py=rows[1][0]-rows[0][0];
+  const cp=[];for(let x=0;x<W;x++){let c=0;for(let y=y0;y<y0+S;y++)c+=M[y*W+x];cp.push(c/S)}
+  const xs=runs(cp,.6,Math.floor(S*.5)).filter(([a,b])=>Math.abs(b-a-S)<=Math.max(3,S*.08)).map(r=>r[0]);
+  const ds=xs.slice(1).map((v,i)=>v-xs[i]).filter(v=>v<S*2).sort((a,b)=>a-b);if(!ds.length)throw new Error("cols");
+  const pxs=ds[ds.length>>1],x0=xs[0]%pxs;
+  const cells=[];for(let y=y0;y+S<=H;y+=py)for(let x=x0;x+S<=W;x+=pxs){let c=0;for(let yy=y;yy<y+S;yy++)for(let xx=x;xx<x+S;xx++)c+=M[yy*W+xx];if(c/(S*S)>.25)cells.push([x,y])}
+  let order=POOL_ORDER();
+  if(cells.length===order.length+1){const last5=order.map(n=>U[n].c).lastIndexOf(5);order=[...order.slice(0,last5+1),null,...order.slice(last5+1)]}
+  if(cells.length!==order.length){toast(`${cells.length} Icons erkannt, erwartet ${order.length}. Bitte den kompletten Pool (Filter „Alle“) screenshotten.`);return}
+  const ins=Math.max(1,Math.round(S*.05)),src=S-2*ins,T=Math.min(src,128);const out=document.createElement("canvas");out.width=out.height=T;const ox=out.getContext("2d");ox.imageSmoothingQuality="high";
+  cells.forEach(([x,y],i)=>{const n=order[i];if(!n)return;ox.clearRect(0,0,T,T);ox.drawImage(cv,x+ins,y+ins,src,src,0,0,T,T);ICONS[n]=out.toDataURL("image/png")});
+  if(src<60)setTimeout(()=>toast("Tipp: Für schärfere Bilder vorher mit Strg und + auf 200 % zoomen und neu screenshotten"),2600);
+  URL.revokeObjectURL(img.src);store.set("tft19-icons",ICONS);iconInfo();rerender();toast(`${order.filter(Boolean).length} Icons aus dem Screenshot übernommen`);
+}
+$("#sheetfile").onchange=async e=>{const f=e.target.files[0];if(f){try{await importSheet(f)}catch(err){toast("Im Screenshot wurde kein Icon-Raster gefunden")}}e.target.value=""};
+
+
+/* Item-Screenshot: erkennt Icons in Gruppen (Tank, Utility, ...) und ordnet sie zeilenweise zu */
+async function importItemSheet(file){
+  const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(file)});
+  const W=img.width,H=img.height,cv=document.createElement("canvas");cv.width=W;cv.height=H;const cx=cv.getContext("2d");cx.drawImage(img,0,0);
+  const d=cx.getImageData(0,0,W,H).data;const px=(x,y)=>{const i=(y*W+x)*4;return [d[i],d[i+1],d[i+2]]};
+  const edge=[];for(let x=0;x<W;x+=2){edge.push(px(x,0),px(x,H-1))}for(let y=0;y<H;y+=2){edge.push(px(0,y),px(W-1,y))}
+  const med=k=>{const v=edge.map(e=>e[k]).sort((a,b)=>a-b);return v[v.length>>1]};const bg=[med(0),med(1),med(2)];
+  const M=new Uint8Array(W*H);for(let y=0;y<H;y++)for(let x=0;x<W;x++){const p=px(x,y);M[y*W+x]=Math.abs(p[0]-bg[0])+Math.abs(p[1]-bg[1])+Math.abs(p[2]-bg[2])>35?1:0}
+  const runs=(prof,th,min)=>{const r=[];let s=-1;prof.concat([0]).forEach((v,i)=>{if(v>th&&s<0)s=i;if(v<=th&&s>=0){if(i-s>=min)r.push([s,i]);s=-1}});return r};
+  const median=a=>{const v=a.slice().sort((x,y)=>x-y);return v[v.length>>1]};
+  const rp=[];for(let y=0;y<H;y++){let c=0;for(let x=0;x<W;x++)c+=M[y*W+x];rp.push(c/W)}
+  const rows=runs(rp,Math.max(...rp)*.3,10);if(!rows.length)throw new Error("rows");
+  const S=median(rows.map(([a,b])=>b-a));
+  let starts=[];rows.forEach(([y0,y1])=>{if(Math.abs(y1-y0-S)>S*.2)return;const cp=[];for(let x=0;x<W;x++){let c=0;for(let y=y0;y<y1;y++)c+=M[y*W+x];cp.push(c/(y1-y0))}
+    runs(cp,.5,Math.floor(S*.5)).forEach(([a,b])=>{if(Math.abs(b-a-S)<=S*.12)starts.push(a)})});
+  starts=[...new Set(starts)].sort((a,b)=>a-b);const ds=starts.slice(1).map((v,i)=>v-starts[i]).filter(v=>v>S*.9&&v<S*1.8);if(!ds.length)throw new Error("cols");
+  const pxs=median(ds);let x0=starts[0];while(x0-pxs>=0)x0-=pxs;
+  const boxes=[];for(let x=x0;x+S<=W;x+=pxs){const cx0=Math.round(x);const vp=[];for(let y=0;y<H;y++){let c=0;for(let xx=cx0+2;xx<cx0+S-2;xx++)c+=M[y*W+xx];vp.push(c/(S-4))}
+    runs(vp,.4,Math.floor(S*.7)).forEach(([a,b])=>{if(b-a<=S*1.3)boxes.push([cx0,Math.max(0,Math.round((a+b)/2-S/2))])})}
+  boxes.sort((a,b)=>a[1]-b[1]||a[0]-b[0]);const rowsB=[];boxes.forEach(b=>{const r=rowsB[rowsB.length-1];if(r&&Math.abs(r[0][1]-b[1])<S*.5)r.push(b);else rowsB.push([b])});
+  const cells=rowsB.flatMap(r=>r.sort((a,b)=>a[0]-b[0]));
+  if(cells.length!==ITEM_SHEET.length){toast(`${cells.length} Items erkannt, erwartet ${ITEM_SHEET.length}. Bitte die komplette Item-Liste screenshotten.`);return}
+  const ins=Math.max(1,Math.round(S*.05)),src=S-2*ins,T=Math.min(src,96);const out=document.createElement("canvas");out.width=out.height=T;const ox=out.getContext("2d");ox.imageSmoothingQuality="high";
+  cells.forEach(([x,y],i)=>{ox.clearRect(0,0,T,T);ox.drawImage(cv,x+ins,y+ins,src,src,0,0,T,T);IICONS_RAW[ITEM_SHEET[i]]=out.toDataURL("image/png")});
+  URL.revokeObjectURL(img.src);store.set("tft19-itemicons",IICONS_RAW);reIicons();rerender();toast(`${ITEM_SHEET.length} Item-Icons übernommen`);
+}
+$("#itemsheetfile").onchange=async e=>{const f=e.target.files[0];if(f){try{await importItemSheet(f)}catch(err){toast("Im Screenshot wurde kein Item-Raster gefunden")}}e.target.value=""};
+
+/* Welche Unit liegt unter der Maus? */
+let hoverUnit=null;
+function unitAt(el){const p=el&&el.closest&&el.closest("[data-unit]");if(p)return p.dataset.unit;const h=el&&el.closest&&el.closest(".hex");if(h&&board[h.dataset.k])return board[h.dataset.k].n;return null}
+document.addEventListener("mouseover",e=>{const u=unitAt(e.target);if(u)hoverUnit=u});
+const hasFiles=e=>e.dataTransfer&&[...e.dataTransfer.types].includes("Files");
+const imgFile=dt=>[...(dt.files||[])].find(f=>f.type.startsWith("image/"));
+/* Bild auf eine Kachel ziehen (Pool oder Board) */
+document.addEventListener("dragover",e=>{if(hasFiles(e)||[...e.dataTransfer.types].includes("text/uri-list")){e.preventDefault();const t=e.target.closest&&e.target.closest("[data-unit],.hex");document.querySelectorAll(".over").forEach(x=>x!==t&&x.classList.remove("over"));if(t)t.classList.add("over")}});
+document.addEventListener("drop",async e=>{
+  const types=[...e.dataTransfer.types];if(!types.includes("Files")&&!types.includes("text/uri-list"))return;
+  const internal=e.dataTransfer.getData("text/plain");if(/^(move|unit):/.test(internal))return;
+  e.preventDefault();e.stopPropagation();document.querySelectorAll(".over").forEach(x=>x.classList.remove("over"));
+  const target=unitAt(e.target);const f=imgFile(e.dataTransfer);
+  if(f&&target){await setIcon(target,f);return}
+  if(e.dataTransfer.files.length){await byFilename(e.dataTransfer.files);return}
+  toast("Der Browser gibt das Bild so nicht frei. Rechtsklick → Bild kopieren, dann mit der Maus über die Kachel und Strg+V.");
+},true);
+/* Bild kopieren und mit Strg+V einfügen */
+document.addEventListener("paste",async e=>{
+  if(e.target.closest&&e.target.closest("input,select,textarea"))return;
+  const item=[...(e.clipboardData&&e.clipboardData.items||[])].find(i=>i.type.startsWith("image/"));if(!item)return;
+  e.preventDefault();const name=hoverUnit||(sel&&board[sel]&&board[sel].n);
+  if(!name){toast("Fahr erst mit der Maus über eine Unit-Kachel, dann Strg+V");return}
+  await setIcon(name,item.getAsFile());
+});
+
+
+
+/* ---------- Routing ---------- */
+const VIEWS=["comps","early","mid","late","champs","augs","unlocks","assist","items","roll","builder","overlay"];
+const FULL=new Set(["assist","items","roll","overlay"]);
+function renderView(h){
+  if(h in PH){st.phase=h;renderPhase()}
+  if(h==="comps"){renderFilters();renderCards();renderDetail()}
+  if(h==="champs"){if(!st.champ){const b=UL.filter(u=>u.st).sort((a,b)=>a.st.avg-b.st.avg)[0];st.champ=b?b.n:UL[0].n}renderChamps()}
+  if(h==="augs")renderAugs();
+  if(h==="unlocks")renderUnlocks();
+  if(h==="assist")renderAssist();
+  if(h==="items")renderItems();
+  if(h==="roll")renderRoll();
+  if(h==="overlay")renderOverlay();
+  if(h==="builder"){renderBoard();renderPool()}
+  if(h!=="builder"&&!FULL.has(h))renderSide();
+}
+function rerender(){renderView(st.view||"comps")}
+function route(){
+  let h=location.hash.slice(1)||"comps";if(!VIEWS.includes(h))h="comps";st.view=h;
+  document.querySelectorAll(".views a").forEach(a=>a.dataset.v===h?a.setAttribute("aria-current","page"):a.removeAttribute("aria-current"));
+  const show=(id,on)=>$(id).classList.toggle("hidden",!on);
+  show("#view-comps",h==="comps");show("#view-phase",h in PH);show("#view-builder",h==="builder");show("#view-champs",h==="champs");show("#view-augs",h==="augs");
+  show("#view-unlocks",h==="unlocks");show("#view-assist",h==="assist");show("#view-items",h==="items");show("#view-roll",h==="roll");show("#view-overlay",h==="overlay");
+  $("#layout").classList.toggle("hidden",h==="builder");$("#layout").classList.toggle("full",FULL.has(h));
+  document.body.classList.toggle("ov",h==="overlay");
+  renderView(h);
+  window.scrollTo(0,0);
+}
+window.addEventListener("hashchange",route);
+$("#meta").innerHTML=`Prismatic Tour · PBE 19.1 · Stand ${new Date(DATA.updated).toLocaleString("de-DE",{dateStyle:"short",timeStyle:"short"})} Uhr · ${DATA.site?"wird alle 30 Minuten aktualisiert":"wird stündlich aktualisiert"} · ${COMPS.length} Comps · ${UL.length} Champions · ${AUGS.length} Augments · Daten: MetaTFT`;
+if(!Object.keys(board).length){const c=COMPS[0];loadBoard(lateBoard(c),c,c.name)}
+iconInfo();route();
+</script>
+</body>
+</html>

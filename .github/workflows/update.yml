@@ -1,0 +1,48 @@
+name: Daten aktualisieren
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "sheets/**"
+      - "build/**"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Pakete installieren
+        run: pip install pillow numpy
+      - name: Seite neu bauen
+        env:
+          SHEETS: sheets
+          DOCS: docs
+        run: |
+          python build/update.py work build/template.html docs/index.html data/history.json | tail -n 5
+          test "$(stat -c%s docs/index.html)" -gt 100000
+      - name: Änderungen speichern
+        run: |
+          git config user.name "tft-planer-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs data
+          if git diff --cached --quiet; then
+            echo "Keine Änderungen"
+          else
+            git commit -m "Daten aktualisiert $(date -u +'%Y-%m-%d %H:%M') UTC"
+            git push
+          fi
