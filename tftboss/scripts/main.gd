@@ -29,6 +29,8 @@ var blocked_seen := 0
 var use_ocr := false
 var ocr_msg := ""
 var ocr_last_log := 0
+var ocr_err_logged := 0
+var ocr_fail := 0
 var shop_empty_since := [0, 0, 0, 0, 0]
 const REC_MAX := 200
 var rec_count := 0
@@ -1284,7 +1286,7 @@ func _ocr_png(img: Image, name: String, scale: int = 2) -> String:
 		c.resize(c.get_width() * scale, c.get_height() * scale, Image.INTERPOLATE_CUBIC)
 	var path := _ocr_dir().path_join(name + ".png")
 	c.save_png(path)
-	return path
+	return path.replace("/", "\\") if OS.get_name() == "Windows" else path
 
 func _rect_px(img: Image, key: String) -> Rect2i:
 	var r: Array = rects[key]
@@ -1314,10 +1316,21 @@ func _ocr_tick(img: Image) -> Dictionary:
 		_log_file("OCR-Fehler: %d Antworten für %d Bilder" % [texts.size(), keys.size()])
 		return out
 	var T := {}
+	var errs := 0
 	for i in keys.size():
 		T[keys[i]] = str(texts[i])
 		if str(texts[i]).begins_with("ERR"):
-			_log_file("OCR %s: %s" % [keys[i], texts[i]])
+			errs += 1
+			if ocr_err_logged < 5:
+				ocr_err_logged += 1
+				_log_file("OCR %s: %s (Datei %s)" % [keys[i], texts[i], paths[i]])
+	if errs == keys.size():
+		ocr_fail += 1
+		if ocr_fail == 10:
+			use_ocr = false
+			_log_file("Texterkennung schlägt dauerhaft fehl, zurück zur alten Erkennung.")
+		return out
+	ocr_fail = 0
 	var ch := false
 	if T.has("stage"):
 		var st := OcrRead.stage(T["stage"])

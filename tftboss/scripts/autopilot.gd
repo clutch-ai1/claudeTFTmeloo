@@ -56,14 +56,20 @@ try {
 } catch { $ocrErr = $_.Exception.Message }
 function ReadText($path) {
   try {
-    $f = Await ([Windows.Storage.StorageFile]::GetFileFromPathAsync($path)) ([Windows.Storage.StorageFile])
-    $st = Await ($f.OpenAsync([Windows.Storage.FileAccessMode]::Read)) ([Windows.Storage.Streams.IRandomAccessStream])
+    $path = [System.IO.Path]::GetFullPath($path.Replace('/', '\'))
+    # Bild direkt als Datenstrom öffnen (robuster als StorageFile)
+    $fs = [System.IO.File]::OpenRead($path)
+    $st = [System.IO.WindowsRuntimeStreamExtensions]::AsRandomAccessStream($fs)
     $dec = Await ([Windows.Graphics.Imaging.BitmapDecoder]::CreateAsync($st)) ([Windows.Graphics.Imaging.BitmapDecoder])
     $bmp = Await ($dec.GetSoftwareBitmapAsync()) ([Windows.Graphics.Imaging.SoftwareBitmap])
     $res = Await ($ocr.RecognizeAsync($bmp)) ([Windows.Media.Ocr.OcrResult])
-    $st.Dispose()
+    $st.Dispose(); $fs.Dispose()
     return (($res.Lines | ForEach-Object { $_.Text }) -join ' # ')
-  } catch { return ('ERR ' + $_.Exception.Message) }
+  } catch {
+    $e = $_.Exception
+    while ($e.InnerException -ne $null) { $e = $e.InnerException }
+    return ('ERR ' + $e.Message)
+  }
 }
 [TB]::GetAsyncKeyState(0x77) | Out-Null
 $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
