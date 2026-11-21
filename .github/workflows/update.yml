@@ -39,8 +39,8 @@ jobs:
         continue-on-error: true
         env:
           RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
-          RIOT_ID: ${{ vars.RIOT_ID }}
-          RIOT_SERVER: ${{ vars.RIOT_SERVER }}
+          RIOT_ID: ${{ vars.RIOT_ID || secrets.RIOT_ID }}
+          RIOT_SERVER: ${{ vars.RIOT_SERVER || secrets.RIOT_SERVER }}
         run: python build/mystats.py work docs data/matches.json
       - name: Änderungen speichern
         run: |
