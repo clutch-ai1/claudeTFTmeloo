@@ -106,7 +106,7 @@ func _ready() -> void:
 	timer.start()
 	Meta.loaded.connect(_refresh_all)
 	_refresh_all()
-	_log_file("Start, Version 10, Bildschirm %d" % screen_idx)
+	_log_file("Start, Version 11, Bildschirm %d" % screen_idx)
 	if OS.get_name() == "Windows" and pilot.start():
 		await get_tree().create_timer(2.5).timeout
 		var st0 := pilot.state()
@@ -1259,12 +1259,27 @@ func _lobby_entries(shot: Image) -> Array:
 	var txt := pilot.ocr_lines(_ocr_png(shot.get_region(box), "scout_lobby", 2))
 	if txt.begins_with("ERR") or txt == "":
 		return []
-	var out := []
+	var raw := []
 	for e in OcrRead.lobby(txt):
 		if int(e["y"]) < 0:
 			continue
-		var p := DisplayServer.screen_get_position(screen_idx) + Vector2i(box.position.x + box.size.x / 2, box.position.y + int(e["y"]) / 2)
-		out.append({"name": e["name"], "hp": e["hp"], "p": p})
+		var nm := str(e["name"]).strip_edges()
+		if nm.length() <= 2:
+			nm = ""     # kein Name = das bin ich (oder OCR-Krümel)
+		raw.append({"name": nm, "hp": int(e["hp"]), "y": box.position.y + int(e["y"]) / 2})
+	# Zeilen, die fast übereinander liegen, sind ein Eintrag (z. B. Level-Abzeichen neben dem Leben)
+	var out := []
+	for e in raw:
+		if not out.is_empty() and absi(int(e["y"]) - int(out[-1]["y"])) < 35:
+			var o: Dictionary = out[-1]
+			if str(o["name"]) == "" and str(e["name"]) != "" or (str(o["name"]) == str(e["name"]) and int(e["hp"]) > int(o["hp"])):
+				out[-1] = e
+			continue
+		out.append(e)
+	# Klicken auf das Porträt rechts neben dem Leben, nicht auf den Namen
+	var W := shot.get_width()
+	for e in out:
+		e["p"] = DisplayServer.screen_get_position(screen_idx) + Vector2i(int(0.978 * W), int(e["y"]))
 	return out
 
 func _same_traits(a: Dictionary, b: Dictionary) -> bool:
@@ -1479,6 +1494,24 @@ func _read_players(img: Image) -> void:
 		_save_settings()
 	_log_file("Ladebildschirm: Spieler %s, du bist %s" % [str(players), my_name if my_name != "" else "?"])
 
+## Farbe der Streak-Flamme: +1 rot (Siege), -1 blau (Niederlagen), 0 keine Flamme
+func _flame_color(crop: Image) -> int:
+	var blue := 0
+	var red := 0
+	for y in crop.get_height():
+		for x in crop.get_width():
+			var c := crop.get_pixel(x, y)
+			if c.b > 0.67 and c.r < 0.43 and c.b - c.r > 0.35:
+				blue += 1
+			elif c.r > 0.75 and c.g < 0.47 and c.b < 0.35:
+				red += 1
+	var need := crop.get_width() * crop.get_height() / 60
+	if blue > need and blue > red * 2:
+		return -1
+	if red > need and red > blue * 2:
+		return 1
+	return 0
+
 func _ocr_dir() -> String:
 	var d := ProjectSettings.globalize_path("user://ocr")
 	DirAccess.make_dir_recursive_absolute(d)
@@ -1518,6 +1551,12 @@ func _ocr_tick(img: Image) -> Dictionary:
 				# zweite Variante mit hohem Kontrast, falls die erste nichts liefert
 				keys.append("stage_bin")
 				paths.append(_ocr_png(_contrast(img.get_region(box)), "stage_bin", 4))
+	# Streak-Flamme neben dem Gold: nur die Zahl lesen, die Farbe zählen wir selbst
+	var W0 := img.get_width()
+	var H0 := img.get_height()
+	var fl := Rect2i(int(0.570 * W0), int(0.808 * H0), int(0.045 * W0), int(0.035 * H0))
+	keys.append("streak")
+	paths.append(_ocr_png(img.get_region(Rect2i(int(0.592 * W0), fl.position.y, int(0.024 * W0), fl.size.y)), "streak", 4))
 	if rects.has("shop"):
 		var sr := _rect_px(img, "shop")
 		for i in 5:
@@ -1584,7 +1623,18 @@ func _ocr_tick(img: Image) -> Dictionary:
 				brain.hp = h
 				ch = true
 	if T.has("lobby"):
-		var lb := OcrRead.lobby(T["lobby"])
+		var lb0 := OcrRead.lobby(T["lobby"])
+		# Mein Eintrag hat keinen Namen. Krümel (Level-Abzeichen usw.) ohne Namen nur einmal zählen: den mit dem meisten Leben.
+		var own_i := -1
+		for i in lb0.size():
+			if str(lb0[i]["name"]).strip_edges().length() <= 2:
+				lb0[i]["name"] = ""
+				if own_i < 0 or int(lb0[i]["hp"]) > int(lb0[own_i]["hp"]):
+					own_i = i
+		var lb := []
+		for i in lb0.size():
+			if str(lb0[i]["name"]) != "" or i == own_i:
+				lb.append(lb0[i])
 		if lb.size() >= 2:
 			out["done"]["lobby"] = true
 			var hs := lb.map(func(e): return e["hp"])
@@ -1593,10 +1643,22 @@ func _ocr_tick(img: Image) -> Dictionary:
 				ch = true
 			if not rects.has("hp"):
 				for e in lb:
-					if str(e["name"]).length() <= 1 and int(e["hp"]) != brain.hp:
+					if str(e["name"]) == "" and int(e["hp"]) != brain.hp:
 						brain.hp = int(e["hp"])
 						out["done"]["hp"] = true
 						ch = true
+	if T.has("streak"):
+		var fcol := _flame_color(img.get_region(fl))
+		var nums := OcrRead.ints(T["streak"])
+		var sv := 0
+		if fcol != 0:
+			sv = fcol * (int(nums[0]) if nums.size() > 0 and int(nums[0]) <= 30 else 2)
+		if sv != brain.streak or not brain.streak_seen:
+			if sv != brain.streak and auto_on:
+				_log_file("Streak: %s" % ("%d Siege in Folge" % sv if sv > 0 else ("%d Niederlagen in Folge" % -sv if sv < 0 else "keine")))
+			brain.streak = sv
+			brain.streak_seen = true
+			ch = true
 	if T.has("traits") and not scouting and Time.get_ticks_msec() > trait_block_ms:
 		var tc := OcrRead.traits(T["traits"], Meta.traits.keys())
 		out["done"]["traits"] = true

@@ -23,6 +23,8 @@ var my_traits: Dictionary = {}   # Trait -> Anzahl (per Texterkennung gelesen)
 var opp_scores: Array = []       # dasselbe für die Gegner, beim Scouten gelesen
 var win_chance := -1.0           # geschätzte Siegchance gegen einen zufälligen Gegner
 var plan_why := ""
+var streak := 0                  # vom Bildschirm: +n rote Flamme (Winstreak), -n blaue Flamme (Lossstreak)
+var streak_seen := false
 
 var target: Dictionary = {}      # gewählte Ziel-Comp
 var spec_stage := ""             # Runde, in der zuletzt "auf Verdacht" gekauft wurde
@@ -60,6 +62,8 @@ func reset() -> void:
 	my_score = -1.0
 	my_traits = {}
 	spec_stage = ""
+	streak = 0
+	streak_seen = false
 	spec_buys = 0
 	bench_buys = 0
 	opp_scores = []
@@ -453,6 +457,8 @@ func strength() -> float:
 	return sc
 
 func win_streak() -> int:
+	if streak_seen:
+		return maxi(0, streak)
 	var n := 0
 	for i in range(results.size() - 1, -1, -1):
 		if results[i] != "W":
@@ -461,6 +467,8 @@ func win_streak() -> int:
 	return n
 
 func loss_streak() -> int:
+	if streak_seen:
+		return maxi(0, -streak)
 	var n := 0
 	for i in range(results.size() - 1, -1, -1):
 		if results[i] != "L":

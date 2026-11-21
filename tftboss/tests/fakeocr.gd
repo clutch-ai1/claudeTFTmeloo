@@ -28,3 +28,21 @@ func cursor() -> Vector2i:
 	return Vector2i(960, 540)
 func move(p: Vector2i) -> void:
 	pass
+func ocr_lines(path: String) -> String:
+	var out := []
+	OS.execute("tesseract", [path, "stdout", "--psm", "6", "tsv"], out)
+	var lines := {}
+	var order := []
+	for row in str(out[0] if out.size() > 0 else "").split("\n", false):
+		var c := row.split("\t")
+		if c.size() < 12 or c[0] != "5" or c[11].strip_edges() == "":
+			continue
+		var key := c[2] + "_" + c[3] + "_" + c[4]
+		if not lines.has(key):
+			lines[key] = {"t": [], "y": int(c[7]) + int(c[9]) / 2}
+			order.append(key)
+		lines[key]["t"].append(c[11])
+	var res := []
+	for k in order:
+		res.append("%s ~%d" % [" ".join(lines[k]["t"]), lines[k]["y"]])
+	return " # ".join(res)
