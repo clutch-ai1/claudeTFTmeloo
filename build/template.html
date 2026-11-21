@@ -1161,7 +1161,7 @@ function route(){
   window.scrollTo(0,0);
 }
 window.addEventListener("hashchange",route);
-$("#meta").innerHTML=`Prismatic Tour · PBE 19.1 · Stand ${new Date(DATA.updated).toLocaleString("de-DE",{dateStyle:"short",timeStyle:"short"})} Uhr · ${DATA.site?"wird alle 30 Minuten aktualisiert":"wird stündlich aktualisiert"} · ${COMPS.length} Comps · ${UL.length} Champions · ${AUGS.length} Augments · Daten: MetaTFT`;
+$("#meta").innerHTML=DATA.site?"by meloo - wird alle 30 Minuten aktualisiert":`Prismatic Tour · PBE 19.1 · Stand ${new Date(DATA.updated).toLocaleString("de-DE",{dateStyle:"short",timeStyle:"short"})} Uhr · ${DATA.site?"wird alle 30 Minuten aktualisiert":"wird stündlich aktualisiert"} · ${COMPS.length} Comps · ${UL.length} Champions · ${AUGS.length} Augments · Daten: MetaTFT`;
 if(!Object.keys(board).length){const c=COMPS[0];loadBoard(lateBoard(c),c,c.name)}
 if(DATA.site){$("#ownimg").remove();$("#ownimghelp").remove()}
 iconInfo();route();
