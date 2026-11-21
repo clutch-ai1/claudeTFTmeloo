@@ -462,7 +462,7 @@ body.ov .wrap{max-width:460px;padding:8px}
   </section>
 
   <div class="note">
-    <div class="iconbar">
+    <div class="iconbar" id="ownimg">
       <span>Eigene Bilder:</span>
       <label class="btn primary" for="sheetfile">Unit-Screenshot importieren</label>
       <input type="file" id="sheetfile" accept="image/*" class="hidden">
@@ -473,7 +473,7 @@ body.ov .wrap{max-width:460px;padding:8px}
       <button class="btn" id="iconclear">Bilder entfernen</button>
       <span id="iconinfo"></span>
     </div>
-    <div>Bilder einzeln: Rechtsklick auf ein Icon → „Bild kopieren“, hier mit der Maus über die Kachel und Strg+V. Oder Bilddatei direkt auf eine Kachel ziehen. Die Bilder bleiben nur in deinem Browser.</div>
+    <div id="ownimghelp">Bilder einzeln: Rechtsklick auf ein Icon → „Bild kopieren“, hier mit der Maus über die Kachel und Strg+V. Oder Bilddatei direkt auf eine Kachel ziehen. Die Bilder bleiben nur in deinem Browser.</div>
     <div>Dieser Planer ist ein privates Fan-Projekt und wird nicht von Riot Games unterstützt oder befürwortet. Teamfight Tactics und alle zugehörigen Inhalte gehören Riot Games, Inc.</div>
     <div>Alle Zahlen: MetaTFT, PBE Patch 19.1, letzte 3 Tage. Positionen sind die Felder, auf denen die Unit in dieser Comp am häufigsten steht. Items sind der Build mit dem besten Ergebnis bei genug Spielen. Unit-Daten und Unlock-Bedingungen aus den offiziellen Set-Daten. <a href="https://www.metatft.com/pbe-comps">MetaTFT PBE Comps</a></div>
   </div>
@@ -508,9 +508,9 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"
 const pct=v=>(v*100).toFixed(1).replace(".",",")+" %";
 const num=v=>String(v).replace(".",",");
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}};
-let ICONS=store.get("tft19-icons",{});
+let ICONS=DATA.site?{}:store.get("tft19-icons",{});
 const SITEICONS=DATA.siteIcons||{};const SITEITEMS={};Object.entries(DATA.siteItems||{}).forEach(([k,v])=>SITEITEMS[ikey(k)]=v);
-let IICONS_RAW=store.get("tft19-itemicons",{});let IICONS={};const reIicons=()=>{IICONS={};Object.entries(IICONS_RAW).forEach(([k,v])=>IICONS[ikey(k)]=v)};reIicons();
+let IICONS_RAW=DATA.site?{}:store.get("tft19-itemicons",{});let IICONS={};const reIicons=()=>{IICONS={};Object.entries(IICONS_RAW).forEach(([k,v])=>IICONS[ikey(k)]=v)};reIicons();
 function toast(t){const el=$("#toast");el.textContent=t;el.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(()=>el.style.display="none",2200)}
 function initials(n){const w=n.replace(/[^A-Za-z ]/g,"").split(" ").filter(Boolean);return w.length>1?(w[0][0]+w[1][0]):n.slice(0,2)}
 function iab(n){const w=n.replace(/[^A-Za-z ]/g,"").split(" ").filter(Boolean);return (w.length>1?w.map(x=>x[0]).join(""):w[0].slice(0,2)).slice(0,3).toUpperCase()}
@@ -1035,9 +1035,9 @@ $("#rl-odds").addEventListener("click",e=>{if(e.target.id==="rl-oddreset"){ODDS=
 
 const norm=s=>s.toLowerCase().replace(/[^a-z]/g,"");
 const NAMES=Object.keys(U).sort((a,b)=>norm(b).length-norm(a).length);
-function iconInfo(){const n=Object.keys(ICONS).length;$("#iconinfo").textContent=n?`${n} von ${Object.keys(U).length} Bildern geladen`:""}
+function iconInfo(){const el=$("#iconinfo");if(!el)return;const n=Object.keys(ICONS).length;el.textContent=n?`${n} von ${Object.keys(U).length} Bildern geladen`:""}
 function shrink(blob){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{const s=Math.min(img.width,img.height),T=Math.min(s,128);const cv=document.createElement("canvas");cv.width=cv.height=T;const x=cv.getContext("2d");x.imageSmoothingQuality="high";x.drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,T,T);URL.revokeObjectURL(img.src);res(cv.toDataURL("image/png"))};img.onerror=rej;img.src=URL.createObjectURL(blob)})}
-async function setIcon(name,blob){try{ICONS[name]=await shrink(blob);store.set("tft19-icons",ICONS);iconInfo();rerender();toast(`Bild für ${name} gesetzt`);return true}catch(e){toast("Das Bild konnte nicht gelesen werden");return false}}
+async function setIcon(name,blob){if(DATA.site)return false;try{ICONS[name]=await shrink(blob);store.set("tft19-icons",ICONS);iconInfo();rerender();toast(`Bild für ${name} gesetzt`);return true}catch(e){toast("Das Bild konnte nicht gelesen werden");return false}}
 async function byFilename(files){let ok=0;for(const f of files){if(!f.type.startsWith("image/"))continue;const fn=norm(f.name.replace(/\.[^.]+$/,""));const m=NAMES.find(n=>fn.includes(norm(n)));if(!m)continue;try{ICONS[m]=await shrink(f);ok++}catch(e){}}
   if(!ok&&files.length===1){try{await importSheet(files[0]);return}catch(e){}}
   store.set("tft19-icons",ICONS);iconInfo();rerender();toast(ok?`${ok} Bilder zugeordnet`:"Kein Dateiname passte zu einer Unit. Zieh das Bild direkt auf die Kachel.");}
@@ -1111,6 +1111,7 @@ const imgFile=dt=>[...(dt.files||[])].find(f=>f.type.startsWith("image/"));
 /* Bild auf eine Kachel ziehen (Pool oder Board) */
 document.addEventListener("dragover",e=>{if(hasFiles(e)||[...e.dataTransfer.types].includes("text/uri-list")){e.preventDefault();const t=e.target.closest&&e.target.closest("[data-unit],.hex");document.querySelectorAll(".over").forEach(x=>x!==t&&x.classList.remove("over"));if(t)t.classList.add("over")}});
 document.addEventListener("drop",async e=>{
+  if(DATA.site)return;
   const types=[...e.dataTransfer.types];if(!types.includes("Files")&&!types.includes("text/uri-list"))return;
   const internal=e.dataTransfer.getData("text/plain");if(/^(move|unit):/.test(internal))return;
   e.preventDefault();e.stopPropagation();document.querySelectorAll(".over").forEach(x=>x.classList.remove("over"));
@@ -1121,6 +1122,7 @@ document.addEventListener("drop",async e=>{
 },true);
 /* Bild kopieren und mit Strg+V einfügen */
 document.addEventListener("paste",async e=>{
+  if(DATA.site)return;
   if(e.target.closest&&e.target.closest("input,select,textarea"))return;
   const item=[...(e.clipboardData&&e.clipboardData.items||[])].find(i=>i.type.startsWith("image/"));if(!item)return;
   e.preventDefault();const name=hoverUnit||(sel&&board[sel]&&board[sel].n);
@@ -1161,6 +1163,7 @@ function route(){
 window.addEventListener("hashchange",route);
 $("#meta").innerHTML=`Prismatic Tour · PBE 19.1 · Stand ${new Date(DATA.updated).toLocaleString("de-DE",{dateStyle:"short",timeStyle:"short"})} Uhr · ${DATA.site?"wird alle 30 Minuten aktualisiert":"wird stündlich aktualisiert"} · ${COMPS.length} Comps · ${UL.length} Champions · ${AUGS.length} Augments · Daten: MetaTFT`;
 if(!Object.keys(board).length){const c=COMPS[0];loadBoard(lateBoard(c),c,c.name)}
+if(DATA.site){$("#ownimg").remove();$("#ownimghelp").remove()}
 iconInfo();route();
 </script>
 </body>
