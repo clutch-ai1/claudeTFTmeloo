@@ -1338,6 +1338,10 @@ func _ocr_tick(img: Image) -> Dictionary:
 			elif k in ["gold", "hp"]:
 				box = _grow(img, box, 0.3, 0.3, 0.2, 0.2)
 			paths.append(_ocr_png(img.get_region(box), k, 4 if k in ["stage", "gold", "level", "hp"] else 2))
+			if k == "stage":
+				# zweite Variante mit hohem Kontrast, falls die erste nichts liefert
+				keys.append("stage_bin")
+				paths.append(_ocr_png(_contrast(img.get_region(box)), "stage_bin", 4))
 	if rects.has("shop"):
 		var sr := _rect_px(img, "shop")
 		for i in 5:
@@ -1371,6 +1375,8 @@ func _ocr_tick(img: Image) -> Dictionary:
 	var ch := false
 	if T.has("stage"):
 		var st := OcrRead.stage(T["stage"])
+		if st == "":
+			st = OcrRead.stage(T.get("stage_bin", ""))
 		if st != "":
 			out["done"]["stage"] = true
 			stage_seen_ms = Time.get_ticks_msec()
@@ -1481,3 +1487,18 @@ func _grow(img: Image, r: Rect2i, l: float, rr: float, t: float, b: float) -> Re
 	var x1 := int(r.end.x + r.size.x * rr)
 	var y1 := int(r.end.y + r.size.y * b)
 	return Rect2i(x0, y0, x1 - x0, y1 - y0).intersection(Rect2i(0, 0, img.get_width(), img.get_height()))
+
+## Heller Text auf dunklem Grund -> schwarzer Text auf weiß (liest die Texterkennung besser)
+func _contrast(img: Image) -> Image:
+	var c := img.duplicate() as Image
+	c.convert(Image.FORMAT_L8)
+	var d := c.get_data()
+	var mx := 0
+	for v in d:
+		mx = maxi(mx, v)
+	var th := int(mx * 0.6)
+	for i in d.size():
+		d[i] = 0 if d[i] >= th else 255
+	var out := Image.create_from_data(c.get_width(), c.get_height(), false, Image.FORMAT_L8, d)
+	out.convert(Image.FORMAT_RGB8)
+	return out

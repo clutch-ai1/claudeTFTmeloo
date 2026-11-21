@@ -207,8 +207,13 @@ func advise() -> Array:
 		return out
 
 	if sn == 0:
-		out.append({"k": "info", "t": "Warte auf das Spiel. Ich lese Stage, Gold und Shop, sobald sie zu sehen sind."})
-		return out
+		# Stage nicht lesbar: aus dem Level schätzen, damit trotzdem gespielt wird
+		if gold >= 0 and level > 0:
+			stage = guess_stage()
+			sn = stage_num(stage)
+		else:
+			out.append({"k": "info", "t": "Warte auf das Spiel. Ich lese Stage, Gold und Shop, sobald sie zu sehen sind."})
+			return out
 	if sn % 10 == 4 and not target.is_empty():
 		var need := carousel_component()
 		if need != "":
@@ -687,3 +692,7 @@ func carousel_component() -> String:
 			bs = need[k]
 			best = k
 	return best
+
+## Stage grob aus dem Level schätzen (wenn die Anzeige oben nicht lesbar ist)
+func guess_stage() -> String:
+	return {1: "1-3", 2: "1-3", 3: "1-4", 4: "2-1", 5: "2-5", 6: "3-2", 7: "4-1", 8: "4-5", 9: "5-2", 10: "6-1"}.get(level, "3-1")
