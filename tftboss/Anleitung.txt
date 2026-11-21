@@ -81,3 +81,9 @@ SCOUTEN UND SIEGCHANCE
 AUFNAHMEN
 - Läuft der Autopilot, speichert er pro Runde ein Bild deines Boards und beim Scouten ein Bild jedes Gegner-Boards
   nach Desktop\TFT Boss\aufnahmen (höchstens 200 pro Start). Daraus wird der Board-Scanner (Sterne, Items, Units) gebaut.
+
+SPIELVERSTAND (neu)
+- Augments passend zum Plan: im Lossstreak eher Gold-Augments, im Winstreak eher Kampf- und Item-Augments. Unter 40 Leben keine Gold-Augments mehr.
+- Items: im Lossstreak hält er Komponenten bis 3-2 (außer bei vielen Komponenten oder unter 50 Leben), im Winstreak baut er sofort.
+- Karussell (x-4): er sagt, welche Komponente dein Carry am meisten braucht.
+- Hat eine Comp keine eigenen Level-Daten, nimmt er einen Standard-Plan je nach Spielweise (Reroll, schnell auf 8, schnell auf 9, normal).

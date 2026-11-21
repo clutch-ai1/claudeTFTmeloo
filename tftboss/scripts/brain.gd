@@ -207,10 +207,22 @@ func advise() -> Array:
 	if sn == 0:
 		out.append({"k": "info", "t": "Warte auf das Spiel. Ich lese Stage, Gold und Shop, sobald sie zu sehen sind."})
 		return out
+	if sn % 10 == 4 and not target.is_empty():
+		var need := carousel_component()
+		if need != "":
+			out.append({"k": "info", "t": "Karussell: nimm %s (für %s)" % [Meta.comp_de(need), target.get("carry", ["deinen Carry"])[0]]})
 
 	# 2. Items und Verbrauchsitems
-	for line in item_advice():
-		out.append({"k": "item", "t": line})
+	update_plan()
+	var comps_n := 0
+	for k in comps_have.values():
+		comps_n += k
+	if plan == "loss" and sn <= 31 and comps_n < 6 and (hp < 0 or hp >= 50):
+		if comps_n >= 2:
+			out.append({"k": "info", "t": "Items noch nicht bauen (Lossstreak): Komponenten halten, bei 3-2 richtig bauen."})
+	else:
+		for line in item_advice():
+			out.append({"k": "item", "t": line})
 	for line in consumable_advice():
 		out.append({"k": "item", "t": line})
 
@@ -247,6 +259,20 @@ func aug_score(name: String) -> float:
 		s += 0.5
 	if "Reroll" in cats and not target.is_empty():
 		s += 1.5 if reroll_level(target) > 0 else -0.5
+	# Passend zum Streak-Plan: Lossstreak will Gold, Winstreak will sofort Kampfkraft
+	if plan == "loss":
+		if "Gold" in cats:
+			s += 1.2
+		if "Kampf" in cats:
+			s -= 0.4
+	elif plan == "win":
+		if "Kampf" in cats or "Items" in cats:
+			s += 1.0
+		if "Gold" in cats:
+			s -= 0.6
+	# Wenig Leben: nur noch sofortige Stärke zählt
+	if hp >= 0 and hp < 40 and "Gold" in cats:
+		s -= 2.0
 	if not target.is_empty():
 		var tr := comp_traits(target)
 		var board := late_board(target)
@@ -484,7 +510,10 @@ func econ_advice(g: int) -> Array:
 	elif sn == 32 and plan == "loss":
 		want = 6 if rr == 0 or rr >= 6 else rr
 	else:
-		for e in target.get("lv", []):
+		var lvplan: Array = target.get("lv", [])
+		if lvplan.is_empty():
+			lvplan = _standard_levels(style)
+		for e in lvplan:
 			if sn >= stage_num(str(e["s"])):
 				want = maxi(want, int(e["l"]))
 		if rr > 0 and sn >= 31 and want > rr and _missing_three_stars().size() > 0:
@@ -603,3 +632,35 @@ func _roll_floor(style: String, rr: int) -> int:
 	if style == "Standard":
 		return 30
 	return 50
+
+## Standard-Levelplan, falls die Comp keine eigenen Daten hat
+static func _standard_levels(style: String) -> Array:
+	if style.begins_with("lvl "):
+		var rr := int(style.substr(4))
+		return [{"l": 4, "s": "2-1"}, {"l": 5, "s": "2-5"}, {"l": rr, "s": "3-2"}, {"l": rr + 1, "s": "4-5"}, {"l": 8, "s": "5-1"}]
+	if style.begins_with("Fast 9"):
+		return [{"l": 4, "s": "2-1"}, {"l": 5, "s": "2-5"}, {"l": 6, "s": "3-2"}, {"l": 7, "s": "3-5"}, {"l": 8, "s": "4-1"}, {"l": 9, "s": "5-1"}]
+	if style.begins_with("Fast 8"):
+		return [{"l": 4, "s": "2-1"}, {"l": 5, "s": "2-5"}, {"l": 6, "s": "3-2"}, {"l": 7, "s": "3-5"}, {"l": 8, "s": "4-2"}, {"l": 9, "s": "5-2"}]
+	return [{"l": 4, "s": "2-1"}, {"l": 5, "s": "2-5"}, {"l": 6, "s": "3-2"}, {"l": 7, "s": "4-1"}, {"l": 8, "s": "4-5"}, {"l": 9, "s": "5-5"}]
+
+## Welche Komponente fehlt dem Carry am meisten (fürs Karussell)?
+func carousel_component() -> String:
+	var need := {}
+	var carry: Array = target.get("carry", [])
+	for i in carry.size():
+		for it in items_for(target, carry[i]):
+			if it in items_have:
+				continue
+			for k in Meta.recipes.get(it, []):
+				need[k] = need.get(k, 0.0) + (1.0 if i == 0 else 0.6)
+	for k in comps_have.keys():
+		if need.has(k):
+			need[k] -= comps_have[k] * 0.9
+	var best := ""
+	var bs := 0.0
+	for k in need.keys():
+		if need[k] > bs:
+			bs = need[k]
+			best = k
+	return best
