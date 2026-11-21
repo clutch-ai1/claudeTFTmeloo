@@ -169,9 +169,19 @@ func _build_ui() -> void:
 	v.add_child(head)
 
 	var row := HBoxContainer.new()
-	var b_cal := Button.new()
-	b_cal.text = "Kalibrieren"
-	b_cal.pressed.connect(_start_calibration)
+	var b_cal := MenuButton.new()
+	b_cal.text = "Kalibrieren ▾"
+	b_cal.flat = false
+	var pm := b_cal.get_popup()
+	pm.about_to_popup.connect(func():
+		pm.clear()
+		for i in Calib.ORDER.size():
+			var k: String = Calib.ORDER[i]
+			pm.add_item(("✓  " if rects.has(k) else "○  ") + Calib.NAMES[k], i)
+		pm.add_separator()
+		pm.add_item("Alle der Reihe nach", 100))
+	pm.id_pressed.connect(func(id):
+		_start_calibration("" if id == 100 else Calib.ORDER[id]))
 	row.add_child(b_cal)
 	var b_new := Button.new()
 	b_new.text = "Neues Spiel"
@@ -339,7 +349,7 @@ func _refresh_all() -> void:
 func _render_advice() -> void:
 	var lines := []
 	if rects.is_empty():
-		lines.append("[color=#f5c542]Zuerst einmal „Kalibrieren“ drücken, während TFT im Spiel offen ist.[/color]")
+		lines.append("[color=#f5c542]Zuerst kalibrieren: Im Spiel auf „Kalibrieren ▾“ klicken und einen Bereich wählen, zum Beispiel Shop. Jeder Bereich wird sofort gespeichert, die anderen kannst du später machen.[/color]")
 	else:
 		var adv := brain.advise()
 		var i := 1
@@ -350,6 +360,13 @@ func _render_advice() -> void:
 			else:
 				lines.append("[color=#%s][b]%d.[/b] %s[/color]" % [col, i, a["t"]])
 				i += 1
+	if not rects.is_empty():
+		var miss := []
+		for k in Calib.ORDER:
+			if not rects.has(k):
+				miss.append(Calib.NAMES[k])
+		if miss.size() > 0:
+			lines.append("[font_size=13][color=#8a87a6]Noch nicht kalibriert: %s[/color][/font_size]" % ", ".join(miss))
 	lbl_do.text = "\n".join(lines)
 	var tg := brain.target
 	if tg.is_empty():
@@ -491,7 +508,7 @@ func _tick() -> void:
 			_ask({"kind": "num", "key": key, "glyphs": r["glyphs"], "img": crop})
 		seen.append("%s %s" % [NUM_NAME[key], t if t != "" else "-"])
 
-	var active := _in_game()
+	var active := _in_game() or not rects.has("stage")
 
 	# Shop
 	if rects.has("shop") and active:
@@ -729,7 +746,7 @@ func _close_prompt() -> void:
 var calib: Calib = null
 var saved_win := {}
 
-func _start_calibration() -> void:
+func _start_calibration(key: String = "") -> void:
 	if calib != null:
 		return
 	running = false
@@ -756,7 +773,7 @@ func _start_calibration() -> void:
 	win.grab_focus()
 	calib = Calib.new()
 	add_child(calib)
-	calib.setup(img, rects)
+	calib.setup(img, rects, key)
 	calib.finished.connect(func(r):
 		rects = r
 		_end_calibration())

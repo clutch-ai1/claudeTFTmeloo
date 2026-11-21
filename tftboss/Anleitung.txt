@@ -11,13 +11,14 @@ WICHTIG IN TFT
 - Schieb das Boss-Fenster an eine Stelle, wo es nichts verdeckt (z. B. ganz rechts) oder auf einen zweiten Bildschirm.
 - Hast du zwei Bildschirme, oben bei "Bildschirm" den auswählen, auf dem TFT läuft.
 
-EINMAL KALIBRIEREN (im laufenden Spiel)
-1. Ein Spiel starten, bis der Shop zu sehen ist.
-2. Im Boss-Fenster "Kalibrieren" drücken. Das Fenster verschwindet kurz und macht ein Bild vom Bildschirm.
-3. Rahmen ziehen und jeweils Enter drücken:
-   Shop (alle 5 Karten) > Gold-Zahl > Level-Zahl (nur die Zahl) > Stage (z. B. 3-2) > Item-Plätze links (alle, auch leere)
-   > Augments (nur wenn gerade eine Wahl offen ist, sonst "Überspringen").
-   Einzelne Bereiche kannst du später neu setzen: Kalibrieren, bei den anderen einfach "Überspringen" drücken.
+KALIBRIEREN (im laufenden Spiel, jeder Bereich einzeln)
+1. Im Boss-Fenster auf "Kalibrieren ▾" klicken und einen Bereich auswählen:
+   Shop, Gold, Level, Stage, Item-Plätze oder Augments. Ein Haken zeigt, was schon gespeichert ist.
+2. Das Fenster macht ein Bild vom Bildschirm. Rahmen ziehen, "Speichern" (oder Enter).
+   Shop: alle 5 Karten. Gold, Level, Stage: eng um die Zahl. Item-Plätze: alle Plätze links neben der Bank, auch leere.
+3. Fertig, der Bereich ist gespeichert. Die anderen machst du, wenn sie gerade zu sehen sind,
+   zum Beispiel Augments erst bei der nächsten Augment-Wahl.
+   Liegt das Hilfe-Panel im Weg, rutscht es von selbst in die andere Ecke.
 
 DIE ERSTEN SPIELE: KURZ HELFEN
 - Das Programm kennt die Bilder am Anfang noch nicht. Bei einer neuen Shop-Karte fragt es einmal "Welcher Champion ist das?":

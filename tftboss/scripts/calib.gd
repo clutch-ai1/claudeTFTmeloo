@@ -6,27 +6,35 @@ extends Control
 signal finished(rects: Dictionary)
 signal cancelled
 
+const NAMES := {"shop": "Shop", "gold": "Gold", "level": "Level", "stage": "Stage", "items": "Item-Plätze", "augs": "Augments"}
+const ORDER := ["shop", "gold", "level", "stage", "items", "augs"]
 const STEPS := [
 	["shop", "Zieh einen Rahmen um alle 5 Shop-Karten. Nur die Karten, ohne Level- und Reroll-Knopf links."],
 	["gold", "Zieh einen Rahmen eng um deine Gold-Zahl."],
 	["level", "Zieh einen Rahmen eng um die Level-Zahl. Nur die Zahl, ohne „Lvl.“."],
 	["stage", "Zieh einen Rahmen eng um die Stage-Anzeige oben, zum Beispiel 3-2."],
 	["items", "Zieh einen Rahmen um die Item-Plätze links neben der Bank. Alle Plätze von oben bis unten, auch die leeren."],
-	["augs", "Nur wenn gerade eine Augment-Wahl offen ist: Rahmen um alle 3 Augment-Karten. Sonst „Überspringen“."],
+	["augs", "Rahmen um alle 3 Augment-Karten (geht nur, solange eine Augment-Wahl offen ist)."],
 ]
 const COLORS := {"items": Color("ff6fae"), "shop": Color("7be07b"), "gold": Color("f5c542"), "level": Color("6fd3ff"), "stage": Color("ff9a4a"), "augs": Color("c48cff")}
 
 var img: Image
 var rects := {}
 var step := 0
+var only := ""
 var drag_from := Vector2(-1, -1)
 var drag_to := Vector2(-1, -1)
 var info: Label
 var panel: PanelContainer
+var layer: Control
 
-func setup(screen_img: Image, old: Dictionary) -> void:
+func setup(screen_img: Image, old: Dictionary, key: String = "") -> void:
 	img = screen_img
 	rects = old.duplicate()
+	only = key
+	for i in STEPS.size():
+		if STEPS[i][0] == key:
+			step = i
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var tr := TextureRect.new()
@@ -53,7 +61,8 @@ func setup(screen_img: Image, old: Dictionary) -> void:
 	info.add_theme_font_size_override("font_size", 20)
 	v.add_child(info)
 	var h := HBoxContainer.new()
-	for b in [["Weiter", _next], ["Überspringen", _skip], ["Zurück", _back], ["Abbrechen", _cancel], ["Panel verschieben", _move_panel]]:
+	var btns := [["Speichern", _next], ["Abbrechen", _cancel], ["Panel verschieben", _move_panel]] if only != "" else [["Weiter", _next], ["Überspringen", _skip], ["Zurück", _back], ["Abbrechen", _cancel], ["Panel verschieben", _move_panel]]
+	for b in btns:
 		var btn := Button.new()
 		btn.text = b[0]
 		btn.add_theme_font_size_override("font_size", 18)
@@ -61,14 +70,30 @@ func setup(screen_img: Image, old: Dictionary) -> void:
 		h.add_child(btn)
 	v.add_child(h)
 	panel.add_child(v)
+	# Nur die Knöpfe fangen die Maus, sonst kann man auch durch das Panel hindurch Rahmen ziehen
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(panel)
+	# Rahmen werden über dem Panel gezeichnet, damit man sie immer sieht
+	layer = Control.new()
+	layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.draw.connect(_draw_layer)
+	add_child(layer)
 	_update_info()
 
 func _update_info() -> void:
 	var s: Array = STEPS[step]
+	if only != "":
+		var st := "Rahmen gesetzt. „Speichern“ oder Enter drücken, oder neu ziehen." if rects.has(only) else "Mit der Maus einen Rahmen ziehen, dann „Speichern“."
+		info.text = "%s kalibrieren\n%s\n\n%s" % [NAMES[only], s[1], st]
+		_redraw()
+		return
 	var done := " (Rahmen gesetzt)" if rects.has(s[0]) else ""
 	info.text = "Schritt %d von %d%s\n%s\n\nMit der Maus einen Rahmen ziehen, dann „Weiter“. Enter, Leertaste und Esc gehen auch." % [step + 1, STEPS.size(), done, s[1]]
-	queue_redraw()
+	_redraw()
 
 func _norm(p: Vector2) -> Vector2:
 	return Vector2(clampf(p.x / size.x, 0, 1), clampf(p.y / size.y, 0, 1))
@@ -85,13 +110,16 @@ func _gui_input(e: InputEvent) -> void:
 			var r := Rect2(a.min(b), (a - b).abs())
 			if r.size.x > 0.003 and r.size.y > 0.003:
 				rects[STEPS[step][0]] = [r.position.x, r.position.y, r.size.x, r.size.y]
+				var px := Rect2(drag_from.min(drag_to), (drag_from - drag_to).abs())
+				if px.intersects(panel.get_rect()):
+					_move_panel()
 			drag_from = Vector2(-1, -1)
 			_update_info()
-		queue_redraw()
+		_redraw()
 		accept_event()
 	elif e is InputEventMouseMotion and drag_from.x >= 0:
 		drag_to = e.position
-		queue_redraw()
+		_redraw()
 		accept_event()
 
 func _input(e: InputEvent) -> void:
@@ -101,9 +129,11 @@ func _input(e: InputEvent) -> void:
 		KEY_ENTER, KEY_KP_ENTER:
 			_next()
 		KEY_SPACE:
-			_skip()
+			if only == "":
+				_skip()
 		KEY_BACKSPACE:
-			_back()
+			if only == "":
+				_back()
 		KEY_ESCAPE:
 			_cancel()
 		_:
@@ -111,6 +141,11 @@ func _input(e: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 func _next() -> void:
+	if only != "":
+		if rects.has(only):
+			finished.emit(rects)
+			queue_free()
+		return
 	step += 1
 	if step >= STEPS.size():
 		finished.emit(rects)
@@ -136,17 +171,21 @@ func _move_panel() -> void:
 	else:
 		panel.position = Vector2(20, 20)
 
-func _draw() -> void:
+func _redraw() -> void:
+	if layer:
+		layer.queue_redraw()
+
+func _draw_layer() -> void:
 	for k in rects.keys():
 		var r: Array = rects[k]
 		var rr := Rect2(r[0] * size.x, r[1] * size.y, r[2] * size.x, r[3] * size.y)
 		var col: Color = COLORS.get(k, Color.WHITE)
-		draw_rect(rr, col, false, 3.0)
-		draw_string(ThemeDB.fallback_font, rr.position + Vector2(4, -6), k, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, col)
+		layer.draw_rect(rr, col, false, 3.0)
+		layer.draw_string(ThemeDB.fallback_font, rr.position + Vector2(4, -6), NAMES.get(k, k), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, col)
 		for sr in Calib.split(k, rr):
-			draw_rect(sr, col, false, 1.0)
+			layer.draw_rect(sr, col, false, 1.0)
 	if drag_from.x >= 0:
-		draw_rect(Rect2(drag_from.min(drag_to), (drag_from - drag_to).abs()), Color.WHITE, false, 2.0)
+		layer.draw_rect(Rect2(drag_from.min(drag_to), (drag_from - drag_to).abs()), Color.WHITE, false, 2.0)
 
 ## Teilt einen Bereich in seine Plätze auf (Shop 5, Augments 3, Items automatisch nach Form).
 static func split(key: String, r: Rect2) -> Array:
