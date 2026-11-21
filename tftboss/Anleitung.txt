@@ -68,3 +68,12 @@ STREAK-PLAN (Winstreak / Lossstreak)
   Zwei Siege im Lossstreak: Wechsel auf Winstreak. Unter 50 Leben bricht er den Lossstreak ab.
 - Spät im Spiel: unter 40 Leben rollt er bis 20 Gold, unter 20 Leben rollt er alles.
 - Gegner-Boards Unit für Unit erkennt er nicht (3D-Figuren). Er nutzt das Leben aller Spieler und deine Ergebnisse.
+
+SCOUTEN UND SIEGCHANCE
+- Kalibriere "Trait-Leiste": die Leiste links mit den aktiven Traits, vom obersten bis zum untersten Eintrag (8 Plätze, mit − und + anpassen).
+- Beim Scouten klickt er jeden Gegner in der Spielerliste an. TFT zeigt dann dessen Board und links dessen Traits.
+  Er liest die Farbe jeder Trait-Stufe (Bronze 1, Silber 2, Gold 3,5, Prismatisch 5 Punkte), danach klickt er zurück auf dich.
+- Beim ersten Mal fragt er pro Farbe, welche Stufe das ist (Knöpfe Bronze, Silber, Gold, Prismatisch, Inaktiv, Leer).
+- Aus deinen Punkten gegen die der Gegner rechnet er deine Siegchance. Ab 55 % Winstreak, unter 42 % Lossstreak.
+- Der Autopilot scoutet einmal pro PvP-Runde von selbst, etwa 3 Sekunden lang. Mit "Jetzt scouten" geht es auch ohne Autopilot.
+- Damit er dich in der Liste findet, muss "Mein Leben" und "Leben aller Spieler" kalibriert sein.

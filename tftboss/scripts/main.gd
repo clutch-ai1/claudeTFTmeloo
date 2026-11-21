@@ -20,6 +20,10 @@ var auto_tried := {}             # Shop-Platz -> Unit, die schon versucht wurde 
 var auto_log: Array = []
 var auto_last_img_size := Vector2i.ZERO
 var btn_auto: Button
+var scouting := false
+var scouted_stage := ""
+var stage_changed_ms := 0
+var btn_scout: Button
 var lbl_auto: RichTextLabel
 var brain := Brain.new()
 var rects := {}
@@ -195,6 +199,10 @@ func _build_ui() -> void:
 	btn_auto.text = "Autopilot starten"
 	btn_auto.pressed.connect(_toggle_auto)
 	hap.add_child(btn_auto)
+	btn_scout = Button.new()
+	btn_scout.text = "Jetzt scouten"
+	btn_scout.pressed.connect(func(): _scout(true))
+	hap.add_child(btn_scout)
 	vap.add_child(hap)
 	lbl_auto = _rich()
 	lbl_auto.add_theme_font_size_override("normal_font_size", 14)
@@ -420,6 +428,9 @@ func _render_advice() -> void:
 	var res_txt := "".join(brain.results.slice(maxi(0, brain.results.size() - 8))) if brain.results.size() > 0 else "-"
 	var rank := brain.hp_rank()
 	var head := "Plan: %s  ·  Runden: %s  ·  Leben: %s%s" % [plan_txt, res_txt, str(brain.hp) if brain.hp >= 0 else "-", ("  ·  Platz %d nach Leben" % rank) if rank > 0 else ""]
+	if brain.win_chance >= 0.0:
+		var wcol := "7be07b" if brain.win_chance >= 0.55 else ("ff9a4a" if brain.win_chance <= 0.42 else "f5c542")
+		head += "\n[color=#%s][b]Siegchance %d %%[/b][/color]  [color=#a9a6c4](deine Traits %.1f, Gegner Ø %.1f, stärkster %.1f)[/color]" % [wcol, int(brain.win_chance * 100), brain.my_score, _avg(brain.opp_scores), brain.opp_scores.max()]
 	if brain.plan_why != "":
 		head += "\n[color=#a9a6c4]%s[/color]" % brain.plan_why
 	var tline := head + "\n[b]%s[/b]  [color=#a9a6c4](%s-Tier, %s, Ø Platz %.2f)[/color]%s" % [tg["name"], tg["tier"], Brain.style_de(tg), float(tg["avg"]), "  [color=#7be07b]fest[/color]" if brain.locked else "  [color=#a9a6c4]noch flexibel[/color]"]
@@ -623,6 +634,15 @@ func _tick() -> void:
 
 	var active := _in_game() or not rects.has("stage")
 
+	# Eigene Trait-Stärke (nicht während des Scoutens, dann zeigt die Leiste den Gegner)
+	if rects.has("traits") and active and not scouting:
+		var ts := _trait_score(img, true)
+		if ts["ok"] and absf(ts["score"] - brain.my_score) > 0.01:
+			brain.my_score = ts["score"]
+			brain.update_win_chance()
+			changed = true
+		seen.append("Traits %s" % (str(snappedf(brain.my_score, 0.1)) if brain.my_score >= 0 else "?"))
+
 	# Shop
 	if rects.has("shop") and active:
 		var names := []
@@ -728,6 +748,7 @@ func _on_stage(t: String) -> void:
 	round_hp = brain.hp
 	last_stage_num = sn
 	brain.stage = t
+	stage_changed_ms = Time.get_ticks_msec()
 	aug_seen_full = false
 
 func _aug_taken() -> void:
@@ -788,6 +809,9 @@ func _ask(p: Dictionary) -> void:
 		"aug":
 			prompt_q.text = "Welches Augment ist das (%s)?" % Brain.SIDE[p["slot"]]
 			prompt_edit.placeholder_text = "Namen tippen, dann anklicken"
+		"tier":
+			prompt_q.text = "Welche Stufe hat dieser Trait (Farbe des Symbols)?"
+			prompt_edit.placeholder_text = "Knopf anklicken"
 		"item":
 			prompt_q.text = "Welches Item liegt auf Item-Platz %d (von oben)?" % (p["slot"] + 1)
 			prompt_edit.placeholder_text = "Fertiges Item? Namen tippen"
@@ -798,6 +822,11 @@ func _ask(p: Dictionary) -> void:
 func _fill_quick() -> void:
 	for c in prompt_quick.get_children():
 		c.queue_free()
+	if prompt.get("kind", "") == "tier":
+		for t in [["Inaktiv (grau)", "inaktiv"], ["Bronze", "bronze"], ["Silber", "silber"], ["Gold", "gold"], ["Prismatisch", "prisma"], ["Leer / kein Trait", Vision.EMPTY]]:
+			var lab: String = t[1]
+			_btn(prompt_quick, t[0], func(): _answer(lab))
+		return
 	if prompt.get("kind", "") != "item":
 		return
 	for k in Meta.components:
@@ -819,6 +848,9 @@ func _prompt_typed(s: String) -> void:
 	var kind: String = prompt["kind"]
 	if kind == "num":
 		_btn(prompt_sugg, "Gerade nicht im Spiel", func(): _skip(20.0))
+		return
+	if kind == "tier":
+		_btn(prompt_sugg, "Später (30 s)", func(): _skip(30.0))
 		return
 	var names: Array = {"shop": Meta.unit_names, "aug": Meta.aug_names, "item": Meta.item_names}[kind]
 	var q := s.strip_edges().to_lower()
@@ -1022,6 +1054,13 @@ func _autopilot_step() -> void:
 	if not _in_game():
 		_auto_status("Wartet auf ein Spiel (Stage nicht erkannt).")
 		return
+	if scouting:
+		_auto_status("Scoutet die Gegner ...")
+		return
+	var snum := Brain.stage_num(brain.stage)
+	if scouted_stage != brain.stage and (snum % 10) in PVP_ROUNDS and snum >= 21 and now - stage_changed_ms > 1200 and rects.has("lobby") and rects.has("traits"):
+		_scout()
+		return
 	for k in auto_pending.keys():
 		if auto_pending[k] < now:
 			auto_pending.erase(k)
@@ -1065,3 +1104,82 @@ func _autopilot_step() -> void:
 					_auto_status("Rollt.")
 					return
 	_auto_status("Nichts zu tun, wartet.")
+
+# ================================================================= Scouten
+
+## Stärke der Traits in der Leiste links. Ergebnis {"score", "ok", "rows"}
+func _trait_score(img: Image, ask: bool) -> Dictionary:
+	var rows := _slots(img, "traits")
+	var score := 0.0
+	var ok := true
+	var labels := []
+	for i in rows.size():
+		var row: Image = rows[i]
+		var h := row.get_height()
+		var icon := row.get_region(Rect2i(0, 0, mini(h, row.get_width()), h))
+		var r := vision.read_tier("trait%d" % i, icon)
+		var lab: String = r["l"]
+		if lab == "":
+			ok = false
+			if ask:
+				_ask_stable("trait%d" % i, {"kind": "tier", "sig": r["s"], "img": icon, "slot": i})
+		elif Vision.TIERS.has(lab):
+			score += Vision.TIERS[lab]
+		labels.append(lab)
+	return {"score": score, "ok": ok, "rows": labels}
+
+## Klickt alle Gegner in der Spielerliste an, liest ihre Trait-Leiste und kehrt zum eigenen Board zurück.
+func _scout(manual: bool = false) -> void:
+	if scouting:
+		return
+	if not (rects.has("lobby") and rects.has("traits")):
+		_auto_status("Zum Scouten „Leben aller Spieler“ und „Trait-Leiste“ kalibrieren.")
+		return
+	if not pilot.ok and not pilot.start():
+		_auto_status(pilot.error)
+		return
+	if brain.hp < 0 or brain.lobby_hp.size() < 2:
+		_auto_status("Scouten geht erst, wenn dein Leben und die Spielerliste erkannt werden.")
+		return
+	var me := brain.lobby_hp.find(brain.hp)
+	if me < 0:
+		_auto_status("Ich finde dich nicht in der Spielerliste (dein Leben passt zu keinem Eintrag).")
+		return
+	if manual:
+		for i in range(3, 0, -1):
+			_auto_status("Scouten startet, wechsle ins TFT-Fenster ... %d" % i)
+			await get_tree().create_timer(1.0).timeout
+	scouting = true
+	var n := brain.lobby_hp.size()
+	var scores := []
+	for i in n:
+		if i == me or int(brain.lobby_hp[i]) <= 0:
+			continue
+		pilot.click(_gpos("lobby", i))
+		await get_tree().create_timer(0.45).timeout
+		var shot := DisplayServer.screen_get_image(screen_idx)
+		if shot == null or shot.is_empty():
+			continue
+		var ts := _trait_score(shot, true)
+		if ts["ok"]:
+			scores.append(ts["score"])
+	pilot.click(_gpos("lobby", me))
+	await get_tree().create_timer(0.3).timeout
+	scouting = false
+	scouted_stage = brain.stage
+	if scores.size() > 0:
+		brain.opp_scores = scores
+		brain.update_win_chance()
+		var best := 0.0
+		for x in scores:
+			best = maxf(best, x)
+		_log("Gescoutet: %d Gegner, Ø %.1f, stärkster %.1f, du %.1f" % [scores.size(), _avg(scores), best, brain.my_score])
+	else:
+		_log("Scouten: Trait-Stufen noch unbekannt, bitte die Fragen beantworten.")
+	_refresh_all()
+
+func _avg(a: Array) -> float:
+	var s := 0.0
+	for x in a:
+		s += float(x)
+	return s / maxf(1.0, float(a.size()))

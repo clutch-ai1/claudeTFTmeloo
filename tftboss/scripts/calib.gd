@@ -7,9 +7,11 @@ signal finished(rects: Dictionary)
 signal changed(rects: Dictionary)
 signal cancelled
 
-const NAMES := {"shop": "Shop", "gold": "Gold", "level": "Level", "stage": "Stage", "items": "Item-Plätze", "augs": "Augments", "hp": "Mein Leben", "lobby": "Leben aller Spieler"}
-const ORDER := ["shop", "gold", "level", "stage", "items", "augs", "hp", "lobby"]
+const NAMES := {"shop": "Shop", "gold": "Gold", "level": "Level", "stage": "Stage", "items": "Item-Plätze", "augs": "Augments", "hp": "Mein Leben", "lobby": "Leben aller Spieler", "traits": "Trait-Leiste"}
+const ORDER := ["shop", "gold", "level", "stage", "items", "augs", "hp", "lobby", "traits"]
 const LOBBY_SLOTS := 8
+const TRAIT_SLOTS := 8
+const MULTI := {"items": ITEM_SLOTS, "lobby": LOBBY_SLOTS, "traits": TRAIT_SLOTS}
 const STEPS := [
 	["shop", "Zieh einen Rahmen um alle 5 Shop-Karten. Nur die Karten, ohne Level- und Reroll-Knopf links."],
 	["gold", "Zieh einen Rahmen eng um deine Gold-Zahl."],
@@ -18,9 +20,10 @@ const STEPS := [
 	["items", "Rahmen von der Oberkante des obersten Item-Platzes bis zur Unterkante des untersten ziehen, auch über die leeren. Die dünnen Linien müssen zwischen den Plätzen liegen. Wenn nicht: mit − und + die Anzahl ändern."],
 	["augs", "Rahmen um alle 3 Augment-Karten (geht nur, solange eine Augment-Wahl offen ist)."],
 	["hp", "Rahmen mit etwas Abstand um deine eigene Lebens-Zahl (in der Spielerliste rechts oder unter deinem Portrait)."],
+	["traits", "Rahmen um die Trait-Leiste links: von der Oberkante des obersten bis zur Unterkante des untersten sichtbaren Trait-Eintrags, so breit, dass Symbol und Zahl drin sind. Die Linien müssen zwischen den Einträgen liegen, sonst mit − und + anpassen."],
 	["lobby", "Rahmen um die Lebens-Zahlen aller 8 Spieler in der Liste rechts, von der obersten bis zur untersten Zahl, nur die Zahlen-Spalte. Die Linien müssen zwischen den Spielern liegen, sonst mit − und + anpassen."],
 ]
-const COLORS := {"hp": Color("ff6b6b"), "lobby": Color("ffa0a0"), "items": Color("ff6fae"), "shop": Color("7be07b"), "gold": Color("f5c542"), "level": Color("6fd3ff"), "stage": Color("ff9a4a"), "augs": Color("c48cff")}
+const COLORS := {"traits": Color("8fd0ff"), "hp": Color("ff6b6b"), "lobby": Color("ffa0a0"), "items": Color("ff6fae"), "shop": Color("7be07b"), "gold": Color("f5c542"), "level": Color("6fd3ff"), "stage": Color("ff9a4a"), "augs": Color("c48cff")}
 
 var img: Image
 var rects := {}
@@ -117,7 +120,7 @@ func _slots_add(d: int) -> void:
 	if not rects.has(key):
 		return
 	var r: Array = rects[key]
-	var n: int = int(r[4]) if r.size() > 4 else (ITEM_SLOTS if key == "items" else LOBBY_SLOTS)
+	var n: int = int(r[4]) if r.size() > 4 else int(MULTI.get(key, 1))
 	n = clampi(n + d, 1, 16)
 	if r.size() > 4:
 		r[4] = n
@@ -129,9 +132,9 @@ func _slots_add(d: int) -> void:
 func _update_info() -> void:
 	var s: Array = STEPS[step]
 	if slot_row:
-		slot_row.visible = s[0] == "items" or s[0] == "lobby"
 		var k: String = s[0]
-		var cnt: int = int(rects[k][4]) if rects.has(k) and rects[k].size() > 4 else (ITEM_SLOTS if k == "items" else LOBBY_SLOTS)
+		slot_row.visible = MULTI.has(k)
+		var cnt: int = int(rects[k][4]) if rects.has(k) and rects[k].size() > 4 else int(MULTI.get(k, 1))
 		slot_lbl.text = "  Plätze: %d  " % cnt
 	info.remove_theme_color_override("font_color")
 	if only != "":
@@ -160,8 +163,8 @@ func _gui_input(e: InputEvent) -> void:
 				var key: String = STEPS[step][0]
 				var cnt: int = int(rects[key][4]) if rects.has(key) and rects[key].size() > 4 else 0
 				rects[key] = [r.position.x, r.position.y, r.size.x, r.size.y]
-				if key == "items" or key == "lobby":
-					rects[key].append(cnt if cnt > 0 else (ITEM_SLOTS if key == "items" else LOBBY_SLOTS))
+				if MULTI.has(key):
+					rects[key].append(cnt if cnt > 0 else MULTI[key])
 				changed.emit(rects)
 				var px := Rect2(drag_from.min(drag_to), (drag_from - drag_to).abs())
 				if px.intersects(panel.get_rect()):
@@ -267,6 +270,9 @@ static func split(key: String, r: Rect2, count: int = 0) -> Array:
 		"lobby":
 			vertical = r.size.y >= r.size.x
 			n = count if count > 0 else LOBBY_SLOTS
+		"traits":
+			vertical = true
+			n = count if count > 0 else TRAIT_SLOTS
 	for i in n:
 		if vertical:
 			out.append(Rect2(r.position.x, r.position.y + r.size.y * i / n, r.size.x, r.size.y / n))

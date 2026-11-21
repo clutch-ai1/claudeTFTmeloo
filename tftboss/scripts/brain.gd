@@ -18,6 +18,9 @@ var hp := -1                     # eigenes Leben
 var lobby_hp: Array = []         # Leben aller Spieler aus der Liste rechts
 var results: Array = []          # "W" / "L" pro PvP-Runde
 var plan := ""                   # "win", "loss" oder "" (noch offen)
+var my_score := -1.0             # Stärke meiner aktiven Traits (aus der Trait-Leiste)
+var opp_scores: Array = []       # dasselbe für die Gegner, beim Scouten gelesen
+var win_chance := -1.0           # geschätzte Siegchance gegen einen zufälligen Gegner
 var plan_why := ""
 
 var target: Dictionary = {}      # gewählte Ziel-Comp
@@ -49,6 +52,9 @@ func reset() -> void:
 	results = []
 	plan = ""
 	plan_why = ""
+	my_score = -1.0
+	opp_scores = []
+	win_chance = -1.0
 
 # ---------------------------------------------------------------- Comp-Helfer
 
@@ -396,6 +402,16 @@ func hp_rank() -> int:
 			r += 1
 	return r
 
+## Siegchance aus dem Vergleich der Trait-Stärke mit allen gescouteten Gegnern
+func update_win_chance() -> void:
+	if my_score < 0 or opp_scores.is_empty():
+		win_chance = -1.0
+		return
+	var sum := 0.0
+	for o in opp_scores:
+		sum += 1.0 / (1.0 + exp(-(my_score - float(o)) / 2.5))
+	win_chance = sum / opp_scores.size()
+
 ## Winstreak oder Lossstreak? Wird ab 2-1 entschieden und nach jeder Runde geprüft.
 func update_plan() -> void:
 	var sn := stage_num(stage)
@@ -407,6 +423,16 @@ func update_plan() -> void:
 		plan = ""
 		return
 	var st := strength()
+	var wc := win_chance
+	if plan == "" and wc >= 0.0:
+		if wc >= 0.55:
+			plan = "win"
+			plan_why = "Siegchance %d %% nach dem Scouten: Winstreak, früh leveln." % int(wc * 100)
+			return
+		if wc <= 0.42:
+			plan = "loss"
+			plan_why = "Siegchance nur %d %% nach dem Scouten: Lossstreak, Gold sparen." % int(wc * 100)
+			return
 	if plan == "":
 		if st >= 4.0 or win_streak() >= 2:
 			plan = "win"
@@ -419,6 +445,14 @@ func update_plan() -> void:
 			plan_why = "Mittelstarkes Board (Stärke %.1f), Ergebnisse entscheiden: %s." % [st, "Winstreak" if plan == "win" else "Lossstreak"]
 		return
 	var hp_ok := hp < 0 or hp >= 60
+	if wc >= 0.0 and plan == "win" and wc < 0.35 and hp_ok and sn <= 31:
+		plan = "loss"
+		plan_why = "Gegner sind deutlich stärker (Siegchance %d %%): auf Lossstreak umgestellt." % int(wc * 100)
+		return
+	if wc >= 0.0 and plan == "loss" and wc > 0.62:
+		plan = "win"
+		plan_why = "Dein Board ist stärker als die Lobby (Siegchance %d %%): auf Winstreak umgestellt." % int(wc * 100)
+		return
 	if plan == "win" and loss_streak() >= 2 and hp_ok and sn <= 31:
 		plan = "loss"
 		plan_why = "Zwei Niederlagen in Folge: auf Lossstreak umgestellt."

@@ -13,7 +13,9 @@ const MAX_PER_LABEL := 4
 
 const EMPTY := "(leer)"
 const IGNORE := "(ignorieren)"
-const KINDS := ["shop", "aug", "item", "glyph"]
+const KINDS := ["shop", "aug", "item", "glyph", "tier"]
+## Trait-Stufen und ihr Wert für die Board-Stärke
+const TIERS := {"inaktiv": 0.0, "bronze": 1.0, "silber": 2.0, "gold": 3.5, "prisma": 5.0}
 
 ## kind -> Array von {"l": Label, "s": PackedByteArray}
 var db := {}
@@ -319,3 +321,60 @@ func learn_number(glyphs: Array, text: String, meta: Array = []) -> String:
 	cache.clear()
 	save_db()
 	return ""
+
+# ---------------------------------------------------------------- Trait-Stufen
+
+## Farb-Merkmal eines Trait-Symbols: mittlere Farbe der bunten Pixel und Anteil bunter Pixel.
+## Die Stufe (Bronze, Silber, Gold, Prismatisch) erkennt man an der Farbe, nicht an der Form.
+static func tier_feat(img: Image) -> PackedByteArray:
+	var c := img.duplicate() as Image
+	c.convert(Image.FORMAT_RGB8)
+	c.resize(16, 16, Image.INTERPOLATE_BILINEAR)
+	var d := c.get_data()
+	var sr := 0.0
+	var sg := 0.0
+	var sb := 0.0
+	var n := 0
+	var bright := 0
+	var tr := 0.0
+	var tg := 0.0
+	var tb := 0.0
+	for i in range(0, d.size(), 3):
+		var r := d[i]
+		var g := d[i + 1]
+		var b := d[i + 2]
+		tr += r
+		tg += g
+		tb += b
+		var mx := maxi(r, maxi(g, b))
+		var mn := mini(r, mini(g, b))
+		if mx > 90:
+			bright += 1
+			if mx - mn > 25 or mx > 170:
+				sr += r
+				sg += g
+				sb += b
+				n += 1
+	var px := d.size() / 3
+	var out := PackedByteArray()
+	if n == 0:
+		out.append_array([int(tr / px), int(tg / px), int(tb / px)])
+	else:
+		out.append_array([int(sr / n), int(sg / n), int(sb / n)])
+	out.append(clampi(int(255.0 * n / px), 0, 255))
+	out.append(clampi(int(255.0 * bright / px), 0, 255))
+	# doppelt gewichtet: Farbe zählt mehr als Helligkeit
+	out.append_array(out.slice(0, 3))
+	return out
+
+func read_tier(slot_key: String, img: Image) -> Dictionary:
+	if spread(img) < 6.0:
+		return {"l": EMPTY, "s": PackedByteArray()}
+	var f := tier_feat(img)
+	var c: Dictionary = cache.get(slot_key, {})
+	if not c.is_empty() and dist(f, c["s"], 3.0) < 3.0:
+		return c["r"]
+	var r := classify("tier", f, 22.0)
+	var res := {"l": r["l"], "s": f}
+	cache[slot_key] = {"s": f, "r": res}
+	return res
