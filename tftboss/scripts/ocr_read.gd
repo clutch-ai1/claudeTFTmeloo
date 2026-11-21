@@ -36,7 +36,13 @@ static func gold(t: String) -> int:
 	return best
 
 static func level(t: String) -> int:
-	for n in ints(t):
+	var rx := RegEx.create_from_string("[LlI1|][vV][lI1|]\\.?\\s*(\\d{1,2})")
+	var m := rx.search(t)
+	if m and int(m.get_string(1)) >= 1 and int(m.get_string(1)) <= 11:
+		return int(m.get_string(1))
+	var ns := ints(t)
+	# "Lvl. 5 4/20": die erste Zahl ist das Level
+	for n in ns:
 		if n >= 1 and n <= 11:
 			return n
 	return -1

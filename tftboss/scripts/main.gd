@@ -590,8 +590,11 @@ func _update_preview(img: Image) -> void:
 		tr2.custom_minimum_size = Vector2(clampf(hgt * asp, 24.0, 420.0), hgt)
 		tr2.texture = ImageTexture.create_from_image(crop)
 
+var shop_seen_ms := -100000
+
 func _in_game() -> bool:
-	return Time.get_ticks_msec() - stage_seen_ms < 20000
+	var now := Time.get_ticks_msec()
+	return now - stage_seen_ms < 20000 or now - shop_seen_ms < 8000
 
 func _tick() -> void:
 	if not running or rects.is_empty() or busy:
@@ -1300,7 +1303,15 @@ func _ocr_tick(img: Image) -> Dictionary:
 	for k in ["stage", "gold", "level", "hp", "lobby", "traits"]:
 		if rects.has(k):
 			keys.append(k)
-			paths.append(_ocr_png(img.get_region(_rect_px(img, k)), k, 3 if k in ["stage", "gold", "level", "hp"] else 2))
+			var box := _rect_px(img, k)
+			# Kleine Rahmen großzügig erweitern: die Texterkennung braucht etwas Umfeld
+			if k == "stage":
+				box = _grow(img, box, 0.6, 0.6, 0.3, 0.6)
+			elif k == "level":
+				box = _grow(img, box, 2.0, 0.3, 0.2, 0.2)   # nach links bis "Lvl."
+			elif k in ["gold", "hp"]:
+				box = _grow(img, box, 0.3, 0.3, 0.2, 0.2)
+			paths.append(_ocr_png(img.get_region(box), k, 4 if k in ["stage", "gold", "level", "hp"] else 2))
 	if rects.has("shop"):
 		var sr := _rect_px(img, "shop")
 		for i in 5:
@@ -1404,11 +1415,14 @@ func _ocr_tick(img: Image) -> Dictionary:
 				brain.shop[i] = lab
 				ch = true
 			names.append(lab if lab != "" else "?")
+		if names.filter(func(n): return Meta.units.has(n)).size() >= 2:
+			shop_seen_ms = now
 		out["seen"].append("Shop: " + " | ".join(names))
 	out["changed"] = ch
 	out["seen"].append("OCR %d ms" % (Time.get_ticks_msec() - t0))
 	if Time.get_ticks_msec() - ocr_last_log > 8000:
 		ocr_last_log = Time.get_ticks_msec()
+		_log_file("Rohtext Stage '%s' Level '%s' Gold '%s'" % [T.get("stage", ""), T.get("level", ""), T.get("gold", "")])
 		_log_file("Gelesen: Stage %s, Gold %d, Level %d, Leben %d, Lobby %s, Traits %s, Shop %s" % [brain.stage, brain.gold, brain.level, brain.hp, str(brain.lobby_hp), str(brain.my_traits), str(brain.shop)])
 	return out
 
@@ -1428,3 +1442,10 @@ func _log_file(t: String) -> void:
 	if f:
 		f.store_line("%s  %s" % [Time.get_datetime_string_from_system(), t])
 		f.close()
+
+func _grow(img: Image, r: Rect2i, l: float, rr: float, t: float, b: float) -> Rect2i:
+	var x0 := int(r.position.x - r.size.x * l)
+	var y0 := int(r.position.y - r.size.y * t)
+	var x1 := int(r.end.x + r.size.x * rr)
+	var y1 := int(r.end.y + r.size.y * b)
+	return Rect2i(x0, y0, x1 - x0, y1 - y0).intersection(Rect2i(0, 0, img.get_width(), img.get_height()))
