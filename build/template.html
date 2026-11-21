@@ -314,6 +314,16 @@ h2,h3{font-family:var(--display);letter-spacing:.4px;margin:0;line-height:1.05;t
 .buildnow{background:#1f3a2c;border-radius:8px;padding:8px 10px;font-size:13px;display:flex;flex-direction:column;gap:4px}
 .buildnow b{color:var(--good)}
 .rtab{border-collapse:collapse;font-size:12px}
+.mytiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.mytile{padding:12px 14px}.mytile b{display:block;font-family:var(--display);font-size:26px;color:var(--accent);line-height:1.1}.mytile span{font-size:12px;color:var(--muted)}
+.mgame{display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 12px}
+.mplace{font-family:var(--display);font-size:26px;text-align:center;border-radius:8px;padding:4px 0;color:#1a1928}
+.mplace.p1{background:#f2c14e}.mplace.p2,.mplace.p3,.mplace.p4{background:#8fc98a}.mplace.p5,.mplace.p6,.mplace.p7,.mplace.p8{background:#5a5873;color:#ecebf5}
+.mgame .munits{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.mgame .mmeta{font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 12px}
+.mform{display:flex;flex-direction:column;gap:10px}.mform .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.mtab{width:100%;border-collapse:collapse;font-size:13px}.mtab th,.mtab td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}.mtab td.n{text-align:right;font-variant-numeric:tabular-nums}
+.good{color:#8fc98a}.bad{color:#ff8a8a}
 .rtab th,.rtab td{border:1px solid var(--line);padding:4px;text-align:center}
 .rtab th{background:var(--panel-2);font-weight:600;white-space:nowrap}
 .rtab td .it{margin:auto;width:26px;height:26px;font-size:9px}
@@ -360,6 +370,7 @@ body.ov .wrap{max-width:460px;padding:8px}
       <a href="#roll" data-v="roll">Reroll-Rechner</a>
       <a href="#builder" data-v="builder">Builder</a>
       <a href="#overlay" data-v="overlay">Overlay</a>
+      <a href="#myg" data-v="myg">Meine Spiele</a>
     </nav>
   </div>
 
@@ -432,6 +443,19 @@ body.ov .wrap{max-width:460px;padding:8px}
       <div class="panel sbox"><h3>Eingaben</h3><div class="form" id="rl-form"></div><button class="btn primary" id="rl-run">Berechnen</button></div>
       <div class="panel sbox"><h3>Ergebnis</h3><div id="rl-out"><p class="muted" style="margin:0">Eingaben wählen und „Berechnen“ klicken.</p></div></div>
       <div class="panel sbox"><h3>Shop-Chancen pro Level</h3><div class="notebox" id="rl-note"></div><div style="overflow-x:auto"><table class="rtab odds" id="rl-odds"></table></div></div>
+    </div>
+  </section>
+  <section id="view-myg" class="hidden">
+    <div id="myg-status"></div>
+    <div class="row" style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0" id="myg-src"></div>
+    <div class="mytiles" id="myg-tiles"></div>
+    <div class="agrid" style="margin-top:14px;grid-template-columns:minmax(0,1.4fr) minmax(280px,1fr)">
+      <div class="panel sbox"><h3>Letzte Spiele</h3><div id="myg-list" style="display:flex;flex-direction:column;gap:8px"></div></div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="panel sbox"><h3>Spiel eintragen</h3><p class="muted" style="margin:0;font-size:12.5px">Für PBE-Spiele oder wenn die Riot API nichts liefert. Wird nur in deinem Browser gespeichert.</p><div class="mform" id="myg-form"></div></div>
+        <div class="panel sbox"><h3>Deine Comps</h3><div id="myg-comps"></div></div>
+        <div class="panel sbox"><h3>Deine Augments</h3><div id="myg-augs"></div></div>
+      </div>
     </div>
   </section>
   <section id="view-overlay" class="hidden">
@@ -1150,9 +1174,75 @@ document.addEventListener("paste",async e=>{
 
 
 
+
+/* ---------- Meine Spiele ---------- */
+let MYAPI=null,MYLOAD=false;let MYMAN=store.get("tft19-mygames",[]);const myf={src:"all"};
+const MYFORM={p:0,comp:"",lv:8,augs:["","",""],note:""};
+function myLoad(){if(MYLOAD||!DATA.site)return;MYLOAD=true;fetch("mystats.json?t="+Date.now()).then(r=>r.ok?r.json():null).then(j=>{MYAPI=j;if(st.view==="myg")renderMyg()}).catch(()=>{MYAPI={status:"error",message:"mystats.json konnte nicht geladen werden."};if(st.view==="myg")renderMyg()})}
+function myGames(){
+  const api=(MYAPI&&MYAPI.games||[]).map(g=>({...g,src:"api"}));
+  const man=MYMAN.map(g=>({...g,src:"man"}));
+  let all=[...api,...man].sort((a,b)=>(b.t||0)-(a.t||0));
+  if(myf.src!=="all")all=all.filter(g=>g.src===myf.src);
+  return all;
+}
+function renderMyg(){
+  myLoad();
+  const s=MYAPI;let msg="";
+  if(!DATA.site)msg='<div class="notebox">Die Riot-Abfrage läuft nur auf der GitHub-Seite. Eingetragene Spiele funktionieren hier trotzdem.</div>';
+  else if(!s)msg='<div class="notebox">Lade deine Spiele ...</div>';
+  else if(s.status==="setup")msg='<div class="notebox">Riot API noch nicht eingerichtet. Bis dahin kannst du Spiele rechts selbst eintragen.</div>';
+  else if(s.status==="error")msg=`<div class="notebox">${esc(s.message||"Fehler bei der Riot API")}</div>`;
+  else msg=`<div class="muted" style="font-size:13px">Spiele von <b>${esc(s.riotId)}</b> (${esc(String(s.server).toUpperCase())}) über die Riot API, Stand ${new Date(s.updated).toLocaleString("de-DE",{dateStyle:"short",timeStyle:"short"})} Uhr</div>`;
+  $("#myg-status").innerHTML=msg;
+  chipRow("#myg-src",[["all","Alle"],["api","Riot API"],["man","Eingetragen"]],myf.src,"mysrc");
+  const G=myGames(),n=G.length;
+  const avg=n?G.reduce((a,g)=>a+g.p,0)/n:0,t4=n?G.filter(g=>g.p<=4).length/n:0,w=n?G.filter(g=>g.p===1).length/n:0;
+  const last10=G.slice(0,10),a10=last10.length?last10.reduce((a,g)=>a+g.p,0)/last10.length:0;
+  $("#myg-tiles").innerHTML=[["Spiele",n],["Ø Platz",n?num(avg.toFixed(2)):"-"],["Top 4",n?pct(t4):"-"],["Siege",n?pct(w):"-"],["Ø letzte 10",last10.length?num(a10.toFixed(2)):"-"]].map(x=>`<div class="panel mytile"><b>${x[1]}</b><span>${x[0]}</span></div>`).join("");
+  $("#myg-list").innerHTML=n?G.slice(0,30).map(g=>{
+    const d=g.t?new Date(g.t).toLocaleString("de-DE",{dateStyle:"short",timeStyle:"short"}):"";
+    const cmp=g.comp?`<a href="#comps" data-gocomp="${esc((COMPS.find(c=>c.name===g.comp)||{}).id||"")}">${esc(g.comp)}</a>`:"keine bekannte Comp";
+    const vs=g.comp&&g.compAvg?` <span class="${g.p<=g.compAvg?"good":"bad"}">(Meta Ø ${num(g.compAvg)})</span>`:"";
+    const units=(g.units||[]).filter(u=>U[u.n]).map(u=>tile(u.n,{stars:u.s,items:u.i||[]})).join("");
+    return `<div class="panel mgame"><div class="mplace p${g.p}">${g.p}</div><div style="min-width:0"><div><b>${cmp}</b>${vs}</div>
+      <div class="mmeta"><span>${d}</span>${g.lv?`<span>Level ${g.lv}</span>`:""}${g.round?`<span>Runde ${g.round}</span>`:""}<span>${g.src==="api"?"Riot API":"eingetragen"}</span></div>
+      ${(g.aug||[]).filter(Boolean).length?`<div class="mmeta" style="margin-top:3px">${g.aug.filter(Boolean).map(a=>`<a href="#augs" data-goaug="${esc(a)}">${esc(a)}</a>`).join(" · ")}</div>`:""}
+      ${g.note?`<div class="mmeta" style="margin-top:3px">${esc(g.note)}</div>`:""}
+      ${units?`<div class="munits">${units}</div>`:""}</div>
+      <div>${g.src==="man"?`<button class="btn small" data-mydel="${esc(g.id)}">Löschen</button>`:""}</div></div>`}).join(""):'<p class="muted" style="margin:0">Noch keine Spiele.</p>';
+  // Comps
+  const bc={};G.forEach(g=>{const k=g.comp||"Andere";(bc[k]=bc[k]||[]).push(g)});
+  const crow=Object.entries(bc).map(([k,a])=>{const c=COMPS.find(x=>x.name===k);const av=a.reduce((s,g)=>s+g.p,0)/a.length;return {k,n:a.length,av,t4:a.filter(g=>g.p<=4).length/a.length,meta:c?c.avg:null}}).sort((x,y)=>y.n-x.n||x.av-y.av);
+  $("#myg-comps").innerHTML=crow.length?`<table class="mtab"><tr><th>Comp</th><th>Spiele</th><th>Ø</th><th>Top 4</th><th>Meta Ø</th></tr>${crow.map(r=>`<tr><td>${esc(r.k)}</td><td class="n">${r.n}</td><td class="n ${r.meta?(r.av<=r.meta?"good":"bad"):""}">${num(r.av.toFixed(2))}</td><td class="n">${pct(r.t4)}</td><td class="n">${r.meta?num(r.meta):"-"}</td></tr>`).join("")}</table>`:'<p class="muted" style="margin:0">Noch keine Daten.</p>';
+  const ba={};G.forEach(g=>(g.aug||[]).filter(Boolean).forEach(a=>(ba[a]=ba[a]||[]).push(g.p)));
+  const arow=Object.entries(ba).map(([k,a])=>({k,n:a.length,av:a.reduce((s,x)=>s+x,0)/a.length})).sort((x,y)=>y.n-x.n||x.av-y.av).slice(0,20);
+  $("#myg-augs").innerHTML=arow.length?`<table class="mtab"><tr><th>Augment</th><th>Spiele</th><th>Ø Platz</th></tr>${arow.map(r=>`<tr><td>${esc(r.k)}</td><td class="n">${r.n}</td><td class="n">${num(r.av.toFixed(2))}</td></tr>`).join("")}</table>`:'<p class="muted" style="margin:0">Noch keine Daten.</p>';
+  renderMyForm();
+}
+function renderMyForm(){
+  if($("#myg-form").dataset.ready)return;$("#myg-form").dataset.ready="1";
+  $("#myg-form").innerHTML=`<div class="row"><span class="flabel">Platz</span>${[1,2,3,4,5,6,7,8].map(i=>`<button class="chip" data-myp="${i}" aria-pressed="false">${i}</button>`).join("")}</div>
+    <div class="row"><span class="flabel">Comp</span><select class="inp" id="myg-comp"><option value="">Andere</option>${COMPS.map(c=>`<option>${esc(c.name)}</option>`).join("")}</select></div>
+    <div class="row"><span class="flabel">Level</span><select class="inp" id="myg-lv">${[5,6,7,8,9,10].map(l=>`<option ${l===8?"selected":""}>${l}</option>`).join("")}</select></div>
+    <div class="row"><span class="flabel">Augments</span><datalist id="myg-augdl">${AUGS.map(a=>`<option value="${esc(a.n)}">`).join("")}</datalist>${[0,1,2].map(i=>`<input class="inp" list="myg-augdl" id="myg-a${i}" placeholder="Augment ${i+1}" style="flex:1;min-width:140px">`).join("")}</div>
+    <div class="row"><input class="inp" id="myg-note" placeholder="Notiz (optional)" style="flex:1"></div>
+    <div class="row"><button class="btn primary" id="myg-save">Spiel speichern</button><span id="myg-msg" class="muted" style="font-size:12.5px"></span></div>`;
+}
+$("#view-myg").addEventListener("click",e=>{
+  const s=e.target.closest("[data-mysrc]");if(s){myf.src=s.dataset.mysrc;renderMyg();return}
+  const p=e.target.closest("[data-myp]");if(p){MYFORM.p=+p.dataset.myp;document.querySelectorAll("[data-myp]").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.myp===MYFORM.p)));return}
+  const d=e.target.closest("[data-mydel]");if(d){MYMAN=MYMAN.filter(g=>g.id!==d.dataset.mydel);store.set("tft19-mygames",MYMAN);renderMyg();return}
+  if(e.target.closest("#myg-save")){
+    if(!MYFORM.p){$("#myg-msg").textContent="Bitte zuerst die Platzierung wählen.";return}
+    const comp=$("#myg-comp").value||null,c=COMPS.find(x=>x.name===comp);
+    MYMAN.push({id:"m"+Date.now(),t:Date.now(),p:MYFORM.p,lv:+$("#myg-lv").value,comp,compAvg:c?c.avg:null,aug:[0,1,2].map(i=>$("#myg-a"+i).value.trim()).filter(Boolean),note:$("#myg-note").value.trim(),units:c?lateBoard(c).map(n=>({n,s:0,i:[]})):[]});
+    store.set("tft19-mygames",MYMAN);MYFORM.p=0;$("#myg-form").dataset.ready="";renderMyg();toast("Spiel gespeichert");
+  }
+});
 /* ---------- Routing ---------- */
-const VIEWS=["comps","early","mid","late","champs","augs","unlocks","assist","items","roll","builder","overlay"];
-const FULL=new Set(["assist","items","roll","overlay"]);
+const VIEWS=["comps","early","mid","late","champs","augs","unlocks","assist","items","roll","builder","overlay","myg"];
+const FULL=new Set(["assist","items","roll","overlay","myg"]);
 function renderView(h){
   if(h in PH){st.phase=h;renderPhase()}
   if(h==="comps"){renderFilters();renderCards();renderDetail()}
@@ -1163,6 +1253,7 @@ function renderView(h){
   if(h==="items")renderItems();
   if(h==="roll")renderRoll();
   if(h==="overlay")renderOverlay();
+  if(h==="myg")renderMyg();
   if(h==="builder"){renderBoard();renderPool()}
   if(h!=="builder"&&!FULL.has(h))renderSide();
 }
@@ -1172,7 +1263,7 @@ function route(){
   document.querySelectorAll(".views a").forEach(a=>a.dataset.v===h?a.setAttribute("aria-current","page"):a.removeAttribute("aria-current"));
   const show=(id,on)=>$(id).classList.toggle("hidden",!on);
   show("#view-comps",h==="comps");show("#view-phase",h in PH);show("#view-builder",h==="builder");show("#view-champs",h==="champs");show("#view-augs",h==="augs");
-  show("#view-unlocks",h==="unlocks");show("#view-assist",h==="assist");show("#view-items",h==="items");show("#view-roll",h==="roll");show("#view-overlay",h==="overlay");
+  show("#view-unlocks",h==="unlocks");show("#view-assist",h==="assist");show("#view-items",h==="items");show("#view-roll",h==="roll");show("#view-overlay",h==="overlay");show("#view-myg",h==="myg");
   $("#layout").classList.toggle("hidden",h==="builder");$("#layout").classList.toggle("full",FULL.has(h));
   document.body.classList.toggle("ov",h==="overlay");
   renderView(h);

@@ -35,6 +35,13 @@ jobs:
         run: |
           python build/update.py work build/template.html docs/index.html data/history.json | tail -n 5
           test "$(stat -c%s docs/index.html)" -gt 100000
+      - name: Meine Spiele (Riot API)
+        continue-on-error: true
+        env:
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+          RIOT_ID: ${{ vars.RIOT_ID }}
+          RIOT_SERVER: ${{ vars.RIOT_SERVER }}
+        run: python build/mystats.py work docs data/matches.json
       - name: Änderungen speichern
         run: |
           git config user.name "tft-planer-bot"
