@@ -137,20 +137,28 @@ def build_games(cache, puuid, names, comps):
             for opt in c.get("opts", {}).values():
                 if opt:
                     core |= set(opt[0]["u"])
-                    break
-            if not core:
+            if not core or not un:
                 continue
-            j = len(un & core) / len(un | core)
-            if j > bs:
-                bs, best = j, c
+            inter = len(un & core)
+            if inter < 3:
+                continue
+            # Anteil deiner Units, die zur Comp gehören, plus ein kleiner Bonus für die Carrys
+            sc = inter / len(un) + 0.15 * len(un & set(c.get("carry", [])))
+            if sc > bs:
+                bs, best = sc, c
+        traits = [{"n": names.get(t["n"], pretty(t["n"])), "u": t["u"], "st": t["st"]} for t in g["traits"]]
+        free = None
+        if not (best and bs >= 0.5):
+            tt = sorted([t for t in traits if "Unique" not in t["n"] and t["u"] > 1], key=lambda t: (-t["st"], -t["u"]))
+            free = "%s (eigene Comp)" % tt[0]["n"] if tt else None
         games.append({
             "id": mid, "t": g["t"], "set": g.get("set"), "q": g.get("q"), "p": g["p"], "lv": g["lv"],
             "gold": g["gold"], "round": g["round"],
             "aug": [names.get(a, pretty(a)) for a in g["aug"]],
             "units": units,
-            "traits": [{"n": names.get(t["n"], pretty(t["n"])), "u": t["u"], "st": t["st"]} for t in g["traits"]],
-            "comp": best["name"] if best and bs >= 0.35 else None,
-            "compAvg": best["avg"] if best and bs >= 0.35 else None,
+            "traits": traits,
+            "comp": best["name"] if best and bs >= 0.5 else free,
+            "compAvg": best["avg"] if best and bs >= 0.5 else None,
         })
     games.sort(key=lambda x: x["t"] or 0, reverse=True)
     return games
