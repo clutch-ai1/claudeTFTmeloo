@@ -1242,7 +1242,7 @@ function renderMyg(){
   $("#myg-comps").innerHTML=crow.length?`<table class="mtab"><tr><th>Comp</th><th>Spiele</th><th>Ø</th><th>Top 4</th><th>Meta Ø</th></tr>${crow.map(r=>`<tr><td>${esc(r.k)}</td><td class="n">${r.n}</td><td class="n ${r.meta?(r.av<=r.meta?"good":"bad"):""}">${num(r.av.toFixed(2))}</td><td class="n">${pct(r.t4)}</td><td class="n">${r.meta?num(r.meta):"-"}</td></tr>`).join("")}</table>`:'<p class="muted" style="margin:0">Noch keine Daten.</p>';
   const ba={};G.forEach(g=>(g.aug||[]).filter(Boolean).forEach(a=>(ba[a]=ba[a]||[]).push(g.p)));
   const arow=Object.entries(ba).map(([k,a])=>({k,n:a.length,av:a.reduce((s,x)=>s+x,0)/a.length})).sort((x,y)=>y.n-x.n||x.av-y.av).slice(0,20);
-  $("#myg-augs").innerHTML=arow.length?`<table class="mtab"><tr><th>Augment</th><th>Spiele</th><th>Ø Platz</th></tr>${arow.map(r=>`<tr><td>${esc(r.k)}</td><td class="n">${r.n}</td><td class="n">${num(r.av.toFixed(2))}</td></tr>`).join("")}</table>`:'<p class="muted" style="margin:0">Noch keine Daten.</p>';
+  $("#myg-augs").innerHTML=arow.length?`<table class="mtab"><tr><th>Augment</th><th>Spiele</th><th>Ø Platz</th></tr>${arow.map(r=>`<tr><td>${esc(r.k)}</td><td class="n">${r.n}</td><td class="n">${num(r.av.toFixed(2))}</td></tr>`).join("")}</table>`:(MYAPI&&MYAPI.server==="pbe1"?'<p class="muted" style="margin:0">Die Riot API liefert für PBE-Spiele keine Augments. Ab dem Live-Start stehen sie hier.</p>':'<p class="muted" style="margin:0">Noch keine Daten.</p>');
   renderMyForm();
 }
 function renderMyForm(){
