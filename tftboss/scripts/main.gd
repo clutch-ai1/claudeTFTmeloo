@@ -21,6 +21,11 @@ var auto_log: Array = []
 var auto_last_img_size := Vector2i.ZERO
 var btn_auto: Button
 var scouting := false
+var trait_block_ms := 0
+var last_action_ms := 0
+var last_shot_ms := 0
+var gold_fresh := false
+var shop_fresh := false
 var scouted_stage := ""
 var stage_changed_ms := 0
 var btn_scout: Button
@@ -94,7 +99,7 @@ func _ready() -> void:
 	timer.start()
 	Meta.loaded.connect(_refresh_all)
 	_refresh_all()
-	_log_file("Start, Version 7, Bildschirm %d" % screen_idx)
+	_log_file("Start, Version 8, Bildschirm %d" % screen_idx)
 	if OS.get_name() == "Windows" and pilot.start():
 		await get_tree().create_timer(2.5).timeout
 		var st0 := pilot.state()
@@ -623,10 +628,11 @@ func _in_game() -> bool:
 	return now - stage_seen_ms < 20000 or now - shop_seen_ms < 8000
 
 func _tick() -> void:
-	if not running or rects.is_empty() or busy:
+	if not running or rects.is_empty() or busy or scouting:
 		return
 	busy = true
 	var t0 := Time.get_ticks_msec()
+	var shot_ms := t0
 	var img := DisplayServer.screen_get_image(screen_idx)
 	if img == null or img.is_empty():
 		lbl_seen.text = "Kann den Bildschirm nicht lesen. Ist TFT im Modus „Randloses Fenster“ und der richtige Bildschirm gewählt?"
@@ -641,6 +647,7 @@ func _tick() -> void:
 	if use_ocr:
 		var res := _ocr_tick(img)
 		done_ocr = res["done"]
+		last_shot_ms = shot_ms
 		if res["changed"]:
 			changed = true
 		seen.append_array(res["seen"])
@@ -1149,6 +1156,9 @@ func _autopilot_step() -> void:
 	if scouting:
 		_auto_status("Scoutet die Gegner ...")
 		return
+	# Erst handeln, wenn ein frisches Bild NACH der letzten Aktion gelesen wurde
+	if last_shot_ms < last_action_ms + 250:
+		return
 	var snum := Brain.stage_num(brain.stage)
 	if scouted_stage != brain.stage and (snum % 10) in PVP_ROUNDS and snum >= 21 and now - stage_changed_ms > 1200 and rects.has("lobby") and rects.has("traits"):
 		_scout()
@@ -1160,24 +1170,33 @@ func _autopilot_step() -> void:
 	for k in auto_tried.keys():
 		if brain.shop[k] != auto_tried[k]:
 			auto_tried.erase(k)
-	for a in brain.advise():
+	var acts := brain.advise()
+	if not gold_fresh:
+		_auto_status("Gold gerade nicht lesbar, wartet.")
+		return
+	for a in acts:
 		match a["k"]:
 			"aug":
 				if rects.has("augs"):
 					pilot.click(_gpos("augs", a["idx"]))
 					_log("Augment: " + str(brain.aug_offer[a["idx"]]))
 					auto_next_ms = now + 1500
+					last_action_ms = now
 					_auto_status("Nimmt Augment.")
 					return
 			"buy":
+				if not shop_fresh:
+					return
 				var sl: int = a["slot"]
 				if auto_pending.has(sl) or auto_tried.get(sl, "") == a["u"]:
 					continue
 				pilot.click(_gpos("shop", sl))
 				auto_pending[sl] = now + 2500
 				auto_tried[sl] = a["u"]
+				brain.note_buy(a["u"], str(a.get("why", "")))
 				_log("Kauft %s (Platz %d)" % [a["u"], sl + 1])
 				auto_next_ms = now + 450
+				last_action_ms = now
 				_auto_status("Kauft %s." % a["u"])
 				return
 			"level":
@@ -1185,14 +1204,18 @@ func _autopilot_step() -> void:
 					pilot.key(Autopilot.VK_F)
 					_log("Level-XP gekauft (F)")
 					auto_next_ms = now + 700
+					last_action_ms = now
 					_auto_status("Kauft XP.")
 					return
 			"roll":
+				if not shop_fresh:
+					return
 				if brain.gold > int(a.get("until", 50)) + 1:
 					pilot.key(Autopilot.VK_D)
 					vision.cache.clear()
 					_log("Rollt (D), %d Gold" % brain.gold)
 					auto_next_ms = now + 1100
+					last_action_ms = now
 					_auto_status("Rollt.")
 					return
 	_auto_status("Nichts zu tun, wartet.")
@@ -1221,6 +1244,39 @@ func _trait_score(img: Image, ask: bool) -> Dictionary:
 	return {"score": score, "ok": ok, "rows": labels}
 
 ## Klickt alle Gegner in der Spielerliste an, liest ihre Trait-Leiste und kehrt zum eigenen Board zurück.
+## Die Klickpositionen kommen direkt aus der Texterkennung (Zeilenhöhe jedes Eintrags), nicht aus geschätzten Plätzen.
+func _lobby_entries(shot: Image) -> Array:
+	var box := _rect_px(shot, "lobby")
+	var txt := pilot.ocr_lines(_ocr_png(shot.get_region(box), "scout_lobby", 2))
+	if txt.begins_with("ERR") or txt == "":
+		return []
+	var out := []
+	for e in OcrRead.lobby(txt):
+		if int(e["y"]) < 0:
+			continue
+		var p := DisplayServer.screen_get_position(screen_idx) + Vector2i(box.position.x + box.size.x / 2, box.position.y + int(e["y"]) / 2)
+		out.append({"name": e["name"], "hp": e["hp"], "p": p})
+	return out
+
+func _same_traits(a: Dictionary, b: Dictionary) -> bool:
+	var ka := a.keys().filter(func(k): return int(a[k]) > 0)
+	if ka.is_empty():
+		return true
+	var hit := 0
+	for k in ka:
+		if int(b.get(k, 0)) > 0:
+			hit += 1
+	return hit * 2 >= ka.size()
+
+func _read_traits_now() -> Dictionary:
+	var shot := DisplayServer.screen_get_image(screen_idx)
+	if shot == null or shot.is_empty():
+		return {}
+	var tt := pilot.ocr([_ocr_png(shot.get_region(_rect_px(shot, "traits")), "scout_traits", 2)])
+	if tt.size() != 1 or str(tt[0]).begins_with("ERR"):
+		return {}
+	return OcrRead.traits(str(tt[0]), Meta.traits.keys())
+
 func _scout(manual: bool = false) -> void:
 	if scouting:
 		return
@@ -1230,43 +1286,62 @@ func _scout(manual: bool = false) -> void:
 	if not pilot.ok and not pilot.start():
 		_auto_status(pilot.error)
 		return
-	if brain.hp < 0 or brain.lobby_hp.size() < 2:
-		_auto_status("Scouten geht erst, wenn dein Leben und die Spielerliste erkannt werden.")
-		return
-	var me := brain.lobby_hp.find(brain.hp)
-	if me < 0:
-		_auto_status("Ich finde dich nicht in der Spielerliste (dein Leben passt zu keinem Eintrag).")
+	if not use_ocr:
+		_auto_status("Scouten braucht die Windows-Texterkennung.")
 		return
 	if manual:
 		for i in range(3, 0, -1):
 			_auto_status("Scouten startet, wechsle ins TFT-Fenster ... %d" % i)
 			await get_tree().create_timer(1.0).timeout
 	scouting = true
-	var n := brain.lobby_hp.size()
-	var scores := []
-	for i in n:
-		if i == me or int(brain.lobby_hp[i]) <= 0:
-			continue
-		pilot.click(_gpos("lobby", i))
-		await get_tree().create_timer(0.45).timeout
-		var shot := DisplayServer.screen_get_image(screen_idx)
-		if shot == null or shot.is_empty():
-			continue
-		_record(shot, "gegner%d" % (i + 1))
-		if use_ocr and rects.has("traits"):
-			var tt := pilot.ocr([_ocr_png(shot.get_region(_rect_px(shot, "traits")), "scout_traits", 2)])
-			if tt.size() == 1:
-				var tc := OcrRead.traits(str(tt[0]), Meta.traits.keys())
-				scores.append(OcrRead.trait_power(tc))
-				_log_file("Gegner %d: %s" % [i + 1, str(tc)])
-			continue
-		var ts := _trait_score(shot, true)
-		if ts["ok"]:
-			scores.append(ts["score"])
-	pilot.click(_gpos("lobby", me))
-	await get_tree().create_timer(0.3).timeout
-	scouting = false
 	scouted_stage = brain.stage
+	var mine := brain.my_traits.duplicate()
+	var shot0 := DisplayServer.screen_get_image(screen_idx)
+	var ents := _lobby_entries(shot0) if shot0 != null and not shot0.is_empty() else []
+	# Mich finden: Eintrag ohne Namen, sonst eindeutiges Leben
+	var me := -1
+	for i in ents.size():
+		if str(ents[i]["name"]).length() <= 1:
+			me = i
+	if me < 0 and brain.hp >= 0:
+		var hits := []
+		for i in ents.size():
+			if int(ents[i]["hp"]) == brain.hp:
+				hits.append(i)
+		if hits.size() == 1:
+			me = hits[0]
+	if ents.size() < 2 or me < 0:
+		_log("Scouten übersprungen: Spielerliste nicht sicher gelesen (%d Einträge)." % ents.size())
+		scouting = false
+		return
+	var scores := []
+	for i in ents.size():
+		if i == me or int(ents[i]["hp"]) <= 0:
+			continue
+		pilot.click(ents[i]["p"])
+		await get_tree().create_timer(0.5).timeout
+		var tc := _read_traits_now()
+		if tc.is_empty():
+			continue
+		if not mine.is_empty() and _same_traits(mine, tc) and _same_traits(tc, mine):
+			continue   # zeigt noch mein Board, Klick ging nicht durch
+		scores.append(OcrRead.trait_power(tc))
+		_log_file("Gegner %s (%d Leben): %s" % [ents[i]["name"], int(ents[i]["hp"]), str(tc)])
+	# Zurück zum eigenen Board und prüfen, dass es wirklich meins ist
+	var back := false
+	for attempt in 3:
+		pilot.click(ents[me]["p"])
+		await get_tree().create_timer(0.45).timeout
+		var tc2 := _read_traits_now()
+		if mine.is_empty() or _same_traits(mine, tc2):
+			back = true
+			break
+	if not back:
+		_log("Rückweg zum eigenen Board nicht bestätigt.")
+	brain.my_traits = mine
+	trait_block_ms = Time.get_ticks_msec() + 1200
+	last_action_ms = Time.get_ticks_msec()
+	scouting = false
 	if scores.size() > 0:
 		brain.opp_scores = scores
 		brain.update_win_chance()
@@ -1274,8 +1349,6 @@ func _scout(manual: bool = false) -> void:
 		for x in scores:
 			best = maxf(best, x)
 		_log("Gescoutet: %d Gegner, Ø %.1f, stärkster %.1f, du %.1f" % [scores.size(), _avg(scores), best, brain.my_score])
-	else:
-		_log("Scouten: Trait-Stufen noch unbekannt, bitte die Fragen beantworten.")
 	_refresh_all()
 
 func _avg(a: Array) -> float:
@@ -1358,6 +1431,8 @@ func _ocr_tick(img: Image) -> Dictionary:
 		return out
 	var T := {}
 	var errs := 0
+	gold_fresh = false
+	shop_fresh = false
 	for i in keys.size():
 		T[keys[i]] = str(texts[i])
 		if str(texts[i]).begins_with("ERR"):
@@ -1387,6 +1462,7 @@ func _ocr_tick(img: Image) -> Dictionary:
 		var g := OcrRead.gold(T["gold"])
 		if g >= 0:
 			out["done"]["gold"] = true
+			gold_fresh = true
 			if g != brain.gold:
 				brain.gold = g
 				ch = true
@@ -1418,7 +1494,7 @@ func _ocr_tick(img: Image) -> Dictionary:
 						brain.hp = int(e["hp"])
 						out["done"]["hp"] = true
 						ch = true
-	if T.has("traits") and not scouting:
+	if T.has("traits") and not scouting and Time.get_ticks_msec() > trait_block_ms:
 		var tc := OcrRead.traits(T["traits"], Meta.traits.keys())
 		out["done"]["traits"] = true
 		var pw := OcrRead.trait_power(tc)
@@ -1455,6 +1531,7 @@ func _ocr_tick(img: Image) -> Dictionary:
 			names.append(lab if lab != "" else "?")
 		if names.filter(func(n): return Meta.units.has(n)).size() >= 2:
 			shop_seen_ms = now
+		shop_fresh = names.filter(func(n): return n != "?").size() == 5
 		out["seen"].append("Shop: " + " | ".join(names))
 	out["changed"] = ch
 	out["seen"].append("OCR %d ms" % (Time.get_ticks_msec() - t0))

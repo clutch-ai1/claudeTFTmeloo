@@ -25,9 +25,13 @@ var win_chance := -1.0           # geschätzte Siegchance gegen einen zufällige
 var plan_why := ""
 
 var target: Dictionary = {}      # gewählte Ziel-Comp
+var spec_stage := ""             # Runde, in der zuletzt "auf Verdacht" gekauft wurde
+var spec_buys := 0               # Käufe ohne festen Grund in dieser Runde (Bank nicht vollmüllen)
+var bench_buys := 0              # alle Käufe des Bots seit Spielstart (grobe Bank-Schätzung)
 var locked := false
 
 const SIDE := ["links", "Mitte", "rechts"]
+const SPEC_WHY := ["passt zu den Traits", "passt zum Board", "starke Unit", "Board füllen"]
 
 static func stage_num(s: String) -> int:
 	var p := s.split("-")
@@ -55,6 +59,9 @@ func reset() -> void:
 	plan_why = ""
 	my_score = -1.0
 	my_traits = {}
+	spec_stage = ""
+	spec_buys = 0
+	bench_buys = 0
 	opp_scores = []
 	win_chance = -1.0
 
@@ -161,9 +168,34 @@ func score_comp(c: Dictionary) -> float:
 		for hname in A.get("h", []):
 			if hname in board:
 				total += 2.0
+	# Was gerade auf dem Board steht (Trait-Leiste): die Comp, die dazu passt, gewinnt klar
+	for t in tr.keys():
+		var mine := int(my_traits.get(t, 0))
+		if mine > 0:
+			total += 0.9 * mini(mine, int(tr[t]))
 	if not target.is_empty() and target["id"] == c["id"]:
 		total += 1.5 if not locked else 3.0
 	return total
+
+## Wie gut passt eine Unit zu dem, was schon auf dem Board steht? 0 = gar nicht
+func board_fit(u: String) -> float:
+	if not Meta.units.has(u):
+		return 0.0
+	var f := 0.0
+	for t in Meta.units[u]["t"]:
+		var n := int(my_traits.get(t, 0))
+		if n >= 2:
+			f += 1.0 + 0.25 * mini(n, 8)
+	return f
+
+## Merkt sich Käufe des Bots, damit die Bank nicht mit Zufalls-Units vollläuft
+func note_buy(u: String, why: String) -> void:
+	bench_buys += 1
+	if why in SPEC_WHY:
+		if spec_stage != stage:
+			spec_stage = stage
+			spec_buys = 0
+		spec_buys += 1
 
 func pick_target() -> void:
 	if Meta.comps.is_empty():
@@ -238,7 +270,7 @@ func advise() -> Array:
 	var spent := 0
 	for b in buys:
 		spent += b["cost"]
-		out.append({"k": "buy", "slot": b["slot"], "u": b["u"], "t": "Kaufen: Platz %d %s (%s)" % [b["slot"] + 1, b["u"], b["why"]]})
+		out.append({"k": "buy", "slot": b["slot"], "u": b["u"], "why": b["why"], "t": "Kaufen: Platz %d %s (%s)" % [b["slot"] + 1, b["u"], b["why"]]})
 
 	# 4. Level und Rollen
 	for x in econ_advice(gold - spent if gold >= 0 else -1):
@@ -332,6 +364,7 @@ func shop_advice() -> Array:
 	var sn := stage_num(stage)
 	var rel := relevant(target) if not target.is_empty() else {}
 	var rr := reroll_level(target) if not target.is_empty() else 0
+	var late := late_board(target) if not target.is_empty() else []
 	var cand := []
 	for i in shop.size():
 		var u: String = shop[i]
@@ -339,41 +372,43 @@ func shop_advice() -> Array:
 			continue
 		var c := Meta.cost(u)
 		var have: int = owned.get(u, 0)
+		var fit := board_fit(u)
 		var prio := 0.0
 		var why := ""
-		if rel.has(u):
-			prio = rel[u] * 2.0
+		if rel.has(u) and (sn < 41 or u in late or u in target.get("carry", []) or have >= 1 or (rr > 0 and c <= 3)):
+			# Später im Spiel nur noch, was ins End-Board gehört oder aufgewertet wird
+			prio = rel[u] * 2.0 + fit * 0.3
 			why = "Carry" if u in target.get("carry", []) else "für " + target["name"]
 			if rr > 0 and c <= 3:
 				prio += 2.0
 				why += ", für 3 Sterne"
-		elif have >= 1 and sn < 41 and c <= 3:
+		elif have >= 1 and (sn < 41 or c >= 3 or have >= 2) and have < 9:
 			prio = 1.5 + have
-			why = "Paar, wird 2 Sterne" if have == 2 else "Paar"
-		elif sn <= 32 and c <= 3 and plan != "loss":
-			var shared := 0
-			var tr := comp_traits(target) if not target.is_empty() else {}
-			for t in Meta.units[u]["t"]:
-				if tr.has(t):
-					shared += 1
+			why = "wird 2 Sterne" if have == 2 else "Paar"
+		elif fit > 0.0 and sn <= 36 and c <= maxi(2, level - 3):
+			prio = 0.6 + fit * 0.4
+			why = "passt zum Board"
+		elif sn <= 22 and c <= 2 and plan != "loss":
 			var ust = Meta.units[u].get("st")
 			var good: bool = typeof(ust) == TYPE_DICTIONARY and float(ust.get("avg", 9.0)) <= 4.4
-			if shared > 0 or good or sn <= 22:
-				prio = 0.8 + shared * 0.4 + (0.3 if good else 0.0)
-				why = "passt zu den Traits" if shared > 0 else ("starke Unit" if good else "Board füllen")
-		if have >= 8:
-			prio = 0.0
+			prio = 0.5 + (0.3 if good else 0.0)
+			why = "starke Unit" if good else "Board füllen"
 		if prio > 0.0:
 			cand.append({"slot": i, "u": u, "cost": c, "prio": prio, "why": why})
 	cand.sort_custom(func(a, b): return a["prio"] > b["prio"])
 	var g := gold
 	var keep := _keep_gold(sn)
-	var fill_left := maxi(0, level + 3 - owned.size())
+	# Käufe auf Verdacht: wenige pro Runde, und gar keine, wenn die Bank schon voll sein dürfte
+	var spec_left := 2 if sn <= 22 else 1
+	if spec_stage == stage:
+		spec_left -= spec_buys
+	if bench_buys >= 12 and sn >= 31:
+		spec_left = 0
 	for x in cand:
-		if x["why"] in ["passt zu den Traits", "starke Unit", "Board füllen"]:
-			if fill_left <= 0:
+		if x["why"] in SPEC_WHY:
+			if spec_left <= 0:
 				continue
-			fill_left -= 1
+			spec_left -= 1
 		var important: bool = x["prio"] >= 4.0
 		if g - x["cost"] >= keep or (important and g >= x["cost"]):
 			res.append(x)

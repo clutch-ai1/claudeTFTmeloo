@@ -56,7 +56,13 @@ static func hp(t: String) -> int:
 ## Spielerliste: pro Zeile Name und Leben
 static func lobby(t: String) -> Array:
 	var out := []
-	for line in t.split(" # ", false):
+	for line0 in t.split(" # ", false):
+		var line: String = line0
+		var y := -1
+		var tl := line.rfind(" ~")
+		if tl >= 0 and line.substr(tl + 2).strip_edges().is_valid_int():
+			y = int(line.substr(tl + 2))
+			line = line.substr(0, tl)
 		var ns := ints(line)
 		if ns.is_empty():
 			continue
@@ -66,7 +72,7 @@ static func lobby(t: String) -> Array:
 		var name := line
 		for ch in "0123456789|":
 			name = name.replace(ch, "")
-		out.append({"name": name.strip_edges(), "hp": h})
+		out.append({"name": name.strip_edges(), "hp": h, "y": y})
 	return out
 
 static func _norm(s: String) -> String:

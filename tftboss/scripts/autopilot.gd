@@ -54,7 +54,7 @@ try {
   if ($ocr -eq $null) { $ocr = [Windows.Media.Ocr.OcrEngine]::TryCreateFromUserProfileLanguages() }
   if ($ocr -eq $null) { $ocrErr = 'keine OCR-Sprache installiert' }
 } catch { $ocrErr = $_.Exception.Message }
-function ReadText($path) {
+function ReadText($path, $pos = $false) {
   try {
     $path = [System.IO.Path]::GetFullPath($path.Replace('/', '\'))
     # Bild direkt als Datenstrom öffnen (robuster als StorageFile)
@@ -64,6 +64,7 @@ function ReadText($path) {
     $bmp = Await ($dec.GetSoftwareBitmapAsync()) ([Windows.Graphics.Imaging.SoftwareBitmap])
     $res = Await ($ocr.RecognizeAsync($bmp)) ([Windows.Media.Ocr.OcrResult])
     $st.Dispose(); $fs.Dispose()
+    if ($pos) { return (($res.Lines | ForEach-Object { $w = $_.Words[0].BoundingRect; '{0} ~{1}' -f $_.Text, [int]($w.Y + $w.Height / 2) }) -join ' # ') }
     return (($res.Lines | ForEach-Object { $_.Text }) -join ' # ')
   } catch {
     $e = $_.Exception
@@ -91,6 +92,7 @@ while ($true) {
       foreach ($pp in $paths) { if ($ocr -eq $null) { $out += ('ERR ' + $ocrErr) } else { $out += (ReadText $pp) } }
       [Console]::Out.WriteLine(($out -join ' @@ ')); [Console]::Out.Flush()
     }
+    'ocrl'   { if ($ocr -eq $null) { [Console]::Out.WriteLine('ERR ' + $ocrErr) } else { [Console]::Out.WriteLine((ReadText $l.Substring(5) $true)) }; [Console]::Out.Flush() }
     'quit'   { exit }
   }
 }
@@ -182,6 +184,10 @@ func ocr(paths: Array) -> Array:
 	if line == "":
 		return []
 	return Array(line.split(" @@ "))
+
+## Wie ocr(), aber jede Zeile endet mit " ~Y" (Mitte der Zeile im Bild, in Pixeln)
+func ocr_lines(path: String) -> String:
+	return _ask_line("ocrl " + path)
 
 func cursor() -> Vector2i:
 	var l := _ask_line("cursor")
