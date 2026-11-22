@@ -52,6 +52,7 @@ var hud_orbs: Array = []
 var hud_items: Array = []
 var hud_ms := 0
 var hp_pending := -1
+var streak_pending := 0
 var lv_pending := -1
 var orb_walks := 0
 var orb_ms := 0
@@ -150,7 +151,7 @@ func _ready() -> void:
 	timer.start()
 	Meta.loaded.connect(_refresh_all)
 	_refresh_all()
-	_log_file("Start, Version 20, Bildschirm %d" % screen_idx)
+	_log_file("Start, Version 21, Bildschirm %d" % screen_idx)
 	if OS.get_name() == "Windows" and pilot.start():
 		await get_tree().create_timer(2.5).timeout
 		var st0 := pilot.state()
@@ -2204,6 +2205,7 @@ func _hud_tick(img: Image) -> void:
 	if now - hud_ms > 1500:
 		hud_ms = now
 		hud_units = Hud.units(img)
+		brain.bench_count = hud_units["bench"].size()
 		hud_orbs = Hud.orbs(img) + Hud.white_orbs(img)
 		hud_items = Hud.item_slots(img)
 		# Infofenster einer Unit verdeckt die Spielerliste: wegklicken
@@ -2346,6 +2348,10 @@ func _ocr_tick(img: Image) -> Dictionary:
 				sv = brain.streak       # Zahl gerade nicht lesbar: alte behalten
 			else:
 				sv = fcol * 2
+		# Streak ändert sich pro Runde höchstens um 1 (oder springt auf 0/±1): Sprünge wie 2 -> 9 erst nach zweimal gleich lesen glauben
+		if absi(sv - brain.streak) > 1 and absi(sv) > 1 and sv != streak_pending:
+			streak_pending = sv
+			sv = brain.streak
 		if sv != brain.streak or not brain.streak_seen:
 			if sv != brain.streak and auto_on:
 				_log_file("Streak: %s" % ("%d Siege in Folge" % sv if sv > 0 else ("%d Niederlagen in Folge" % -sv if sv < 0 else "keine")))

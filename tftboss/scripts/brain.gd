@@ -28,6 +28,7 @@ var streak_seen := false
 
 var target: Dictionary = {}      # gewählte Ziel-Comp
 var spec_stage := ""             # Runde, in der zuletzt "auf Verdacht" gekauft wurde
+var bench_count := 0             # Units auf der Bank (aus den Lebensbalken)
 var spec_buys := 0               # Käufe ohne festen Grund in dieser Runde (Bank nicht vollmüllen)
 var bench_buys := 0              # alle Käufe des Bots seit Spielstart (grobe Bank-Schätzung)
 var locked := false
@@ -410,6 +411,13 @@ func shop_advice() -> Array:
 		spec_left -= spec_buys
 	if bench_buys >= 12 and sn >= 31:
 		spec_left = 0
+	# Bank fast voll: nur noch kaufen, was gleich 2 Sterne gibt oder ein fehlender Carry ist
+	if bench_count >= 7:
+		cand = cand.filter(func(x): return int(owned.get(x["u"], 0)) >= 2 or (x["u"] in target.get("carry", []) and int(owned.get(x["u"], 0)) == 0))
+	# Ab Stage 3 nichts mehr kaufen, was weder zum End-Board gehört noch ein Paar ist
+	if sn >= 31:
+		cand = cand.filter(func(x): return x["u"] in late or int(owned.get(x["u"], 0)) >= 1 or (rr > 0 and Meta.cost(x["u"]) <= 3 and rel.has(x["u"])))
+	# Nie mehr als 3 Kopien einer Unit pro Runde kaufen, wenn sie nicht ins End-Board gehört
 	for x in cand:
 		if x["why"] in SPEC_WHY:
 			if spec_left <= 0:
