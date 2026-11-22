@@ -469,6 +469,10 @@ body.sideopen .layout.drawer .lside{transform:none}
 .cprio .cpi{display:flex;align-items:center;gap:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:5px 10px 5px 6px}
 .cprio .cpi .it{width:26px;height:26px}.cprio .cpi b{font-size:15px}.cprio .cpi small{color:var(--muted);font-size:11px}
 .cprio .cpi.lead{border-color:var(--gold)}
+
+.ptips{margin:12px 0 0;padding:10px 12px;background:var(--panel-2);border-radius:10px;font-size:13px;line-height:1.45}
+.ptips h4{margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ptips ul{margin:0;padding-left:18px}.ptips li{margin:3px 0}.ptips li.warn::marker{content:"⚠ "}
 </style>
 </head>
 <body>
@@ -758,7 +762,7 @@ function renderDetail(){
   <div class="roles">${(c.carry||[]).map((u,i)=>roleCard(c,u,"carry",i)).join("")}${(c.tank||[]).slice(0,1).map((u,i)=>roleCard(c,u,"tank",i)).join("")}</div>
   <div class="phasebar sect" id="d-board" role="group" aria-label="Phase und Level">${bar}</div>
   <div class="dgrid">
-    <div><div class="boardwrap-s">${b?miniBoard(b.u,c,{withItems:!isEarly,stars:!isEarly,lg:true}):""}</div><div class="legend-front">Oben = vorne, zum Gegner</div></div>
+    <div><div class="boardwrap-s">${b?miniBoard(b.u,c,{withItems:!isEarly,stars:!isEarly,lg:true}):""}</div><div class="legend-front">Oben = vorne, zum Gegner</div>${b&&!isEarly?posTips(c,b.u):""}</div>
     <div class="alts"><div class="sect"><h3>${PH[phase].label} Game · Level ${lvl}</h3></div>
       ${b?`<div class="tchips">${traitChips(b.u.map(n=>({n,s:isEarly?1:(c.stars[n]||1)})))}</div>`:""}
       ${boards.map((o,i)=>`<button class="alt" data-alt="${i}" aria-pressed="${i===detailPick.i}"><div class="urow">${o.u.map(n=>tile(n)).join("")}</div><div class="num">${num(o.avg)}<small>Ø Platz</small></div>${o.win!=null?`<div class="num">${pct(o.win)}<small>Runden gewonnen</small></div>`:""}<div class="num">${o.n.toLocaleString("de-DE")}<small>Spiele</small></div></button>`).join("")}
@@ -828,7 +832,7 @@ function champDetail(n){
     <div class="tchips">${u.t.map(t=>`<span class="tchip">${esc(t)}</span>`).join("")}</div>
     ${u.l?`<div class="unlocktxt">Freischalten: ${esc(u.u||"muss freigeschaltet werden")}</div>`:""}
     ${u.st?`<div class="lbl">Stats (PBE, letzte 3 Tage) ${trendHtml(u.st.tr)}</div>${statLine(u.st)}`:""}
-    ${u.ab?`<div class="abil"><b>${esc(u.ab)}</b>${esc(de(u.abd||""))}</div>${trBtn(u.abd)}`:""}
+    ${u.ab?`<div class="abil"><b>${esc(u.ab)}</b>${esc(u.abdde||de(u.abd||""))}</div>${u.abdde?"":trBtn(u.abd)}`:""}
     ${best.length?`<div class="lbl">Beste Items</div><div class="ilist">${best.map(i=>`<span>${itemBadge(i)}${esc(i)}</span>`).join("")}</div>`:""}
     <div class="lbl">Comps mit ${esc(n)} (${comps.length})</div>
     <div class="clist">${comps.slice(0,10).map(c=>compRow(c,roleTag(roleIn(c,n)))).join("")||'<span class="muted" style="font-size:12.5px">In keiner der aktuellen Comps.</span>'}</div>
@@ -1440,7 +1444,7 @@ function compPrio(c){
     const comp=el.closest("#detail,#cards,.hero,#start")?COMPS.find(c=>c.id===st.comp):null;
     const inComp=el.closest("#detail")&&comp&&comp.items[n]&&holders(comp).has(n);
     const it=inComp?comp.items[n].i:(BEST[n]||[]);
-    const ab=clean(u.abd);const s=u.st||{};
+    const ab=clean(u.abdde||u.abd);const s=u.st||{};
     return `<div class="uh">${tile(n)}<div><b>${esc(n)}</b><small>${u.c} Gold${u.role&&u.role.label?" · "+esc(u.role.label):""}</small></div></div>
       <div class="tr">${u.t.map(t=>`<span>${esc(t)}</span>`).join("")}</div>
       ${u.ab?`<div class="ab"><b>${esc(u.ab)}</b><p>${esc(ab.length>240?ab.slice(0,237)+"…":ab)}</p></div>`:""}
@@ -1452,6 +1456,25 @@ function compPrio(c){
     cur=el;const n=el.dataset.u;tip.style.setProperty("--cc",`var(--c${(U[n]||{c:1}).c})`);tip.innerHTML=html(n,el);if(!tip.innerHTML){tip.classList.remove("on");return}place(el);tip.classList.add("on")});
   addEventListener("scroll",()=>{cur=null;tip.classList.remove("on")},true);
 })();
+
+/* ===== Positionierungs-Tipps aus dem angezeigten Board ===== */
+const ROWN=["in die vorderste Reihe","in die zweite Reihe","in die dritte Reihe","in die hinterste Reihe"];
+const sideOf=c=>c<=1?"links":c>=5?"rechts":"in der Mitte";
+function posTips(c,names){
+  const P=placeUnits(names,c);const car=(c.carry||[]).find(u=>P[u]);const tk=(c.tank||[]).find(u=>P[u]);const out=[];
+  if(car){const [r,col]=P[car];const ranged=/Schütze|Caster/.test((U[car].role||{}).label||"");
+    if(r===3&&(col===0||col===6))out.push(`<b>${esc(car)}</b> in die hintere Ecke ${sideOf(col)}. Da kommen Gegner als Letztes an.`);
+    else if(r>=2)out.push(`<b>${esc(car)}</b> ${ROWN[r]}, ${sideOf(col)}. ${ranged?"Mit Reichweite trifft er von dort alles, steht aber hinter den Tanks sicher.":"So springt er schnell rein, sobald die Tanks Schaden fressen."}`);
+    else out.push(`<b>${esc(car)}</b> kämpft vorne mit (${ROWN[r].replace("in die ","")}, ${sideOf(col)}). Gib ihm Items mit Heilung oder Lebensraub.`);}
+  if(tk){const [r,col]=P[tk];
+    out.push(`<b>${esc(tk)}</b> ${ROWN[r]}, ${sideOf(col)}. ${r===0?"Er soll den ersten Schaden fressen.":"Er schützt die Units dahinter."}${car&&P[car]&&Math.abs(P[car][1]-col)<=2&&r===0?` Steht auf der Seite von ${esc(car)} und hält ihm den Rücken frei.`:""}`)}
+  const front=names.filter(n=>P[n]&&P[n][0]===0).length;
+  if(front<2)out.push(`Nur ${front} Unit vorne. Fehlt dir ein Tank, stell lieber eine zweite Unit nach vorne als den Carry ungeschützt zu lassen.`);
+  else out.push(`${front} Units vorne als Frontlinie, der Rest dahinter.`);
+  if(car&&P[car]&&P[car][0]===3)out.push(`<span>Spielt ein Gegner Evelynn oder andere Units, die hinter die Reihen springen: ${esc(car)} eine Spalte nach innen ziehen und eine robuste Unit direkt daneben stellen.</span>`);
+  out.push("Gegen Gegner, deren Carry in einer Ecke steht: Tank auf dieselbe Seite schieben, damit er schneller dort ankommt.");
+  return `<div class="ptips"><h4>Positionierung</h4><ul>${out.map(t=>`<li>${t}</li>`).join("")}</ul></div>`;
+}
 
 const VIEWS=["start","comps","early","mid","late","champs","augs","unlocks","assist","items","roll","builder","overlay","quiz"];
 const FULL=new Set(["start","assist","items","roll","overlay","quiz"]);

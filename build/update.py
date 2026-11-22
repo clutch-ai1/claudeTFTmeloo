@@ -181,11 +181,25 @@ def role_of(x):
     dmg='Magie' if r.startswith('Magic') else ('Angriff' if r.startswith('Attack') else '')
     kind=re.sub(r'^(Magic|Attack|Hybrid)','',r)
     return {'raw':r,'tank':'Tank' in r,'label':(ROLE_DE.get(kind,kind) + (f' ({dmg})' if dmg else '')).strip()}
+# Deutsche Fähigkeitstexte: Zahlen kommen immer frisch aus den Daten, nur der Text ist übersetzt.
+# Ändert Riot den englischen Text, passt das Gerüst nicht mehr und die Seite zeigt Englisch.
+try: ABDE=json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'abilities_de.json')))
+except Exception: ABDE={}
+_NUM=re.compile(r'\d+(?:[.,]\d+)*(?:/\d+(?:[.,]\d+)*)*%?')
+def ability_de(name,en):
+    e=ABDE.get(name)
+    if not e or not en: return ''
+    nums=_NUM.findall(en);i=[0]
+    def r(m):
+        i[0]+=1;return '{%d}'%(i[0]-1)
+    if _NUM.sub(r,en)!=e['skel']: return ''
+    return re.sub(r'\{(\d+)\}',lambda m:nums[int(m.group(1))],e['de'])
 umap={}
 for x in units:
     nm=alias[norm(x['apiName'])]
     ab=x.get('ability') or {}
     umap[nm]={'role':role_of(x),'ab':ab.get('name') or '','abd':clean_desc(ab.get('desc',''),x.get('curveValues'),x.get('curveTable'),x.get('attributeValues'))}
+    umap[nm]['abdde']=ability_de(nm,umap[nm]['abd'])
 # Champion-Stats (units_distribution)
 ustats={}
 try:

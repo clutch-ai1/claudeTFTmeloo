@@ -1,0 +1,378 @@
+{
+"Elise": {
+"skel": "Transform into Spider Form, gaining {0} Health. Then, fire webbing at the enemy that dealt the most damage this round, Stunning the first enemy hit for {1} seconds and dealing {2} magic damage.\n\nSubsequent casts heal {3}, then fire webbing.",
+"de": "Verwandelt sich in Spinnengestalt und erhält {0} Leben. Danach schießt sie ein Netz auf den Gegner, der diese Runde den meisten Schaden verursacht hat. Der erste getroffene Gegner wird {1} Sek. betäubt und erleidet {2} magischen Schaden.\n\nWeitere Einsätze heilen {3} und schießen danach ein Netz."
+},
+"Gnar": {
+"skel": "Passive: Every {0}rd attack is replaced with a rock that deals {1} physical damage and grants Gnar {2} Attack Speed.",
+"de": "Passiv: Jeder {0}. Angriff wird durch einen Felsen ersetzt, der {1} normalen Schaden verursacht und Gnar {2} Angriffstempo gibt."
+},
+"Katarina": {
+"skel": "Twirl, slashing adjacent enemies for {0} magic damage. Then, eviscerate the current target, dealing {1} magic damage to them. Enemies hit are Captivated for {2} seconds. \n\nCaptivated enemies grant bonuses to Classical champions.",
+"de": "Wirbelt herum und trifft benachbarte Gegner für {0} magischen Schaden. Danach zerfetzt sie ihr Ziel für {1} magischen Schaden. Getroffene Gegner sind {2} Sek. gebannt.\n\nGebannte Gegner geben Classical-Champions Boni."
+},
+"Kayn": {
+"skel": "Dash and swipe, dealing {0} physical damage to enemies in a {1} hex line.\n\nHeartsteel Upgrade: At Health, turn into the Shadow Assassin, briefly becoming untargetable and dealing bonus magic damage for the rest of combat.",
+"de": "Springt vor und schlägt zu. Verursacht {0} normalen Schaden an Gegnern in einer Linie von {1} Feldern.\n\nHeartsteel-Upgrade: Bei wenig Leben wird er zum Schattenassassinen, ist kurz unanvisierbar und verursacht für den Rest des Kampfes zusätzlichen magischen Schaden."
+},
+"Kennen": {
+"skel": "Passive: Reduce all incoming damage by {0}. Every second, zap adjacent enemies, dealing {1} magic damage.",
+"de": "Passiv: Reduziert jeden erlittenen Schaden um {0}. Trifft jede Sekunde benachbarte Gegner mit einem Stromschlag für {1} magischen Schaden."
+},
+"Kobuko": {
+"skel": "Passive: Your strongest Kobuko gains bonus Health equal to of your Hyperpop Hype. (((Current Health: X()\n\nActive: Amp Up for {0} seconds, healing {1} each second.",
+"de": "Passiv: Dein stärkster Kobuko erhält zusätzliches Leben abhängig von deinem Hyperpop-Hype.\n\nAktiv: Dreht {0} Sek. auf und heilt sich jede Sekunde um {1}."
+},
+"Lillia": {
+"skel": "Heal {0} Health and strike the target, dealing {1} magic damage to enemies in a {2} hex radius and {3} Weakening them for {4} seconds. \n\nWeaken: reduce Damage Amp",
+"de": "Heilt {0} Leben und schlägt ihr Ziel. Verursacht {1} magischen Schaden an Gegnern im Umkreis von {2} Feld und schwächt sie {4} Sek. lang um {3}.\n\nSchwächen: verringert die Schadensverstärkung"
+},
+"Neeko": {
+"skel": "Convene the K/DA fan club, throwing {0} confetti streams at the target that each deal {1} magic damage. If they kill, permanently gain Ability Power.\n\nCurrent Bonus: X Ability Power",
+"de": "Ruft den K/DA-Fanclub und wirft {0} Konfetti-Strahlen auf das Ziel, die je {1} magischen Schaden verursachen. Tötet sie damit, erhält sie dauerhaft Fähigkeitsstärke."
+},
+"Olaf": {
+"skel": "Passive: On attack, heal {0}. \n\nOn death, instead heal to full and gain Attack Speed, but continuously lose max Health each second.",
+"de": "Passiv: Heilt sich bei jedem Angriff um {0}.\n\nBeim Tod heilt er sich stattdessen voll und erhält Angriffstempo, verliert aber jede Sekunde maximales Leben."
+},
+"Sett": {
+"skel": "Passive: Gain more max Health from all sources.\n\nActive: Heal {0}. Strike the target twice, dealing {1} physical damage on each hit.\n\nHeartsteel Upgrade: Every {2} seconds, heal max Health, increased by up to based on missing Health.",
+"de": "Passiv: Erhält mehr maximales Leben aus allen Quellen.\n\nAktiv: Heilt {0}. Schlägt das Ziel zweimal für je {1} normalen Schaden.\n\nHeartsteel-Upgrade: Heilt sich alle {2} Sek., stärker je weniger Leben er hat."
+},
+"Taric": {
+"skel": "Grant {0} Shield to Taric and a nearby damaged ally for seconds.",
+"de": "Gibt Taric und einem verletzten Verbündeten in der Nähe {0} Schild."
+},
+"Varus": {
+"skel": "Fire a hail of arrows, dealing {0} physical damage to the target and {1} damage to adjacent enemies. {2} Slow them for {3} seconds.\n\nSlow: Reduce Attack Speed",
+"de": "Schießt einen Pfeilhagel. Verursacht {0} normalen Schaden am Ziel und {1} Schaden an benachbarten Gegnern. Verlangsamt sie {3} Sek. lang um {2}.\n\nVerlangsamen: verringert das Angriffstempo"
+},
+"Yunara": {
+"skel": "For the rest of combat, attacks fire an additional orb that deals {0} physical damage.",
+"de": "Für den Rest des Kampfes feuern Angriffe eine zusätzliche Kugel, die {0} normalen Schaden verursacht."
+},
+"Ziggs": {
+"skel": "Passive: Attacks deal {0} bonus magic damage.\n\nActive: Throw a bomb at the target that deals {1} magic damage to them and {2} magic damage to adjacent enemies.",
+"de": "Passiv: Angriffe verursachen {0} zusätzlichen magischen Schaden.\n\nAktiv: Wirft eine Bombe auf das Ziel. Sie verursacht {1} magischen Schaden am Ziel und {2} magischen Schaden an benachbarten Gegnern."
+},
+"Zoe": {
+"skel": "Fire a paddle ball backwards and redirect it towards the farthest enemy, dealing {0} magic damage to the first enemy hit. If they die, the ball ricochets, dealing excess damage to the next enemy hit.",
+"de": "Schießt einen Ball nach hinten und lenkt ihn zum am weitesten entfernten Gegner um. Der erste getroffene Gegner erleidet {0} magischen Schaden. Stirbt er, prallt der Ball ab und gibt den überschüssigen Schaden an den nächsten Gegner weiter."
+},
+"Annie": {
+"skel": "Gain {0} Shield for {1} seconds. Unleash a cone of fire, dealing {2} magic damage to enemies. {3} Burn and Wound them for {4} seconds.",
+"de": "Erhält {1} Sek. lang {0} Schild. Entfesselt einen Feuerkegel, der {2} magischen Schaden verursacht. Getroffene brennen ({3}) und sind {4} Sek. lang verwundet."
+},
+"Ashe": {
+"skel": "The next {0} attacks have {1} Attack Speed and are replaced with flurries of {2} arrows. Each arrow deals {3} physical damage.",
+"de": "Die nächsten {0} Angriffe haben {1} Angriffstempo und werden durch Salven aus {2} Pfeilen ersetzt. Jeder Pfeil verursacht {3} normalen Schaden."
+},
+"Camille": {
+"skel": "Passive: When the target dies, hookshot to the next one and deal {0} physical damage to them.\n\nActive: Do a sweeping kick, dealing {1} physical damage in a cone.",
+"de": "Passiv: Stirbt ihr Ziel, zieht sie sich zum nächsten und verursacht {0} normalen Schaden.\n\nAktiv: Ein weiter Tritt, der {1} normalen Schaden in einem Kegel verursacht."
+},
+"Ezreal": {
+"skel": "Fire a missile that marks the target, then fire a second blast that detonates it. The explosion deals {0} physical damage to the target and {1} physical damage to enemies within {2} hex.\n\nHeartsteel Upgrade: Detonation deals more damage. Every {3}rd cast hits enemies in a {4} hex radius instead.",
+"de": "Schießt eine Rakete, die das Ziel markiert, und lässt die Markierung mit einem zweiten Schuss explodieren. Die Explosion verursacht {0} normalen Schaden am Ziel und {1} normalen Schaden an Gegnern im Umkreis von {2} Feld.\n\nHeartsteel-Upgrade: Die Explosion verursacht mehr Schaden. Jeder {3}. Einsatz trifft Gegner im Umkreis von {4} Feldern."
+},
+"Gragas": {
+"skel": "Become boisterous for {0} seconds, restoring {1} Health per second and dealing {2} bonus magic damage on attack.\n\nFor every {3}-star K/DA ally, increase both effects by . ((Total Increase: X()",
+"de": "Wird für {0} Sek. ausgelassen, stellt jede Sekunde {1} Leben wieder her und verursacht bei Angriffen {2} zusätzlichen magischen Schaden.\n\nJeder K/DA-Verbündete mit {3} Sternen verstärkt beide Effekte."
+},
+"Illaoi": {
+"skel": "Active: Heal {0} and deal {1} magic damage in a {2} hex line.\n\nQuest: On cast during player combat, Illaoi gains {3} Fame + {4} more for every {5}g you have, up to {6}g. At {7} Fame, Illaoi goes Platinum, gaining Durability and dropping {8} gold on cast instead. \n\n(Current Fame: X/{9})Illaoi has gone Platinum! (Gold Generated: X)",
+"de": "Aktiv: Heilt {0} und verursacht {1} magischen Schaden in einer Linie von {2} Feldern.\n\nQuest: Bei jedem Einsatz im Spielerkampf erhält Illaoi {3} Ruhm, plus {4} für je {5} Gold, die du hast (bis {6} Gold). Ab {7} Ruhm geht Illaoi auf Platin, erhält Haltbarkeit und lässt stattdessen bei jedem Einsatz {8} Gold fallen."
+},
+"Jax": {
+"skel": "Bash the current target, dealing {0} magic damage and healing for of damage dealt. Gain Attack Speed for the rest of combat.\n\nEDM Upgrade: Fire beams at the {1} nearest enemies that deal {2} magic damage, reduced by for each enemy they pass through.",
+"de": "Schlägt das Ziel für {0} magischen Schaden und heilt sich um einen Teil davon. Erhält für den Rest des Kampfes Angriffstempo.\n\nEDM-Upgrade: Schießt Strahlen auf die {1} nächsten Gegner, die {2} magischen Schaden verursachen, etwas weniger für jeden durchquerten Gegner."
+},
+"Karthus": {
+"skel": "After a brief delay, deal {0} magic damage to the current target. If they die, recast this ability at effectiveness.",
+"de": "Verursacht nach kurzer Verzögerung {0} magischen Schaden am Ziel. Stirbt es, wirkt er die Fähigkeit mit verringerter Stärke erneut."
+},
+"Lucian": {
+"skel": "Dash to a nearby hex, then fire {0} shots at target that each deal {1} physical damage.",
+"de": "Springt auf ein nahes Feld und schießt {0} Schüsse auf das Ziel, die je {1} normalen Schaden verursachen."
+},
+"Lulu": {
+"skel": "Rotate between {0} effects:\n\nWhimsy!: Grant an ally {1} decaying Attack Speed and {2} magic damage on hit for {3} seconds. \n\nWild Growth: Increase an ally's Health by {4} for {5} seconds. While active, adjacent enemies take {6} magic damage each second.",
+"de": "Wechselt zwischen {0} Effekten:\n\nWhimsy!: Gibt einem Verbündeten {3} Sek. lang {1} abklingendes Angriffstempo und {2} magischen Schaden pro Treffer.\n\nWild Growth: Erhöht das Leben eines Verbündeten {5} Sek. lang um {4}. Solange das aktiv ist, erleiden benachbarte Gegner jede Sekunde {6} magischen Schaden."
+},
+"Lux": {
+"skel": "Toss a prism into the air, then blast it with a beam of light. The beam splits, dealing {0} magic damage to the target, and {1} to another nearby enemy. For each one that dies, gain {2} Mana.",
+"de": "Wirft ein Prisma in die Luft und trifft es mit einem Lichtstrahl. Der Strahl teilt sich, verursacht {0} magischen Schaden am Ziel und {1} an einem weiteren Gegner in der Nähe. Für jeden getöteten Gegner erhält sie {2} Mana."
+},
+"Nasus": {
+"skel": "Create a magnificent {0} hex field that lasts {1} seconds. While active, heal {2} each second and allies within the field heal {3}. Enemies take {4} magic damage and are Captivated if they have less max Health than Nasus.\n\nCaptivated enemies grant bonuses to Classical champions.",
+"de": "Erschafft ein prächtiges Feld mit {0} Feldern Radius, das {1} Sek. hält. Solange es aktiv ist, heilt er sich jede Sekunde um {2} und Verbündete im Feld um {3}. Gegner erleiden {4} magischen Schaden und sind gebannt, wenn sie weniger maximales Leben als Nasus haben.\n\nGebannte Gegner geben Classical-Champions Boni."
+},
+"Qiyana": {
+"skel": "Passive: Qiyana's ring changes color periodically, giving her Ability bonus effects.\n\nActive: Dash to strike enemies in a line, dealing {0} physical damage to the target and {1} to other enemies hit.\n\nRed: Deal bonus damage.\nGreen: Heal for of damage dealt.\nBlue: Refund {2} Mana.\nGold: Gain {3} gold and randomly use another effect. (Gold Gained: X)",
+"de": "Passiv: Qiyanas Ring wechselt regelmäßig die Farbe und gibt ihrer Fähigkeit Zusatzeffekte.\n\nAktiv: Springt durch Gegner in einer Linie, verursacht {0} normalen Schaden am Ziel und {1} an anderen getroffenen Gegnern.\n\nRot: zusätzlicher Schaden.\nGrün: heilt um einen Teil des Schadens.\nBlau: erstattet {2} Mana.\nGold: gibt {3} Gold und nutzt zufällig einen anderen Effekt."
+},
+"Renata Glasc": {
+"skel": "Fire a musical bar at the target, applying {0} stacks of Toxin. Toxin stacks deal {1} magic damage over {2} seconds. Additionally, apply {3} stack of Toxin to {4} nearby enemies, prioritizing unpoisoned enemies. \n\nEnemies are Captivated for {5} seconds upon Toxin application, increased to {6} seconds if their star level is less than Renata's.\n\nCaptivated enemies grant bonuses to Classical champions.",
+"de": "Schießt einen Notentakt auf das Ziel und legt {0} Giftstapel an. Jeder Stapel verursacht {1} magischen Schaden über {2} Sek. Zusätzlich bekommen {4} Gegner in der Nähe {3} Stapel, bevorzugt ungiftete.\n\nVergiftete Gegner sind {5} Sek. gebannt, {6} Sek. wenn sie weniger Sterne als Renata haben.\n\nGebannte Gegner geben Classical-Champions Boni."
+},
+"Renekton": {
+"skel": "Grow larger, gaining {0} max Health for the rest of combat. Then spin, dealing {1} physical damage to adjacent enemies.",
+"de": "Wird größer und erhält für den Rest des Kampfes {0} maximales Leben. Wirbelt danach herum und verursacht {1} normalen Schaden an benachbarten Gegnern."
+},
+"Samira": {
+"skel": "Passive: When Samira critically strikes an enemy, they become Captivated for {0} seconds.\n\nActive: Fire {1} bullets at the current target, each dealing {2} damage.\n\nCaptivated enemies grant bonuses to Classical champions.",
+"de": "Passiv: Trifft Samira kritisch, ist der Gegner {0} Sek. gebannt.\n\nAktiv: Schießt {1} Kugeln auf das Ziel, die je {2} Schaden verursachen.\n\nGebannte Gegner geben Classical-Champions Boni."
+},
+"Seraphine": {
+"skel": "Indie: Release a stream of notes at the target while posing for the fans, dealing {0} magic damage over {1} seconds.\n\nRising Star: Release bonus notes at nearby enemies.\n\nSuperstar: Toss high notes at every enemy.",
+"de": "Indie: Schickt einen Notenstrom auf das Ziel und posiert für die Fans. Verursacht {0} magischen Schaden über {1} Sek.\n\nRising Star: Schickt zusätzliche Noten auf Gegner in der Nähe.\n\nSuperstar: Wirft hohe Töne auf jeden Gegner."
+},
+"Tristana": {
+"skel": "Throw bombs at {0} nearby enemies and detonate them, each dealing {1} physical damage. The final blast deals {2} damage instead.",
+"de": "Wirft Bomben auf {0} Gegner in der Nähe und zündet sie. Jede verursacht {1} normalen Schaden, die letzte Explosion {2}."
+},
+"Amumu": {
+"skel": "Heal {0}. Toss bandages at the {1} nearest enemies, dealing {2} magic damage and Stunning them for {3} seconds.",
+"de": "Heilt {0}. Wirft Bandagen auf die {1} nächsten Gegner, verursacht {2} magischen Schaden und betäubt sie {3} Sek."
+},
+"Bard": {
+"skel": "Passive: Gain the Horn of the Traveler. While equipped, casts generate XP and attacks grant bonus Mana.\n\nActive: Summon a wave of meeps that deal {0} magic damage to enemies hit, reduced by for each one it passes through (minimum ).",
+"de": "Passiv: Erhält das Horn des Reisenden. Solange er es trägt, geben seine Einsätze EP und Angriffe zusätzliches Mana.\n\nAktiv: Ruft eine Welle Meeps, die {0} magischen Schaden verursacht, etwas weniger für jeden durchquerten Gegner."
+},
+"Braum": {
+"skel": "Gain {0} Shield for {1} seconds. Then slam the ground, dealing {2} magic damage to adjacent enemies and Stunning them for {3} seconds.",
+"de": "Erhält {1} Sek. lang {0} Schild. Schlägt danach auf den Boden, verursacht {2} magischen Schaden an benachbarten Gegnern und betäubt sie {3} Sek."
+},
+"Briar": {
+"skel": "Heal {0} and kick a snack at the furthest enemy within {1} hexes. Dash toward it, dealing {2} physical damage in a {3} hex area.\n\nThen chow down, gaining Attack Speed for the next {4} attacks and replacing them with slashes that deal {5} physical damage.",
+"de": "Heilt {0} und kickt einen Snack zum am weitesten entfernten Gegner innerhalb von {1} Feldern. Springt hinterher und verursacht {2} normalen Schaden in {3} Feldern Umkreis.\n\nDanach frisst sie, erhält Angriffstempo für die nächsten {4} Angriffe und ersetzt sie durch Hiebe mit {5} normalem Schaden."
+},
+"Draven": {
+"skel": "Throw a massive spinning record at the target, dealing {0} physical damage. The record leaves behind a vortex that lasts {1} seconds and deals {2} physical damage per second split amongst enemies within {3} hex.",
+"de": "Wirft eine riesige rotierende Schallplatte auf das Ziel für {0} normalen Schaden. Sie hinterlässt {1} Sek. lang einen Wirbel, der pro Sekunde {2} normalen Schaden verursacht, aufgeteilt auf Gegner im Umkreis von {3} Feld."
+},
+"Ekko": {
+"skel": "Passive: Rewind of damage taken over {0} seconds.\n\nActive: Instantly heal all damage being rewinded + {1} Health. Then whack the current target for {2} magic damage.",
+"de": "Passiv: Spult einen Teil des erlittenen Schadens der letzten {0} Sek. zurück.\n\nAktiv: Heilt sofort den gesamten zurückgespulten Schaden plus {1} Leben. Schlägt dann das Ziel für {2} magischen Schaden."
+},
+"Evelynn": {
+"skel": "Passive: At combat start, teleport behind the current target, then become enshrouded for {0} seconds. While enshrouded, become untargetable to attacks and gain Durability if at least {1} other allies are alive.\n\nActive: Deal {2} magic damage to the current target and {3} magic damage to other enemies in a semicircle. Ignore of enemy Magic Resist.",
+"de": "Passiv: Teleportiert sich bei Kampfbeginn hinter ihr Ziel und ist {0} Sek. getarnt. Getarnt kann sie nicht angegriffen werden und erhält Haltbarkeit, solange mindestens {1} andere Verbündete leben.\n\nAktiv: Verursacht {2} magischen Schaden am Ziel und {3} magischen Schaden an anderen Gegnern in einem Halbkreis. Ignoriert einen Teil der Magieresistenz."
+},
+"Galio": {
+"skel": "Gain {0} Shield for {1} seconds. Stun for {2} second and deal {3} magic damage to the enemy that's dealt the most damage this combat.",
+"de": "Erhält {1} Sek. lang {0} Schild. Betäubt {2} Sek. den Gegner, der in diesem Kampf den meisten Schaden verursacht hat, und verursacht {3} magischen Schaden."
+},
+"K'Sante": {
+"skel": "Gain {0} Shield for {1} seconds. Charge and push the target, Stunning them and other enemies hit for {2} seconds. Then slam them, dealing {3} physical damage. After charging, Taunt nearby enemies.\n\nHeartsteel Upgrade: Gain Armor and Magic Resist and deal {4} bonus physical damage on attack.",
+"de": "Erhält {1} Sek. lang {0} Schild. Stürmt los und schiebt das Ziel, betäubt es und andere getroffene Gegner {2} Sek. Schlägt sie danach für {3} normalen Schaden. Verspottet nach dem Sturm Gegner in der Nähe.\n\nHeartsteel-Upgrade: Erhält Rüstung und Magieresistenz und verursacht bei Angriffen {4} zusätzlichen normalen Schaden."
+},
+"Kai'Sa": {
+"skel": "Passive: Every {0} attacks, fire {1} missiles that deal physical damage. \n\nActive: Gain Attack Speed for the rest of combat.",
+"de": "Passiv: Schießt alle {0} Angriffe {1} Raketen, die normalen Schaden verursachen.\n\nAktiv: Erhält für den Rest des Kampfes Angriffstempo."
+},
+"Malzahar": {
+"skel": "Fire a beam at the target for {0} seconds, dealing {1} magic damage. The energy rhythmically explodes {2} times, {3} Shredding enemies in a {4} hex area for {5} seconds, and dealing {6} magic damage each time.\n\n(Shred: reduce Magic Resist",
+"de": "Richtet {0} Sek. lang einen Strahl auf das Ziel und verursacht {1} magischen Schaden. Die Energie explodiert {2}-mal im Takt, zerfetzt die Magieresistenz von Gegnern in {4} Feldern Umkreis {5} Sek. lang um {3} und verursacht jedes Mal {6} magischen Schaden."
+},
+"Senna": {
+"skel": "Blast the target, dealing {0} physical damage and marking them. If they are marked, detonate it instead, dealing {1} damage.\n\nOn detonation or killing a marked enemy, gain Damage Amp until the end of combat.",
+"de": "Trifft das Ziel für {0} normalen Schaden und markiert es. Ist es schon markiert, zündet sie stattdessen die Markierung für {1} Schaden.\n\nBeim Zünden oder wenn ein markierter Gegner stirbt, erhält sie bis Kampfende Schadensverstärkung."
+},
+"Swain": {
+"skel": "Enter Demon Form, gaining {0} max Health and dealing {1} magic damage to adjacent enemies every second. Subsequent casts heal {2} and increase damage by {3}.",
+"de": "Nimmt Dämonengestalt an, erhält {0} maximales Leben und verursacht jede Sekunde {1} magischen Schaden an benachbarten Gegnern. Weitere Einsätze heilen {2} und erhöhen den Schaden um {3}."
+},
+"Syndra": {
+"skel": "Spike a volleyball at target, dealing {0} magic damage. It bounces to an enemy behind them with the least items, dealing {1} magic damage.",
+"de": "Schmettert einen Volleyball auf das Ziel für {0} magischen Schaden. Er prallt zum Gegner dahinter mit den wenigsten Items ab und verursacht {1} magischen Schaden."
+},
+"Tibbers": {
+"skel": "Passive: At Health or when your strongest Annie dies, become enraged, gaining max Health, Attack Damage, and Attack Speed that decays over {0} seconds.\n\nActive: Gain {1} Shield for {2} seconds. If enraged, refresh the decaying Attack Speed.",
+"de": "Passiv: Bei wenig Leben oder wenn deine stärkste Annie stirbt, wird er wütend und erhält maximales Leben, Angriffsschaden und Angriffstempo, das über {0} Sek. abklingt.\n\nAktiv: Erhält {2} Sek. lang {1} Schild. Ist er wütend, frischt das sein abklingendes Angriffstempo auf."
+},
+"Viego": {
+"skel": "Summon X swords around the target. After a brief delay, impale them, dealing {0} physical damage per sword.\n\nEvery {1} takedowns, gain a permanent sword. (Current Takedowns: X)",
+"de": "Ruft Schwerter um das Ziel. Nach kurzer Verzögerung durchbohren sie es und verursachen {0} normalen Schaden pro Schwert.\n\nAlle {1} Kills erhält er dauerhaft ein zusätzliches Schwert."
+},
+"Ahri": {
+"skel": "Passive: Start combat with {0} fox-fires and gain {1} after casting, up to {2}. Then enter a flow state, moving faster and empowering subsequent casts.\n\nActive: Launch all fox-fires at the target, each dealing {3} magic damage. If in the flow, instead launch a heart at the target that deals {4} magic damage and split the fox-fires among all enemies within {5} hexes of them.",
+"de": "Passiv: Startet den Kampf mit {0} Fuchsfeuern und erhält nach jedem Einsatz {1} dazu, bis {2}. Danach gerät sie in einen Flow, bewegt sich schneller und verstärkt weitere Einsätze.\n\nAktiv: Schießt alle Fuchsfeuer auf das Ziel, je {3} magischer Schaden. Im Flow schießt sie stattdessen ein Herz für {4} magischen Schaden und verteilt die Fuchsfeuer auf alle Gegner im Umkreis von {5} Feldern."
+},
+"Alistar": {
+"skel": "Heal {0}, increased by up to based on missing Health. Then slam the target, knocking up enemies within {1} hexes of them for {2} seconds and dealing {3} magic damage to all enemies hit.",
+"de": "Heilt {0}, mehr je weniger Leben er hat. Rammt dann das Ziel, schleudert Gegner im Umkreis von {1} Feldern {2} Sek. hoch und verursacht {3} magischen Schaden an allen getroffenen."
+},
+"Alune": {
+"skel": "Call down a spotlight on the target, dealing {0} magic damage. All enemies within {1} hexes of them split {2} magic damage. If the target dies, split excess damage between the {3} nearest enemies.\n\nHeartsteel Upgrade: Fire {4} blasts at target that deal {5} magic damage.",
+"de": "Richtet einen Scheinwerfer auf das Ziel für {0} magischen Schaden. Alle Gegner im Umkreis von {1} Feldern teilen sich {2} magischen Schaden. Stirbt das Ziel, wird der überschüssige Schaden auf die {3} nächsten Gegner verteilt.\n\nHeartsteel-Upgrade: Schießt {4} Strahlen auf das Ziel, die {5} magischen Schaden verursachen."
+},
+"Aurora": {
+"skel": "Blink away and fire a blast through the best line. The blast deals {0} magic damage to the {1} highest Health enemies, and {2} magic damage to the rest. Then, blink back.",
+"de": "Blinzelt weg und schießt eine Explosion durch die beste Linie. Sie verursacht {0} magischen Schaden an den {1} Gegnern mit dem meisten Leben und {2} an den anderen. Blinzelt danach zurück."
+},
+"Garen": {
+"skel": "Heal {0}, then fire a wave towards the current target, dealing {1} physical damage to enemies hit and {2} Weakening them for {3} seconds. \n\nWeaken: Reduce Damage Dealt",
+"de": "Heilt {0} und schickt eine Welle zum Ziel. Verursacht {1} normalen Schaden an getroffenen Gegnern und schwächt sie {3} Sek. lang um {2}.\n\nSchwächen: verringert den verursachten Schaden"
+},
+"Graves": {
+"skel": "For the next {0} attacks, gain Attack Speed, dash to targets, and replace attacks with a cone of {1} bullets that deal {2} physical damage each. On kill, empower an additional attack.",
+"de": "Für die nächsten {0} Angriffe erhält er Angriffstempo, springt zu Zielen und ersetzt Angriffe durch einen Kegel aus {1} Kugeln mit je {2} normalem Schaden. Bei einem Kill wird ein weiterer Angriff verstärkt."
+},
+"Jhin": {
+"skel": "Passive: Convert {0} bonus Attack Speed into {1} Attack Damage.\n\nAttacks summon violins that attack in unison, dealing {2} physical damage and Captivating the target for {3} seconds. Every {4}th attack is empowered, dealing {5} physical damage and resetting the violins.\n\nOn the {6}th sequence onwards, all violins remain out, Jhin gains infinite range, and attacks pierce, dealing reduced damage for each target hit.",
+"de": "Passiv: Wandelt {0} zusätzliches Angriffstempo in {1} Angriffsschaden um.\n\nAngriffe rufen Geigen, die gemeinsam angreifen, {2} normalen Schaden verursachen und das Ziel {3} Sek. bannen. Jeder {4}. Angriff ist verstärkt, verursacht {5} normalen Schaden und setzt die Geigen zurück.\n\nAb der {6}. Runde bleiben alle Geigen draußen, Jhin erhält unendliche Reichweite und Angriffe durchbohren Gegner mit abnehmendem Schaden."
+},
+"Jinx": {
+"skel": "Rapidly fire X missiles at nearby enemies, each dealing {0} physical damage.",
+"de": "Feuert schnell hintereinander Raketen auf Gegner in der Nähe, die je {0} normalen Schaden verursachen."
+},
+"Kayle": {
+"skel": "Passive: Attacks deal {0} bonus magic damage.\n\nActive: For {1} seconds, gain Attack Speed, infinite range, and summon a sword with each attack. Afterwards, rain swords on the target, dealing {2} to all enemies within {3} hexes, plus {4} magic damage to the target for each sword.",
+"de": "Passiv: Angriffe verursachen {0} zusätzlichen magischen Schaden.\n\nAktiv: Erhält {1} Sek. lang Angriffstempo und unendliche Reichweite, jeder Angriff ruft ein Schwert. Danach regnen die Schwerter auf das Ziel, verursachen {2} an allen Gegnern im Umkreis von {3} Feldern plus {4} magischen Schaden am Ziel pro Schwert."
+},
+"Leona": {
+"skel": "Gain {0} Shield for {1} seconds. Call down {2} beams of light on nearby enemies, each dealing {3} magic damage and reducing their target's Magic Resist by {4}.",
+"de": "Erhält {1} Sek. lang {0} Schild. Ruft {2} Lichtstrahlen auf Gegner in der Nähe, die je {3} magischen Schaden verursachen und die Magieresistenz ihres Ziels um {4} senken."
+},
+"Locke": {
+"skel": "Passive: Attacks deal {0} bonus magic damage. All damage Locke deals to enemies is increased by for each mark he has applied to them.\n\nActive: Hurl {1} Soul Nails at the furthest enemy within {2} hexes, each dealing {3} magic damage and marking all enemies hit. Then, teleport to the enemy and deal {4} magic damage.",
+"de": "Passiv: Angriffe verursachen {0} zusätzlichen magischen Schaden. Jede Markierung, die Locke auf einem Gegner hat, erhöht seinen Schaden an diesem Gegner.\n\nAktiv: Wirft {1} Seelennägel auf den am weitesten entfernten Gegner innerhalb von {2} Feldern, je {3} magischer Schaden, und markiert alle getroffenen. Teleportiert sich danach zum Gegner und verursacht {4} magischen Schaden."
+},
+"Mel": {
+"skel": "Fire {0} missiles split between the {1} closest enemies that each deal {2} magic damage and apply a stack of Blues. For every {3} stacks of Blues, enemies take more damage from this Ability.",
+"de": "Schießt {0} Raketen, aufgeteilt auf die {1} nächsten Gegner. Jede verursacht {2} magischen Schaden und legt einen Blues-Stapel an. Je {3} Stapel erleiden Gegner mehr Schaden durch diese Fähigkeit."
+},
+"Shyvana": {
+"skel": "Passive: At Health, transform into Dragon Form. While transformed, gain max Health, Attack Speed, and every {0}rd attacks deals {1} bonus magic damage in a {2} hex area.\n\nActive: Gain X Shield for {3} seconds.",
+"de": "Passiv: Bei wenig Leben verwandelt sie sich in einen Drachen. Dann erhält sie maximales Leben und Angriffstempo, und jeder {0}. Angriff verursacht {1} zusätzlichen magischen Schaden in {2} Feldern Umkreis.\n\nAktiv: Erhält {3} Sek. lang Schild."
+},
+"Thresh": {
+"skel": "Passive: Every {0} seconds, Captivate the farthest enemy who is not already Captivated for {1} seconds.\n\nActive: Heal {2}. Then drain {3} max Health from up to {4} nearby enemies over {5} seconds. While draining, gain Durability.\n\nCaptivated enemies grant bonuses to Classical champions.",
+"de": "Passiv: Bannt alle {0} Sek. den am weitesten entfernten noch nicht gebannten Gegner für {1} Sek.\n\nAktiv: Heilt {2}. Entzieht danach bis zu {4} Gegnern in der Nähe über {5} Sek. {3} maximales Leben. Währenddessen erhält er Haltbarkeit.\n\nGebannte Gegner geben Classical-Champions Boni."
+},
+"Vayne": {
+"skel": "Passive: On cast or when hit, tumble and gain {0} Durability for {1} seconds. (( (second cooldown)\n\nActive: Gain demonic power, enhancing the next {2} attacks to deal {3} physical damage + of the target's max Health as true damage.",
+"de": "Passiv: Beim Einsatz oder wenn sie getroffen wird, rollt sie sich ab und erhält {1} Sek. lang {0} Haltbarkeit.\n\nAktiv: Erhält dämonische Kraft. Die nächsten {2} Angriffe verursachen {3} normalen Schaden plus einen Teil des maximalen Lebens des Ziels als absoluten Schaden."
+},
+"Wukong": {
+"skel": "Heal {0} and send out {1} clones in a {2} Hex circle that quickly return. Clones steal Armor and Magic Resist from enemies they pass through and deal {3} physical damage. When they return, Wukong gains the stolen defenses.",
+"de": "Heilt {0} und schickt {1} Klone in einem Kreis von {2} Feldern aus, die schnell zurückkehren. Die Klone stehlen Rüstung und Magieresistenz von Gegnern, durch die sie laufen, und verursachen {3} normalen Schaden. Bei ihrer Rückkehr erhält Wukong die gestohlenen Werte."
+},
+"Xayah": {
+"skel": "Summon {0} feathers that strike the target, each dealing {1} physical damage and reducing Armor by .",
+"de": "Ruft {0} Federn, die das Ziel treffen, je {1} normalen Schaden verursachen und seine Rüstung senken."
+},
+"Yasuo": {
+"skel": "Dash and thrust forward, dealing {0} physical damage to enemies in a line.\n\nEvery {1}rd cast, knock up the target and deal {2} physical damage. Then slam them down, dealing {3} physical damage to enemies within {4} Hex.",
+"de": "Springt vor und sticht zu. Verursacht {0} normalen Schaden an Gegnern in einer Linie.\n\nBei jedem {1}. Einsatz schleudert er das Ziel hoch und verursacht {2} normalen Schaden. Schmettert es dann zu Boden und verursacht {3} normalen Schaden an Gegnern im Umkreis von {4} Feld."
+},
+"Yone": {
+"skel": "Passive: This ability scales Attack Damage or Ability Power, whichever is higher. Attacks deal {0} physical damage.\n\nActive: Rapidly strike the target and up to {1} nearby enemies {2} times, each dealing {3} physical damage. After the assault, unleash a massive slash that deals {4} physical damage to target.\n\nHeartsteel Upgrade: Casts strike {5} more times and ignore of Armor.",
+"de": "Passiv: Die Fähigkeit skaliert mit Angriffsschaden oder Fähigkeitsstärke, je nachdem was höher ist. Angriffe verursachen {0} normalen Schaden.\n\nAktiv: Trifft das Ziel und bis zu {1} Gegner in der Nähe schnell {2}-mal mit je {3} normalem Schaden. Danach folgt ein gewaltiger Hieb mit {4} normalem Schaden am Ziel.\n\nHeartsteel-Upgrade: Einsätze treffen {5}-mal öfter und ignorieren einen Teil der Rüstung."
+},
+"Yorick": {
+"skel": "Play an epic solo, restoring {0} Health and creating a {1} Hex zone that deals {2} magic damage each second to enemies. The final note deals {3} damage to enemies within and {4} Slows them for {5} seconds.\n\nSlow: Reduce Attack Speed",
+"de": "Spielt ein episches Solo, stellt {0} Leben wieder her und erschafft eine Zone von {1} Feldern, die Gegnern jede Sekunde {2} magischen Schaden zufügt. Der letzte Ton verursacht {3} Schaden an Gegnern darin und verlangsamt sie {5} Sek. lang um {4}.\n\nVerlangsamen: verringert das Angriffstempo"
+},
+"Yuumi": {
+"skel": "Throw a spinning disc that deals {0} magic damage and stacks on the target's head, reducing their Magic Resist by {1} every second. \n\nWhen they have {2} discs, the stack topples over, dealing of the stacked discs' total damage to the target and another split among {3} nearby enemies.\n\n(If an enemy dies with a disc, it passes to another enemy.",
+"de": "Wirft eine rotierende Scheibe für {0} magischen Schaden, die sich auf dem Kopf des Ziels stapelt und seine Magieresistenz jede Sekunde um {1} senkt.\n\nBei {2} Scheiben kippt der Stapel um, trifft das Ziel mit einem Teil des Gesamtschadens und verteilt einen weiteren Teil auf {3} Gegner in der Nähe."
+},
+"Zac": {
+"skel": "Charge up for {0} seconds, gaining Durability and healing for {1}. Then leap and crash on the target, dealing {2} magic damage to adjacent enemies and briefly knocking them up.",
+"de": "Lädt sich {0} Sek. auf, erhält Haltbarkeit und heilt {1}. Springt dann auf das Ziel, verursacht {2} magischen Schaden an benachbarten Gegnern und schleudert sie kurz hoch."
+},
+"Akali": {
+"skel": "Skateboard through the longest line of unpainted enemies, dealing {0} physical damage to enemies hit and spray-painting them and any hexes along the path. Enemies covered in paint or standing in painted hexes are {1} Vulnerable.\n\nAfter every {2}rd cast, ignite the paint, dealing {3} physical damage to all enemies who are painted or are standing in a painted hex.\n\nVulnerable: Increase Damage Taken",
+"de": "Skatet durch die längste Linie noch unbemalter Gegner, verursacht {0} normalen Schaden und besprüht sie und die Felder auf dem Weg mit Farbe. Bemalte Gegner oder Gegner auf bemalten Feldern sind {1} verwundbar.\n\nNach jedem {2}. Einsatz zündet sie die Farbe und verursacht {3} normalen Schaden an allen bemalten Gegnern und allen auf bemalten Feldern.\n\nVerwundbar: erhöht den erlittenen Schaden"
+},
+"Akali TD": {
+"skel": "B-Side Passive: After every {0} takedowns, gain {1} Player Health. (X/)\n\nActive: Rapidly slash through the current target, dealing {2} magic damage, increased by against Tanks. While casting, gain Durability and become untargetable by attacks. \n\nAfterwards, blink over the target and throw a bomb that deals {3} magic damage split amongst all enemies within {4} hexes.",
+"de": "B-Side Passiv: Alle {0} Kills erhältst du {1} Spielerleben.\n\nAktiv: Schneidet schnell durch das Ziel für {2} magischen Schaden, mehr gegen Tanks. Währenddessen erhält sie Haltbarkeit und kann nicht angegriffen werden.\n\nDanach blinzelt sie über das Ziel und wirft eine Bombe, die {3} magischen Schaden auf alle Gegner im Umkreis von {4} Feldern verteilt."
+},
+"Aphelios": {
+"skel": "Passive: Gain a Chakram every {0} attacks, up to {1}. Attacks deal {2} bonus physical damage for every Chakram equipped. After collecting {3}, gain Attack Damage and infinite range.\n\nActive: Fire bolts at the {4} nearest enemies that deal {5} physical damage, then split into {6} bolts that deal {7} physical damage to enemies they pass through. Gain Attack Speed for {8} seconds.\n\nHeartsteel Upgrade: Start combat with {9} Chakrams equipped.",
+"de": "Passiv: Erhält alle {0} Angriffe ein Chakram, bis {1}. Angriffe verursachen {2} zusätzlichen normalen Schaden pro Chakram. Nach {3} Stück erhält er Angriffsschaden und unendliche Reichweite.\n\nAktiv: Schießt Bolzen auf die {4} nächsten Gegner, die {5} normalen Schaden verursachen und sich in {6} Bolzen teilen, die {7} normalen Schaden an durchquerten Gegnern verursachen. Erhält {8} Sek. lang Angriffstempo.\n\nHeartsteel-Upgrade: Startet den Kampf mit {9} Chakrams."
+},
+"Dr. Mundo": {
+"skel": "Passive: While Dr. Mundo has {0} max Health or more, he becomes Pumped Up, gaining max Health and causing attacks to deal an additional {1} magic damage.\n\nActive: Restore {2} Health over {3} seconds and deal {4} magic damage each second to all enemies within {5} hexes.",
+"de": "Passiv: Hat Dr. Mundo {0} maximales Leben oder mehr, ist er aufgepumpt, erhält maximales Leben und seine Angriffe verursachen {1} zusätzlichen magischen Schaden.\n\nAktiv: Stellt über {3} Sek. {2} Leben wieder her und verursacht jede Sekunde {4} magischen Schaden an allen Gegnern im Umkreis von {5} Feldern."
+},
+"Gwen": {
+"skel": "Passive: Attacks deal {0} bonus magic damage to the target and {1} to other enemies in a cone. Dash to new targets.\n\nActive: Summon a massive pair of scissors over the battlefield. After a short delay, snip a horizontal line on the target, dealing {2} magic damage to all enemies hit + {3} split between them. If {4} or fewer enemies are hit, refund {5} Mana.",
+"de": "Passiv: Angriffe verursachen {0} zusätzlichen magischen Schaden am Ziel und {1} an anderen Gegnern in einem Kegel. Springt zu neuen Zielen.\n\nAktiv: Ruft eine riesige Schere über das Schlachtfeld. Nach kurzer Verzögerung schneidet sie eine waagerechte Linie durch das Ziel, verursacht {2} magischen Schaden an allen getroffenen plus {3}, aufgeteilt auf sie. Trifft sie {4} oder weniger Gegner, erhält sie {5} Mana zurück."
+},
+"Janna": {
+"skel": "Fire celestial dragons at up to {0} nearby enemies, each dealing {1} magic damage.\n\nAfter {2} casts, the arena is enveloped by the Heaven's Gale, dealing {3} magic damage to every enemy over {4} seconds.",
+"de": "Schießt Himmelsdrachen auf bis zu {0} Gegner in der Nähe, je {1} magischer Schaden.\n\nNach {2} Einsätzen hüllt der Himmelssturm die Arena ein und verursacht über {4} Sek. {3} magischen Schaden an jedem Gegner."
+},
+"Lee Sin": {
+"skel": "Unleash a devastating {0}-part combo attack, starting from Dragon Slam and performing moves in sequence. Subsequent casts increase the length of the combo.\n\nDragon Slam: Deal {1} physical damage to the target. Other enemies within {2} hexes take of the damage.\n\nTempest Spin: Deal {3} physical damage to the target, knocking them up for {4} second. Other enemies within {5} hex take of the damage.\n\nCelestial Punch: Deal {6} physical damage to the target and mark them. If they are already marked, the punch strikes their core, dealing bonus true damage.",
+"de": "Entfesselt eine Kombo aus {0} Teilen, beginnend mit Dragon Slam. Weitere Einsätze verlängern die Kombo.\n\nDragon Slam: {1} normaler Schaden am Ziel. Andere Gegner im Umkreis von {2} Feldern erleiden einen Teil davon.\n\nTempest Spin: {3} normaler Schaden am Ziel, schleudert es {4} Sek. hoch. Andere Gegner im Umkreis von {5} Feld erleiden einen Teil davon.\n\nCelestial Punch: {6} normaler Schaden am Ziel und markiert es. Ist es schon markiert, trifft der Schlag seinen Kern und verursacht zusätzlichen absoluten Schaden."
+},
+"Miss Fortune": {
+"skel": "Fire a pinball towards the target, dealing {0} physical damage. After hitting an enemy, it continues bouncing until damaging enemies {1} times, reducing its damage by each hit. (Minimum damage: )",
+"de": "Schießt eine Flipperkugel zum Ziel für {0} normalen Schaden. Nach dem ersten Treffer prallt sie weiter ab, bis sie {1}-mal Schaden verursacht hat, mit weniger Schaden pro Treffer."
+},
+"Mordekaiser": {
+"skel": "Briefly gain Durability. Summon a claw that deals {0} magic damage in a massive line. The {1} closest enemies take more damage and are pulled towards Mordekaiser.\n\nFor the rest of combat, gain Omnivamp, +{2} Attack Range, and replace attacks with a slam that deals {3} magic damage to the target and {4} damage to other enemies within {5} hexes.",
+"de": "Erhält kurz Haltbarkeit. Ruft eine Klaue, die {0} magischen Schaden in einer riesigen Linie verursacht. Die {1} nächsten Gegner erleiden mehr Schaden und werden zu Mordekaiser gezogen.\n\nFür den Rest des Kampfes erhält er Omnivampir, +{2} Reichweite und ersetzt Angriffe durch einen Schlag, der {3} magischen Schaden am Ziel und {4} Schaden an anderen Gegnern im Umkreis von {5} Feldern verursacht."
+},
+"Nidalee": {
+"skel": "Pounce Party: Pounce {0} times on enemies, dealing {1} magic damage, increased by each pounce.\n\nDance of Life: Heal {2}. Hurl a javelin at the target, dealing {3} magic damage and scattering {4} flowers around them. Flowers deal {5} magic damage to enemies in a {6} Hex radius after a brief delay.\n\nCasts Pounce Party in Cougar Form and Dance of Life in Human form.",
+"de": "Pounce Party: Springt {0}-mal auf Gegner und verursacht {1} magischen Schaden, mit jedem Sprung mehr.\n\nDance of Life: Heilt {2}. Wirft einen Speer auf das Ziel für {3} magischen Schaden und verstreut {4} Blumen um es herum. Nach kurzer Verzögerung verursachen sie {5} magischen Schaden an Gegnern in {6} Feldern Umkreis.\n\nIn Pumagestalt nutzt sie Pounce Party, in Menschengestalt Dance of Life."
+},
+"Nunu & Willump": {
+"skel": "Passive: Gain Mana Regen. Slowly roll around a disco ball, dealing X magic damage to all enemies it passes through.\n\nActive: For the rest of combat, move faster and increase the size and damage of the disco ball by .",
+"de": "Passiv: Erhält Manaregeneration. Rollt langsam eine Discokugel herum, die allen durchquerten Gegnern magischen Schaden zufügt.\n\nAktiv: Bewegt sich für den Rest des Kampfes schneller und vergrößert Discokugel und Schaden."
+},
+"Pyke": {
+"skel": "Passive: Whenever an enemy drops below {0} max Health, instantly cast on them, then dash back to the current target.\n\nActive: Deal {1} physical damage to the target and {2} to all other enemies in an X shape. Execute any enemies below {3} Health.",
+"de": "Passiv: Fällt ein Gegner unter {0} seines maximalen Lebens, wirkt Pyke sofort seine Fähigkeit auf ihn und springt danach zum Ziel zurück.\n\nAktiv: Verursacht {1} normalen Schaden am Ziel und {2} an allen anderen Gegnern in einer X-Form. Richtet Gegner unter {3} Leben hin."
+},
+"Rell": {
+"skel": "Rhythm Blaster: For {0} seconds, gain {1} Shield and summon {2} speakers. Each second, they blast a wave of sound, dealing {3} magic damage to enemies hit.\n\nMetal Pony Club: Slam into a crowd of enemies, dealing {4} magic damage to the center enemy and {5} damage split among enemies within {6} hexes.\n\n(Casts Rhythm Blaster while unmounted and Metal Pony Club while mounted.",
+"de": "Rhythm Blaster: Erhält {0} Sek. lang {1} Schild und ruft {2} Lautsprecher. Jede Sekunde senden sie eine Schallwelle mit {3} magischem Schaden aus.\n\nMetal Pony Club: Kracht in eine Gruppe Gegner, verursacht {4} magischen Schaden am mittleren Gegner und {5} Schaden, aufgeteilt auf Gegner im Umkreis von {6} Feldern.\n\nOhne Reittier nutzt sie Rhythm Blaster, beritten Metal Pony Club."
+},
+"Taliyah": {
+"skel": "Throw {0} rocks at the target, each dealing {1} magic damage.\n\nEvery {2}rd cast, quickly reposition and surf in a line instead. Enemies hit take {3} + {4} max Health magic damage and are briefly knocked up.",
+"de": "Wirft {0} Felsen auf das Ziel, je {1} magischer Schaden.\n\nBei jedem {2}. Einsatz stellt sie sich schnell um und surft stattdessen durch eine Linie. Getroffene Gegner erleiden {3} plus {4} ihres maximalen Lebens als magischen Schaden und werden kurz hochgeschleudert."
+},
+"Teemo": {
+"skel": "Passive: Attacks apply Viral, dealing {0} magic damage over {1} seconds. Infected enemies become zombies on death, seeking out unaffected enemies and exploding, dealing {2} damage to adjacent enemies and applying Viral.\n\nActive: Launch a mushroom that applies Viral to enemies in a {3} hex radius and deals {4} magic damage, reduced by per hex away from the center.",
+"de": "Passiv: Angriffe infizieren mit Viral, {0} magischer Schaden über {1} Sek. Infizierte werden beim Tod zu Zombies, suchen gesunde Gegner, explodieren für {2} Schaden an benachbarten Gegnern und stecken sie an.\n\nAktiv: Schießt einen Pilz, der Gegner in {3} Feldern Umkreis infiziert und {4} magischen Schaden verursacht, weniger je weiter weg von der Mitte."
+},
+"Twisted Fate": {
+"skel": "Passive: At Combat Start, draw a card for each champion in the shop. If your shop has refreshed this round, gain loot based on the cards drawn!\n\n{0} or {1} of a Kind: {2} Gold\n{3} of a Kind: Random champion\n{4} of a Kind: Mystery Box\n{5} of a Kind: Royale Mystery Box!\n\nActive: The next {6} attacks gain Attack Speed and are replaced with cards that deal {7} magic damage to the target and {8} magic damage to {9} nearby enemies.",
+"de": "Passiv: Zieht bei Kampfbeginn eine Karte für jeden Champion im Shop. Hast du diese Runde den Shop neu gerollt, gibt es Beute je nach gezogenen Karten!\n\n{0} oder {1} Gleiche: {2} Gold\n{3} Gleiche: zufälliger Champion\n{4} Gleiche: Mystery Box\n{5} Gleiche: Royale Mystery Box!\n\nAktiv: Die nächsten {6} Angriffe erhalten Angriffstempo und werden durch Karten ersetzt, die {7} magischen Schaden am Ziel und {8} magischen Schaden an {9} Gegnern in der Nähe verursachen."
+},
+"Vi": {
+"skel": "Summon {0} giant hologram fists. Gain {1} Shield for {2} seconds and grant {3} Shield to {4} nearby allies. Slam the target {5} times, each dealing {6} physical damage to them and {7} damage to all other enemies within {8} hexes.\n\nEDM Upgrade: Slam one more time and heal of damage dealt by this ability.",
+"de": "Ruft {0} riesige Hologramm-Fäuste. Erhält {2} Sek. lang {1} Schild und gibt {4} Verbündeten in der Nähe {3} Schild. Schlägt das Ziel {5}-mal mit je {6} normalem Schaden und {7} Schaden an allen anderen Gegnern im Umkreis von {8} Feldern.\n\nEDM-Upgrade: Schlägt einmal mehr zu und heilt um einen Teil des verursachten Schadens."
+},
+"Vladimir": {
+"skel": "Passive: Gain Omnivamp. Debuffed enemies are Captivated.\n\nActive: Deal {0} magic damage to the {1} nearest enemies and Captivate them for {2} seconds. \n\nEvery {3}th cast, drop a chandelier on the board. It deals {4} magic damage to all enemies, reduced by per hex they are away from the epicenter.\n\nDebuffs: Burn, Wound, Shred, Sunder, Mana Reave, Weaken, Slow, Vunerable",
+"de": "Passiv: Erhält Omnivampir. Geschwächte Gegner sind gebannt.\n\nAktiv: Verursacht {0} magischen Schaden an den {1} nächsten Gegnern und bannt sie {2} Sek.\n\nBei jedem {3}. Einsatz lässt er einen Kronleuchter aufs Brett fallen. Er verursacht {4} magischen Schaden an allen Gegnern, weniger je weiter weg von der Mitte.\n\nSchwächungen: Brennen, Wunden, Zerfetzen, Zerschmettern, Manaraub, Schwächen, Verlangsamen, Verwundbar"
+},
+"Zeri": {
+"skel": "Quickly dash around the arena, aiming {0} lasers at the current target. Lasers fire in rapid succession, each dealing {1} physical damage to enemies hit and ignoring of their Armor.",
+"de": "Rast schnell durch die Arena und zielt {0} Laser auf das Ziel. Sie feuern kurz hintereinander, verursachen je {1} normalen Schaden an getroffenen Gegnern und ignorieren einen Teil ihrer Rüstung."
+},
+"Baron Nashor": {
+"skel": "Summon an {0}-man orchestra and a Riff Herald, knocking up all enemies for {1} seconds. Deal {2} physical damage and {3} magic damage split among all enemies.\n\nEach minion attacks {4} times, with each attack dealing {5} physical damage.",
+"de": "Ruft ein {0}-köpfiges Orchester und einen Riff Herald und schleudert alle Gegner {1} Sek. hoch. Verursacht {2} normalen und {3} magischen Schaden, aufgeteilt auf alle Gegner.\n\nJeder Diener greift {4}-mal an, jeder Angriff mit {5} normalem Schaden."
+},
+"Rakan": {
+"skel": "Dash to a nearby group of enemies, then fling {0} feathers split amongst enemies within {1} hex, each dealing {2} magic damage.\n\nThe main Rakan hits enemies within {3} hexes and briefly knocks up them up.",
+"de": "Springt zu einer Gruppe Gegner in der Nähe und wirft {0} Federn auf Gegner im Umkreis von {1} Feld, je {2} magischer Schaden.\n\nDer Haupt-Rakan trifft Gegner im Umkreis von {3} Feldern und schleudert sie kurz hoch."
+},
+"Smeech": {
+"skel": "Passive: Gain between {0} and {1} Beats per attack. Every {2} seconds, cast.\n\nActive: Gain {3} Shield for {4} seconds and deal {5} physical damage to all enemies within {6} hexes. Then strike the current target {7} times, each dealing {8} physical damage + {9} per Beat.\n\nAfter unleashing {10} Beats, gain an emblem of a trait you don't have active and increase the number of Beats required.\n\n((Unleashed Beats: (/()",
+"de": "Passiv: Erhält pro Angriff {0} bis {1} Beats. Wirkt alle {2} Sek. seine Fähigkeit.\n\nAktiv: Erhält {4} Sek. lang {3} Schild und verursacht {5} normalen Schaden an allen Gegnern im Umkreis von {6} Feldern. Schlägt dann das Ziel {7}-mal mit je {8} normalem Schaden plus {9} pro Beat.\n\nNach {10} entfesselten Beats erhältst du ein Emblem eines Traits, den du nicht aktiv hast, und es braucht mehr Beats für das nächste."
+},
+"Sona": {
+"skel": "Passive: Cannot attack, instead every {0} seconds, gain X Mana, deal {1} magic damage to the {2} nearest enemies, and {3} allies gain {4} Shield for {5} seconds. Sona is Unstoppable.\n\nActive: Unleash a sonic wave across the battlefield, dealing {6} magic damage split between all enemies and Stunning them for {7} seconds. Allies gain {8} Shield split amongst allies for {9} seconds.",
+"de": "Passiv: Kann nicht angreifen. Stattdessen erhält sie alle {0} Sek. Mana, verursacht {1} magischen Schaden an den {2} nächsten Gegnern und gibt {3} Verbündeten {5} Sek. lang {4} Schild. Sona ist unaufhaltbar.\n\nAktiv: Entfesselt eine Schallwelle über das Schlachtfeld, die {6} magischen Schaden auf alle Gegner verteilt und sie {7} Sek. betäubt. Verbündete teilen sich {9} Sek. lang {8} Schild."
+}
+}
