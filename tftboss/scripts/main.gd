@@ -286,10 +286,12 @@ func _build_ui() -> void:
 
 	var pap := _panel(Color("2a1630"))
 	var vap := VBoxContainer.new()
-	var hap := HBoxContainer.new()
+	# Titel eine eigene Zeile, Knöpfe darunter (brechen um, wenn das Fenster schmal ist)
 	var tap := _title("AUTOPILOT  (die KI klickt selbst, F8 = sofort aus)")
 	tap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hap.add_child(tap)
+	vap.add_child(tap)
+	var hap := HFlowContainer.new()
+	hap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	btn_auto = Button.new()
 	btn_auto.text = "Autopilot starten"
 	btn_auto.pressed.connect(_toggle_auto)
@@ -524,7 +526,7 @@ func _render_advice() -> void:
 	if not rects.is_empty():
 		var miss := []
 		for k in Calib.ORDER:
-			if not rects.has(k):
+			if not rects.has(k) and k != "hp":   # Leben liest er jetzt aus der Spielerliste
 				miss.append(Calib.NAMES[k])
 		if miss.size() > 0:
 			lines.append("[font_size=13][color=#8a87a6]Noch nicht kalibriert: %s[/color][/font_size]" % ", ".join(miss))
