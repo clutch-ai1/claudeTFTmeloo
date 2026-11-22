@@ -408,6 +408,48 @@ body.sideopen .layout.drawer .lside{transform:none}
   .pitem .acts{grid-column:2;flex-direction:row;align-items:center;justify-content:space-between;width:100%}
   .pitem .info .urow{--s:30px!important}
 }
+
+/* ===== Start: Was spiele ich jetzt? ===== */
+.hero{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}
+@media (max-width:1000px){.hero{grid-template-columns:1fr}}
+.hcard{position:relative;cursor:pointer;text-align:left;border:1px solid var(--line);border-radius:16px;padding:16px;background:linear-gradient(140deg,color-mix(in srgb,var(--tc,#888) 26%,var(--panel)) 0%,var(--panel) 62%);display:flex;flex-direction:column;gap:10px;transition:transform .12s,border-color .12s}
+.hcard:hover{transform:translateY(-2px);border-color:var(--tc,var(--gold))}
+.hcard .hk{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.hcard .hn{font-family:var(--display);font-size:24px;line-height:1.1}
+.hcard .hrow{display:flex;align-items:center;gap:12px}
+.hcard .hrow .tile{--s:58px}
+.hcard .kp{display:flex;gap:16px}.hcard .kp b{font-size:20px;display:block}.hcard .kp small{color:var(--muted);font-size:11px}
+.hcard .mb{transform:scale(.82);transform-origin:left top;margin-bottom:-26px}
+.shead{display:flex;align-items:baseline;gap:10px;margin:22px 0 10px}.shead h2{margin:0;font-size:19px}.shead small{color:var(--muted)}
+.movers{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:800px){.movers{grid-template-columns:1fr}}
+.mv{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;border:1px solid transparent}
+.mv:hover{border-color:var(--line);background:var(--panel-2)}
+.mv .tile{--s:34px}.mv b{flex:1}
+.tierlist{display:flex;flex-direction:column;gap:8px}
+.trow{display:grid;grid-template-columns:54px 1fr;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel)}
+.trow .tl{display:grid;place-items:center;font-weight:800;font-size:24px;color:#141019}
+.trow .tl.S{background:#ff6b6b}.trow .tl.A{background:#ffb35c}.trow .tl.B{background:#ffe066}.trow .tl.C{background:#9be37a}
+.trow .tcs{display:flex;flex-wrap:wrap;gap:8px;padding:8px}
+.tc{display:flex;flex-direction:column;align-items:center;gap:3px;width:86px;cursor:pointer;padding:4px;border-radius:10px;border:1px solid transparent;background:none;color:inherit}
+.tc:hover{border-color:var(--tc,var(--line));background:var(--panel-2)}
+.tc .tile{--s:46px;box-shadow:0 0 0 2px var(--tc,transparent)}
+.tc small{font-size:11px;line-height:1.15;text-align:center;color:var(--ink)}
+.tc em{font-style:normal;font-size:10.5px;color:var(--muted)}
+/* Trait-Farbe pro Comp */
+.card{border-left:3px solid var(--tc,var(--line))!important;background:linear-gradient(90deg,color-mix(in srgb,var(--tc,#888) 14%,var(--panel)) 0%,var(--panel) 55%)}
+.dhead{border-left:4px solid var(--tc,transparent);padding-left:12px}
+/* ===== Suche ===== */
+.qwrap{position:relative;flex:1 1 240px;max-width:320px;min-width:150px}
+.qwrap input{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:20px;padding:7px 14px;color:var(--ink);font-size:13.5px}
+.qwrap input:focus{outline:2px solid var(--gold);outline-offset:1px}
+.qres{position:absolute;top:calc(100% + 6px);left:0;right:0;min-width:300px;max-height:60vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 40px #000a;z-index:40;padding:6px}
+.qres.hidden{display:none}
+.qi{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:6px 8px;border-radius:8px;background:none;border:0;color:inherit;cursor:pointer}
+.qi .tile{--s:30px}.qi>span:not(.ib){font-family:var(--body);font-size:14px;font-weight:600}.qi small{color:var(--muted);margin-left:auto;font-size:11px}
+.qi.on,.qi:hover{background:var(--panel-2)}
+.qi .ib{width:30px;height:30px;display:grid;place-items:center}
+@media (max-width:700px){.top{flex-wrap:wrap;row-gap:8px}.qwrap{order:3;flex-basis:100%;max-width:none}.views{order:4;width:100%}}
 </style>
 </head>
 <body>
@@ -417,7 +459,9 @@ body.sideopen .layout.drawer .lside{transform:none}
       <h1>Set 19 Comp-Planer</h1>
       <div class="meta" id="meta"></div>
     </div>
+    <div class="qwrap"><input id="q" type="search" placeholder="Suchen … (Strg+K)" aria-label="Champions, Comps, Items und Augments suchen" autocomplete="off"><div class="qres hidden" id="qres" role="listbox"></div></div>
     <nav class="views" aria-label="Bereiche">
+      <a href="#start" data-v="start">Start</a>
       <a href="#comps" data-v="comps">Comps</a>
       <a href="#early" data-v="early">Early Game</a>
       <a href="#mid" data-v="mid">Mid Game</a>
@@ -459,6 +503,7 @@ body.sideopen .layout.drawer .lside{transform:none}
     <div class="plist" id="plist"></div>
   </section>
 
+  <section id="view-start" class="hidden"><div id="start"></div></section>
   <section id="view-champs" class="hidden">
     <div class="filters">
       <div class="frow"><span class="flabel">Kosten</span><span id="ch-cost"></span></div>
@@ -660,7 +705,7 @@ function renderCards(){
   let list=filteredComps(st.tier,st.style);if(st.show==="fav")list=list.filter(isFav);
   const k=st.sort;list=list.slice().sort((a,b)=>k==="avg"?a.avg-b.avg:b[k]-a[k]);
   if(list.length&&!list.some(c=>c.id===st.comp))st.comp=list[0].id;
-  $("#cards").innerHTML=list.map(c=>`<div class="panel card" role="tab" tabindex="0" data-id="${c.id}" aria-selected="${c.id===st.comp}">
+  $("#cards").innerHTML=list.map(c=>`<div class="panel card" role="tab" tabindex="0" data-id="${c.id}" aria-selected="${c.id===st.comp}" style="--tc:${traitColor(c)}">
   <div class="row1"><span class="tier ${c.tier}">${c.tier}</span><div><div class="nm">${esc(c.name)}</div><div class="sty">${esc(STYLE_LABEL(c.style))}</div></div>
   <div class="kpis"><div><b>${num(c.avg)}${trendHtml(c.tr)}</b><small>Ø Platz</small></div><div><b>${pct(c.top4)}</b><small>Top 4</small></div></div><button class="favbtn" data-fav="${esc(c.name)}" aria-pressed="${isFav(c)}" aria-label="Favorit">${isFav(c)?"★":"☆"}</button></div>
   <div class="urow">${c.core.map(n=>tile(n)).join("")}</div></div>`).join("")||`<div class="empty">${st.show==="fav"?"Noch keine Favoriten. Klick bei einer Comp auf den Stern.":"Keine Comp passt zu diesen Filtern."}</div>`;
@@ -687,7 +732,7 @@ function renderDetail(){
   const lvTimes=c.lv.map(x=>`<div class="tl"><b>Level ${x.l}</b>${esc(x.s)}</div>`).join("");
   const finals=c.final.map(x=>`<div class="tl"><b>Level ${x.l}</b>${pct(x.pct)} · Ø ${num(x.avg)}</div>`).join("");
   const H=holders(c);const carries=[...H].filter(u=>c.items[u]).map(u=>[u,c.items[u]]);
-  d.innerHTML=`<div class="dnav"><button data-dgo="d-board">Board</button><button data-dgo="d-level">Leveln</button><button data-dgo="d-augs">Augments</button><button data-dgo="d-items">Items</button><button data-dgo="d-notes">Notizen</button></div><div class="dhead"><span class="tier ${c.tier}" style="min-width:42px;height:42px;font-size:24px">${c.tier}</span>
+  d.innerHTML=`<div class="dnav"><button data-dgo="d-board">Board</button><button data-dgo="d-level">Leveln</button><button data-dgo="d-augs">Augments</button><button data-dgo="d-items">Items</button><button data-dgo="d-notes">Notizen</button></div><div class="dhead" style="--tc:${traitColor(c)}"><span class="tier ${c.tier}" style="min-width:42px;height:42px;font-size:24px">${c.tier}</span>
   <div><h2>${esc(c.name)}</h2><div class="sty">${esc(STYLE_LABEL(c.style))} · ${num(c.pick)} pro Lobby gespielt</div></div>
   <div class="kpis"><div><b>${num(c.avg)}${trendHtml(c.tr)}</b><small>Ø Platz</small></div><div><b>${pct(c.top4)}</b><small>Top 4</small></div><div><b>${pct(c.win)}</b><small>Win Rate</small></div></div>
   <button class="favbtn" data-dfav="${esc(c.name)}" aria-pressed="${isFav(c)}" aria-label="Favorit" style="font-size:24px">${isFav(c)?"★":"☆"}</button><a class="btn" href="#overlay" data-ovsel="${c.id}">Overlay</a><button class="btn primary" id="toBuilder">Im Builder öffnen</button></div>
@@ -1296,13 +1341,78 @@ document.addEventListener("keydown",e=>{
   const n=+e.key;if(!qz.done&&QZ_COSTS.includes(n)&&qz.mode!=="traits"){qz.cost=n;renderQuiz()}
 });
 /* ---------- Routing ---------- */
-const VIEWS=["comps","early","mid","late","champs","augs","unlocks","assist","items","roll","builder","overlay","quiz"];
-const FULL=new Set(["assist","items","roll","overlay","quiz"]);
+
+/* ===== Trait-Farben ===== */
+const TRAIT_HUE={"Hyperpop":320,"Heartsteel":350,"K/DA":285,"Renegade":20,"Swiftstriker":195,"Ionic Spark":205,"Slayer":0,"Rock":30,"Classical":45,"Bodyguard":160,"Beach Pop":180,"Juggernaut":15,"Prodigy":260,"Gu Feng":140,"Jazz":265,"Pentakill":5,"Choreographer":300,"R&B":335,"Illbeats":250,"Arcanist":230,"Encore":55,"Frontman":25,"EDM":175,"Hitmaker":40,"Trickshot":60,"Collab":95,"Emo":240,"Disco":310,"8-Bit":120,"Tango":0,"Windblessed":150,"Producer":210,"Manager":70,"Record Mogul":48};
+function mainTrait(c){const ts=Object.keys(TB).sort((a,b)=>b.length-a.length);return ts.find(t=>c.name.startsWith(t+" "))||""}
+function traitColor(c){const t=mainTrait(c);let h=TRAIT_HUE[t];if(h==null){h=0;for(const ch of (t||c.name))h=(h*31+ch.charCodeAt(0))%360}return `hsl(${h} 72% 58%)`}
+
+/* ===== Start: Was spiele ich jetzt? ===== */
+function openComp(id){st.comp=id;if(location.hash==="#comps")route();else location.hash="comps"}
+function renderStart(){
+  const best=g=>COMPS.filter(c=>STYLE_GROUP(c.style)===g).sort((a,b)=>a.avg-b.avg)[0];
+  const lbl={reroll:"Bester Reroll",standard:"Bestes Standard",fast:"Beste schnell auf 8/9"};
+  const hero=["reroll","standard","fast"].map(g=>{const c=best(g);if(!c)return"";const car=(c.carry||[])[0]||c.core[0];const lbo=["9","8","10","7","6","5"].map(L=>c.opts&&c.opts[L]&&c.opts[L][0]).find(Boolean);const lb=lbo?lbo.u:c.core;
+    return `<button class="hcard" data-open="${esc(c.id)}" style="--tc:${traitColor(c)}"><span class="hk">${lbl[g]}</span>
+      <div class="hrow">${tile(car)}<div><div class="hn">${esc(c.name)}</div><small class="muted">${esc(STYLE_LABEL(c.style))}</small></div><span class="tier ${c.tier}" style="margin-left:auto">${c.tier}</span></div>
+      <div class="kp"><div><b>${num(c.avg)}${trendHtml(c.tr)}</b><small>Ø Platz</small></div><div><b>${pct(c.top4)}</b><small>Top 4</small></div><div><b>${pct(c.win)}</b><small>Win Rate</small></div></div>
+      <div class="urow" style="--s:30px">${lb.slice(0,9).map(n=>tile(n)).join("")}</div></button>`}).join("");
+  const withTr=COMPS.filter(c=>c.tr!=null&&Math.abs(c.tr)>=0.03);
+  const up=withTr.slice().sort((a,b)=>a.tr-b.tr).filter(c=>c.tr<0).slice(0,4),down=withTr.slice().sort((a,b)=>b.tr-a.tr).filter(c=>c.tr>0).slice(0,4);
+  const mv=c=>`<div class="mv" data-open="${esc(c.id)}" role="button" tabindex="0">${tile((c.carry||[])[0]||c.core[0])}<b>${esc(c.name)}</b><span class="tier ${c.tier}">${c.tier}</span><span>${num(c.avg)}${trendHtml(c.tr)}</span></div>`;
+  const tiers=["S","A","B","C"].map(t=>{const l=COMPS.filter(c=>c.tier===t).sort((a,b)=>a.avg-b.avg);if(!l.length)return"";
+    return `<div class="trow"><div class="tl ${t}">${t}</div><div class="tcs">${l.map(c=>{const car=(c.carry||[])[0]||c.core[0];return `<button class="tc" data-open="${esc(c.id)}" style="--tc:${traitColor(c)}" title="${esc(c.name)} · Ø ${num(c.avg)}">${tile(car)}<small>${esc(c.name)}</small><em>Ø ${num(c.avg)}</em></button>`}).join("")}</div></div>`}).join("");
+  const favs=COMPS.filter(isFav);
+  $("#start").innerHTML=`<div class="shead"><h2>Was spiele ich jetzt?</h2><small>Die stärkste Comp je Spielweise, Stand ${esc(String(DATA.updated).replace("T"," ").slice(0,16))} UTC</small></div>
+    <div class="hero">${hero}</div>
+    ${favs.length?`<div class="shead"><h2>Deine Favoriten</h2></div><div class="movers"><div class="panel">${favs.map(mv).join("")}</div></div>`:""}
+    <div class="shead"><h2>Trend</h2><small>Veränderung Ø Platz in den letzten ${DATA.trendH||24} Std.</small></div>
+    <div class="movers"><div class="panel"><div class="lbl" style="margin-bottom:6px">Im Aufwind</div>${up.map(mv).join("")||'<div class="empty">Gerade keine großen Gewinner.</div>'}</div>
+    <div class="panel"><div class="lbl" style="margin-bottom:6px">Abwärts</div>${down.map(mv).join("")||'<div class="empty">Gerade keine großen Verlierer.</div>'}</div></div>
+    <div class="shead"><h2>Tier-Liste</h2><small>S bis Ø 4,25 · A bis 4,60 · B bis 4,90</small></div>
+    <div class="tierlist">${tiers}</div>`;
+}
+$("#start").addEventListener("click",e=>{const b=e.target.closest("[data-open]");if(b)openComp(b.dataset.open)});
+$("#start").addEventListener("keydown",e=>{if(e.key==="Enter"){const b=e.target.closest("[data-open]");if(b)openComp(b.dataset.open)}});
+
+/* ===== Suche ===== */
+let qSel=0,qHits=[];
+function qNorm(t){return String(t).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,"")}
+function doSearch(){
+  const q=qNorm($("#q").value);const box=$("#qres");
+  if(!q){box.classList.add("hidden");qHits=[];return}
+  const hit=(n)=>{const k=qNorm(n);return k.startsWith(q)?0:k.includes(q)?1:-1};
+  const res=[];
+  COMPS.forEach(c=>{const h=hit(c.name);if(h>=0)res.push({k:"comp",n:c.name,id:c.id,s:h,tie:c.avg})});
+  UL.forEach(u=>{const h=hit(u.n);if(h>=0)res.push({k:"champ",n:u.n,s:h,tie:u.c})});
+  ITEMS.forEach(i=>{const h=hit(i);if(h>=0)res.push({k:"item",n:i,s:h+0.2,tie:0})});
+  AUGS.forEach(a=>{const h=hit(a.n);if(h>=0)res.push({k:"aug",n:a.n,s:h+0.4,tie:0})});
+  res.sort((a,b)=>a.s-b.s||a.tie-b.tie);qHits=res.slice(0,12);qSel=0;
+  const lab={comp:"Comp",champ:"Champion",item:"Item",aug:"Augment"};
+  box.innerHTML=qHits.map((r,i)=>{const ic=r.k==="champ"?tile(r.n):r.k==="comp"?tile((COMPS.find(c=>c.id===r.id).carry||[])[0]||COMPS.find(c=>c.id===r.id).core[0]):r.k==="item"?`<span class="ib">${itemBadge(r.n)}</span>`:`<span class="ib">✦</span>`;
+    return `<button class="qi${i===qSel?" on":""}" data-qi="${i}" role="option">${ic}<span>${esc(r.n)}</span><small>${lab[r.k]}</small></button>`}).join("")||'<div class="empty" style="padding:8px">Nichts gefunden.</div>';
+  box.classList.remove("hidden");
+}
+function goHit(r){if(!r)return;$("#q").value="";$("#qres").classList.add("hidden");$("#q").blur();
+  if(r.k==="comp")openComp(r.id);
+  else if(r.k==="champ"){st.champ=r.n;if(location.hash==="#champs")route();else location.hash="champs"}
+  else if(r.k==="aug"){st.aug=r.n;if(location.hash==="#augs")route();else location.hash="augs"}
+  else {location.hash="items";setTimeout(()=>{const f=document.querySelector("#view-items input[type=search],#view-items input");if(f){f.value=r.n;f.dispatchEvent(new Event("input"))}},60)}}
+$("#q").addEventListener("input",doSearch);
+$("#q").addEventListener("focus",doSearch);
+$("#q").addEventListener("keydown",e=>{if(!qHits.length)return;if(e.key==="ArrowDown"){qSel=Math.min(qHits.length-1,qSel+1);e.preventDefault()}else if(e.key==="ArrowUp"){qSel=Math.max(0,qSel-1);e.preventDefault()}else if(e.key==="Enter"){goHit(qHits[qSel]);return}else if(e.key==="Escape"){$("#qres").classList.add("hidden");return}else return;document.querySelectorAll(".qi").forEach((b,i)=>b.classList.toggle("on",i===qSel))});
+$("#qres").addEventListener("mousedown",e=>{const b=e.target.closest("[data-qi]");if(b){e.preventDefault();goHit(qHits[+b.dataset.qi])}});
+$("#q").addEventListener("blur",()=>setTimeout(()=>$("#qres").classList.add("hidden"),120));
+document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();$("#q").focus();$("#q").select()}});
+
+const VIEWS=["start","comps","early","mid","late","champs","augs","unlocks","assist","items","roll","builder","overlay","quiz"];
+const FULL=new Set(["start","assist","items","roll","overlay","quiz"]);
 const DRAWER=new Set(["comps","early","mid","late"]);
 function openSide(on){document.body.classList.toggle("sideopen",on)}
 function renderView(h){
   if(h in PH){st.phase=h;renderPhase()}
   if(h==="comps"){renderFilters();renderCards();renderDetail()}
+  if(h==="start")renderStart();
   if(h==="champs"){if(!st.champ){const b=UL.filter(u=>u.st).sort((a,b)=>a.st.avg-b.st.avg)[0];st.champ=b?b.n:UL[0].n}renderChamps()}
   if(h==="augs")renderAugs();
   if(h==="unlocks")renderUnlocks();
@@ -1316,10 +1426,10 @@ function renderView(h){
 }
 function rerender(){renderView(st.view||"comps")}
 function route(){
-  let h=location.hash.slice(1)||"comps";if(!VIEWS.includes(h))h="comps";st.view=h;
+  let h=location.hash.slice(1)||"start";if(!VIEWS.includes(h))h="start";st.view=h;
   document.querySelectorAll(".views a").forEach(a=>a.dataset.v===h?a.setAttribute("aria-current","page"):a.removeAttribute("aria-current"));
   const show=(id,on)=>$(id).classList.toggle("hidden",!on);
-  show("#view-comps",h==="comps");show("#view-phase",h in PH);show("#view-builder",h==="builder");show("#view-champs",h==="champs");show("#view-augs",h==="augs");
+  show("#view-comps",h==="comps");show("#view-start",h==="start");show("#view-phase",h in PH);show("#view-builder",h==="builder");show("#view-champs",h==="champs");show("#view-augs",h==="augs");
   show("#view-unlocks",h==="unlocks");show("#view-assist",h==="assist");show("#view-items",h==="items");show("#view-roll",h==="roll");show("#view-overlay",h==="overlay");show("#view-quiz",h==="quiz");
   $("#layout").classList.toggle("hidden",h==="builder");$("#layout").classList.toggle("full",FULL.has(h));$("#layout").classList.toggle("drawer",DRAWER.has(h));openSide(false);
   document.body.classList.toggle("ov",h==="overlay");
