@@ -357,6 +357,57 @@ body.ov .wrap{max-width:460px;padding:8px}
 @media (max-width:1100px){.layout{grid-template-columns:1fr}.lside{position:static;max-height:none}}
 @media (max-width:1050px){.bgrid{grid-template-columns:1fr}.traits{max-height:none}.dgrid{grid-template-columns:1fr}.pitem{grid-template-columns:1fr}.pitem .acts{align-items:flex-start;flex-direction:row}}
 @media (prefers-reduced-motion:no-preference){.card,.hex,.btn,.chip{transition:background .12s,border-color .12s}}
+
+/* ===== Neues Layout: feste Kopfzeile, Comps als Liste + Detail nebeneinander, Infos als Schublade ===== */
+.top{position:sticky;top:0;z-index:20;flex-wrap:nowrap;margin:0 -18px 14px;padding:10px 18px;background:#11101aee;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top h1{font-size:24px;white-space:nowrap}
+.top .meta{font-size:11.5px;white-space:nowrap}
+.views{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;padding-bottom:2px}
+.views a{padding:7px 12px;font-size:13.5px;white-space:nowrap;flex:none}
+.filters{gap:6px}
+.flabel{min-width:78px;font-size:11px}
+.chip{padding:5px 11px;font-size:12.5px}
+.totop{position:fixed;right:16px;bottom:16px;z-index:15;width:42px;height:42px;border-radius:50%;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-size:18px;cursor:pointer;display:none}
+.totop.on{display:block}
+/* Comps: links kompakte Liste, rechts das Detail (bleibt stehen und scrollt für sich) */
+@media (min-width:1100px){
+  #view-comps:not(.hidden){display:grid;grid-template-columns:400px minmax(0,1fr);gap:16px;align-items:start}
+  #view-comps .cleft{position:sticky;top:70px;max-height:calc(100vh - 82px);overflow:auto;padding-right:4px}
+  #view-comps .cards{grid-template-columns:1fr;gap:8px;margin:0}
+  #view-comps .detail{position:sticky;top:70px;max-height:calc(100vh - 82px);overflow:auto}
+  .dnav{position:sticky}
+}
+#view-comps .card{padding:10px 12px;gap:7px}
+#view-comps .card .nm{font-size:14.5px}
+#view-comps .card .kpis b{font-size:18px}
+#view-comps .card .urow{--s:28px;gap:3px}
+.dnav{display:flex;flex-wrap:wrap;gap:6px;position:static;top:-18px;margin:-18px -18px 0;padding:10px 18px;background:var(--panel);z-index:2;border-bottom:1px solid var(--line)}
+.dnav button{cursor:pointer;background:var(--panel-2);border:1px solid var(--line);border-radius:20px;padding:4px 11px;font-size:12.5px}
+.sect{scroll-margin-top:54px}
+/* Champion-/Augment-Infos als Schublade rechts (in Comps, Early, Mid, Late) */
+.layout.drawer{grid-template-columns:minmax(0,1fr)}
+.layout.drawer .lside{position:fixed;top:0;right:0;bottom:0;width:min(400px,92vw);max-height:none;z-index:30;background:var(--stage);border-left:1px solid var(--line);padding:12px;box-shadow:-12px 0 30px #0008;transform:translateX(105%);transition:transform .18s}
+body.sideopen .layout.drawer .lside{transform:none}
+.sclose{position:sticky;top:0;align-self:flex-end;z-index:3}
+.sidebtn{display:none}
+.layout.drawer ~ .sidebtn,.sidebtn.on{display:inline-flex}
+/* Assistent: Eingaben links, Empfehlung rechts immer sichtbar */
+@media (min-width:1100px){
+  .asplit{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px;align-items:start}
+  .asplit .agrid{grid-template-columns:1fr 1fr}
+  .asplit .agrid > :nth-child(2){grid-column:1 / -1;order:3}
+  .asplit #as-result{position:sticky;top:70px;max-height:calc(100vh - 82px);overflow:auto;margin-top:0!important}
+}
+#as-ugrid .tile{--s:34px}
+@media (max-width:700px){.top{gap:8px}.top .meta{display:none}.top h1{font-size:19px}}
+
+/* Early/Mid/Late: zwei Boards nebeneinander, dann muss man nur halb so weit scrollen */
+@media (min-width:1250px){
+  .plist{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .pitem{grid-template-columns:auto minmax(0,1fr);align-items:start}
+  .pitem .acts{grid-column:2;flex-direction:row;align-items:center;justify-content:space-between;width:100%}
+  .pitem .info .urow{--s:30px!important}
+}
 </style>
 </head>
 <body>
@@ -386,6 +437,7 @@ body.ov .wrap{max-width:460px;padding:8px}
   <div class="layout" id="layout">
   <div class="lmain">
   <section id="view-comps">
+    <div class="cleft">
     <div class="filters">
       <div class="frow"><span class="flabel">Anzeigen</span><span id="f-show"></span></div>
       <div class="frow"><span class="flabel">Tier</span><span id="f-tier"></span></div>
@@ -393,6 +445,7 @@ body.ov .wrap{max-width:460px;padding:8px}
       <div class="frow"><span class="flabel">Sortieren</span><span id="f-sort"></span></div>
     </div>
     <div class="cards" id="cards" role="tablist" aria-label="Comps"></div>
+    </div>
     <div class="panel detail" id="detail"></div>
   </section>
 
@@ -433,12 +486,13 @@ body.ov .wrap{max-width:460px;padding:8px}
   </section>
   <section id="view-assist" class="hidden">
     <p class="intro">Trag ein, was du gerade hast. Der Assistent sucht die Comps, die am besten zu deinen Items, Units und Augment-Optionen passen, und sagt dir, was du jetzt bauen solltest. Deine Eingaben bleiben gespeichert, bis du sie zurücksetzt.</p>
-    <div class="agrid">
+    <div class="asplit"><div><div class="agrid">
       <div class="panel sbox"><div class="thead"><h3>1. Deine Komponenten</h3><button class="btn small" id="as-reset">Alles zurücksetzen</button></div><div class="compsel" id="as-comps"></div></div>
       <div class="panel sbox"><h3>2. Deine Units</h3><input class="inp" id="as-uq" placeholder="Unit suchen und anklicken" aria-label="Unit suchen"><div class="sgrid" id="as-ugrid"></div><div class="lbl">Ausgewählt</div><div class="urow" id="as-upicked" style="--s:38px;gap:10px 6px"></div></div>
       <div class="panel sbox"><h3>3. Augment-Auswahl</h3><p class="muted" style="font-size:12.5px;margin:0">Bis zu 3 Augments eintragen, die dir gerade angeboten werden.</p><div id="as-augs" style="display:flex;flex-direction:column;gap:6px"></div><datalist id="auglistdl"></datalist></div>
-    </div>
+    </div></div>
     <div id="as-result" style="margin-top:14px"></div>
+    </div>
   </section>
   <section id="view-items" class="hidden">
     <p class="intro">Klick deine Komponenten an. Du siehst sofort, welche fertigen Items du bauen kannst und welche Carrys in den aktuellen Comps genau diese Items wollen. Darunter steht die komplette Rezept-Tabelle.</p>
@@ -515,6 +569,7 @@ body.ov .wrap{max-width:460px;padding:8px}
   </div>
 </div>
 <div class="toast" id="toast" role="status"></div>
+<button class="totop" id="totop" aria-label="Nach oben">↑</button>
 
 <script>
 const DATA=__DATA__;
@@ -629,12 +684,12 @@ function renderDetail(){
   const lvTimes=c.lv.map(x=>`<div class="tl"><b>Level ${x.l}</b>${esc(x.s)}</div>`).join("");
   const finals=c.final.map(x=>`<div class="tl"><b>Level ${x.l}</b>${pct(x.pct)} · Ø ${num(x.avg)}</div>`).join("");
   const carries=Object.entries(c.items).filter(([u])=>c.core.includes(u)||(b&&b.u.includes(u))).sort((a,b)=>b[1].n-a[1].n).slice(0,6);
-  d.innerHTML=`<div class="dhead"><span class="tier ${c.tier}" style="min-width:42px;height:42px;font-size:24px">${c.tier}</span>
+  d.innerHTML=`<div class="dnav"><button data-dgo="d-board">Board</button><button data-dgo="d-level">Leveln</button><button data-dgo="d-augs">Augments</button><button data-dgo="d-items">Items</button><button data-dgo="d-notes">Notizen</button></div><div class="dhead"><span class="tier ${c.tier}" style="min-width:42px;height:42px;font-size:24px">${c.tier}</span>
   <div><h2>${esc(c.name)}</h2><div class="sty">${esc(STYLE_LABEL(c.style))} · ${num(c.pick)} pro Lobby gespielt</div></div>
   <div class="kpis"><div><b>${num(c.avg)}${trendHtml(c.tr)}</b><small>Ø Platz</small></div><div><b>${pct(c.top4)}</b><small>Top 4</small></div><div><b>${pct(c.win)}</b><small>Win Rate</small></div></div>
   <button class="favbtn" data-dfav="${esc(c.name)}" aria-pressed="${isFav(c)}" aria-label="Favorit" style="font-size:24px">${isFav(c)?"★":"☆"}</button><a class="btn" href="#overlay" data-ovsel="${c.id}">Overlay</a><button class="btn primary" id="toBuilder">Im Builder öffnen</button></div>
   <div class="roles">${(c.carry||[]).map((u,i)=>roleCard(c,u,"carry",i)).join("")}${(c.tank||[]).slice(0,1).map((u,i)=>roleCard(c,u,"tank",i)).join("")}</div>
-  <div class="phasebar" role="group" aria-label="Phase und Level">${bar}</div>
+  <div class="phasebar sect" id="d-board" role="group" aria-label="Phase und Level">${bar}</div>
   <div class="dgrid">
     <div><div class="boardwrap-s">${b?miniBoard(b.u,c,{withItems:!isEarly,stars:!isEarly,lg:true}):""}</div><div class="legend-front">Oben = vorne, zum Gegner</div></div>
     <div class="alts"><div class="sect"><h3>${PH[phase].label} Game · Level ${lvl}</h3></div>
@@ -643,10 +698,10 @@ function renderDetail(){
       ${isEarly?`<p class="muted" style="font-size:12.5px;margin:0">Early-Boards: Ø Platz am Spielende, wenn du so auf Level ${lvl} stehst. „Runden gewonnen“ zeigt, wie oft dieses Board seine Kämpfe gewinnt.</p>`:""}
     </div>
   </div>
-  <div class="sect"><h3>Wann leveln</h3><div class="timeline">${lvTimes}</div><p class="muted" style="font-size:12.5px;margin:8px 0 6px">So verteilen sich die End-Level:</p><div class="timeline">${finals}</div></div>
-  <div class="sect"><h3>${(()=>{const r=augsForComp(c);return r.real?"Beste Augments":"Passende Augments"})()}</h3>${augSection(c)}</div>
-  <div class="sect"><h3>Beste Items</h3><div class="carries">${carries.map(([u,x])=>`<div class="carry"><button data-champ="${esc(u)}" style="all:unset;cursor:pointer">${tile(u)}</button><div><b>${esc(u)}${roleTag(roleIn(c,u))}</b><div class="ilist">${x.i.map(i=>`<span>${itemBadge(i)}${esc(i)}</span>`).join("")}</div><small class="muted">Ø ${num(x.avg)} · ${x.n.toLocaleString("de-DE")} Spiele</small></div></div>`).join("")}</div></div>
-  <div class="sect"><h3>Meine Notizen</h3><textarea class="notes" id="cnote" placeholder="Eigene Notizen zu dieser Comp, z. B. gegen wen sie schwach ist. Wird in deinem Browser gespeichert.">${esc(NOTES[c.name]||"")}</textarea></div>`;
+  <div class="sect" id="d-level"><h3>Wann leveln</h3><div class="timeline">${lvTimes}</div><p class="muted" style="font-size:12.5px;margin:8px 0 6px">So verteilen sich die End-Level:</p><div class="timeline">${finals}</div></div>
+  <div class="sect" id="d-augs"><h3>${(()=>{const r=augsForComp(c);return r.real?"Beste Augments":"Passende Augments"})()}</h3>${augSection(c)}</div>
+  <div class="sect" id="d-items"><h3>Beste Items</h3><div class="carries">${carries.map(([u,x])=>`<div class="carry"><button data-champ="${esc(u)}" style="all:unset;cursor:pointer">${tile(u)}</button><div><b>${esc(u)}${roleTag(roleIn(c,u))}</b><div class="ilist">${x.i.map(i=>`<span>${itemBadge(i)}${esc(i)}</span>`).join("")}</div><small class="muted">Ø ${num(x.avg)} · ${x.n.toLocaleString("de-DE")} Spiele</small></div></div>`).join("")}</div></div>
+  <div class="sect" id="d-notes"><h3>Meine Notizen</h3><textarea class="notes" id="cnote" placeholder="Eigene Notizen zu dieser Comp, z. B. gegen wen sie schwach ist. Wird in deinem Browser gespeichert.">${esc(NOTES[c.name]||"")}</textarea></div>`;
   $("#cnote").oninput=e=>{NOTES[c.name]=e.target.value;store.set("tft19-notes",NOTES)};
   $("#toBuilder").onclick=()=>{loadBoard(b?b.u:c.core,c,c.name+" · Level "+lvl);location.hash="builder"};
 }
@@ -655,8 +710,8 @@ $("#f-style").onclick=e=>{const b=e.target.closest("[data-style]");if(b){st.styl
 $("#f-show").onclick=e=>{const b=e.target.closest("[data-show]");if(b){st.show=b.dataset.show;renderFilters();renderCards();renderDetail()}};
 $("#f-sort").onclick=e=>{const b=e.target.closest("[data-sort]");if(b){st.sort=b.dataset.sort;renderFilters();renderCards()}};
 $("#cards").addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.classList.contains("card")){e.preventDefault();e.target.click()}});
-$("#cards").onclick=e=>{const f=e.target.closest("[data-fav]");if(f){toggleFav(f.dataset.fav);renderFilters();renderCards();renderDetail();return}const b=e.target.closest(".card");if(!b)return;st.comp=b.dataset.id;detailPick={lvl:null,i:0};renderCards();renderDetail();$("#detail").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})};
-$("#detail").addEventListener("click",e=>{const fv=e.target.closest("[data-dfav]");if(fv){toggleFav(fv.dataset.dfav);renderFilters();renderCards();renderDetail();return}const ov=e.target.closest("[data-ovsel]");if(ov){store.set("tft19-ov",ov.dataset.ovsel)}const l=e.target.closest("[data-dlvl]");if(l){detailPick={lvl:l.dataset.dlvl,i:0};renderDetail();return}const a=e.target.closest("[data-alt]");if(a){detailPick.i=+a.dataset.alt;renderDetail()}});
+$("#cards").onclick=e=>{const f=e.target.closest("[data-fav]");if(f){toggleFav(f.dataset.fav);renderFilters();renderCards();renderDetail();return}const b=e.target.closest(".card");if(!b)return;st.comp=b.dataset.id;detailPick={lvl:null,i:0};renderCards();renderDetail();$("#detail").scrollTop=0;if(innerWidth<1100)$("#detail").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})};
+$("#detail").addEventListener("click",e=>{const go=e.target.closest("[data-dgo]");if(go){const t=document.getElementById(go.dataset.dgo),d=$("#detail");if(t){if(innerWidth>=1100)d.scrollTo({top:t.getBoundingClientRect().top-d.getBoundingClientRect().top+d.scrollTop-56,behavior:"smooth"});else window.scrollTo({top:t.getBoundingClientRect().top+scrollY-70,behavior:"smooth"})}return}const fv=e.target.closest("[data-dfav]");if(fv){toggleFav(fv.dataset.dfav);renderFilters();renderCards();renderDetail();return}const ov=e.target.closest("[data-ovsel]");if(ov){store.set("tft19-ov",ov.dataset.ovsel)}const l=e.target.closest("[data-dlvl]");if(l){detailPick={lvl:l.dataset.dlvl,i:0};renderDetail();return}const a=e.target.closest("[data-alt]");if(a){detailPick.i=+a.dataset.alt;renderDetail()}});
 
 /* ---------- Champions, Augments, Info-Leiste ---------- */
 /* Übersetzung über Claude (sample-Fähigkeit), Ergebnis im Browser gespeichert */
@@ -746,10 +801,10 @@ function renderSide(){
   if(st.view==="augs"){const a=AUGMAP[st.aug]||null;s.innerHTML=a?augDetail(a):`<div class="panel sbox"><h3>Augment wählen</h3><p class="muted" style="margin:0;font-size:13px">Klick links auf ein Augment, dann siehst du hier Beschreibung, Platzierung und passende Comps.</p></div>`;return}
   const det=st.champ?champDetail(st.champ):"";
   if(st.view==="champs"){s.innerHTML=det||`<div class="panel sbox"><h3>Champion wählen</h3><p class="muted" style="margin:0;font-size:13px">Klick links auf einen Champion für Stats, Fähigkeit, beste Items, Comps und passende Augments.</p></div>`;return}
-  s.innerHTML=det+sidePicker();renderSideGrid();
+  s.innerHTML=(DRAWER.has(st.view)?'<button class="btn small sclose" data-sclose>Schließen ✕</button>':"")+det+sidePicker();renderSideGrid();
 }
 $("#side").addEventListener("input",e=>{if(e.target.id==="s-q"){side.q=e.target.value;renderSideGrid()}});
-$("#side").addEventListener("click",e=>{const c=e.target.closest("[data-scost]");if(c){side.cost=+c.dataset.scost;document.querySelectorAll("#s-cost .chip").forEach(b=>b.setAttribute("aria-pressed",b===c));renderSideGrid()}});
+$("#side").addEventListener("click",e=>{if(e.target.closest("[data-sclose]")){openSide(false);return}const c=e.target.closest("[data-scost]");if(c){side.cost=+c.dataset.scost;document.querySelectorAll("#s-cost .chip").forEach(b=>b.setAttribute("aria-pressed",b===c));renderSideGrid()}});
 
 /* Champions-Ansicht */
 const chf={cost:0,role:"alle",q:"",trait:"",sort:"avg"};
@@ -786,7 +841,7 @@ $("#au-search").oninput=e=>{auf.q=e.target.value;renderAugs()};
 
 /* Gemeinsame Klicks: Champion, Comp, Augment, Builder */
 document.addEventListener("click",e=>{
-  const ch=e.target.closest("[data-champ]");if(ch&&!e.target.closest("#pgrid")){st.champ=ch.dataset.champ;renderSide();if(st.view==="champs")renderChamps();else document.querySelectorAll("#s-grid [data-champ]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.champ===st.champ));const sd=$("#side");if(sd.getBoundingClientRect().top<0||innerWidth<1100)sd.scrollIntoView({behavior:"auto",block:"start"});return}
+  const ch=e.target.closest("[data-champ]");if(ch&&!e.target.closest("#pgrid")){st.champ=ch.dataset.champ;renderSide();if(st.view==="champs")renderChamps();else document.querySelectorAll("#s-grid [data-champ]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.champ===st.champ));const sd=$("#side");if(DRAWER.has(st.view)){openSide(true);sd.scrollTop=0}else if(sd.getBoundingClientRect().top<0||innerWidth<1100)sd.scrollIntoView({behavior:"auto",block:"start"});return}
   const gc=e.target.closest("[data-gocomp]");if(gc){st.comp=gc.dataset.gocomp;detailPick={lvl:null,i:0};if(location.hash!=="#comps")location.hash="comps";else{renderCards();renderDetail()}setTimeout(()=>$("#detail").scrollIntoView(),60);return}
   const ga=e.target.closest("[data-goaug]");if(ga){st.aug=ga.dataset.goaug;if(location.hash!=="#augs")location.hash="augs";else{renderAugs();renderSide()}return}
   const ab=e.target.closest("[data-addb]");if(ab){placeOne(ab.dataset.addb);location.hash="builder";return}
@@ -1240,6 +1295,8 @@ document.addEventListener("keydown",e=>{
 /* ---------- Routing ---------- */
 const VIEWS=["comps","early","mid","late","champs","augs","unlocks","assist","items","roll","builder","overlay","quiz"];
 const FULL=new Set(["assist","items","roll","overlay","quiz"]);
+const DRAWER=new Set(["comps","early","mid","late"]);
+function openSide(on){document.body.classList.toggle("sideopen",on)}
 function renderView(h){
   if(h in PH){st.phase=h;renderPhase()}
   if(h==="comps"){renderFilters();renderCards();renderDetail()}
@@ -1261,12 +1318,16 @@ function route(){
   const show=(id,on)=>$(id).classList.toggle("hidden",!on);
   show("#view-comps",h==="comps");show("#view-phase",h in PH);show("#view-builder",h==="builder");show("#view-champs",h==="champs");show("#view-augs",h==="augs");
   show("#view-unlocks",h==="unlocks");show("#view-assist",h==="assist");show("#view-items",h==="items");show("#view-roll",h==="roll");show("#view-overlay",h==="overlay");show("#view-quiz",h==="quiz");
-  $("#layout").classList.toggle("hidden",h==="builder");$("#layout").classList.toggle("full",FULL.has(h));
+  $("#layout").classList.toggle("hidden",h==="builder");$("#layout").classList.toggle("full",FULL.has(h));$("#layout").classList.toggle("drawer",DRAWER.has(h));openSide(false);
   document.body.classList.toggle("ov",h==="overlay");
   renderView(h);
   window.scrollTo(0,0);
 }
 window.addEventListener("hashchange",route);
+document.addEventListener("keydown",e=>{if(e.key==="Escape")openSide(false)});
+document.addEventListener("click",e=>{if(document.body.classList.contains("sideopen")&&!e.target.closest("#side")&&!e.target.closest("[data-champ]")&&!e.target.closest("[data-goaug]")&&!e.target.closest(".sidebtn"))openSide(false)},true);
+addEventListener("scroll",()=>$("#totop").classList.toggle("on",scrollY>600),{passive:true});
+$("#totop").onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
 $("#meta").innerHTML=DATA.site?"by meloo - wird alle 30 Minuten aktualisiert":`Prismatic Tour · PBE 19.1 · Stand ${new Date(DATA.updated).toLocaleString("de-DE",{dateStyle:"short",timeStyle:"short"})} Uhr · ${DATA.site?"wird alle 30 Minuten aktualisiert":"wird stündlich aktualisiert"} · ${COMPS.length} Comps · ${UL.length} Champions · ${AUGS.length} Augments · Daten: MetaTFT`;
 if(!Object.keys(board).length){const c=COMPS[0];loadBoard(lateBoard(c),c,c.name)}
 if(DATA.site){$("#ownimg").remove();$("#ownimghelp").remove()}
