@@ -150,7 +150,7 @@ func _ready() -> void:
 	timer.start()
 	Meta.loaded.connect(_refresh_all)
 	_refresh_all()
-	_log_file("Start, Version 19, Bildschirm %d" % screen_idx)
+	_log_file("Start, Version 20, Bildschirm %d" % screen_idx)
 	if OS.get_name() == "Windows" and pilot.start():
 		await get_tree().create_timer(2.5).timeout
 		var st0 := pilot.state()
@@ -839,6 +839,8 @@ func _tick() -> void:
 	var sn := Brain.stage_num(brain.stage)
 	if use_ocr:
 		_aug_ocr(img)
+		if _in_game():
+			_pick_ocr(img)
 		if not brain.aug_offer.is_empty():
 			seen.append("Augments: " + " | ".join(brain.aug_offer))
 	elif rects.has("augs") and active and sn in AUG_STAGES and aug_off_stage != brain.stage:
@@ -936,6 +938,70 @@ func _aug_ocr(img: Image) -> void:
 		aug_seen_full = true
 		_log_file("Augments: " + " | ".join(offer) + "  (Wertung %s)" % str(offer.map(func(a): return snappedf(brain.aug_score(a), 0.1))))
 		_refresh_all()
+
+## Item-Auswahl unten („Choose One“ nach Amboss/Truhe): 3 Items nebeneinander über dem Shop
+const PICK_X := [0.374, 0.5, 0.626]
+var pick_ms := 0
+var pick_on := false
+var pick_names: Array = []
+
+func _pick_ocr(img: Image) -> void:
+	var now := Time.get_ticks_msec()
+	if now - pick_ms < 1200:
+		return
+	pick_ms = now
+	var W := img.get_width()
+	var H := img.get_height()
+	var paths := [_ocr_png(img.get_region(Rect2i(int(0.42 * W), int(0.77 * H), int(0.16 * W), int(0.03 * H))), "wahl_titel", 3)]
+	for i in 3:
+		paths.append(_ocr_png(img.get_region(Rect2i(int((PICK_X[i] - 0.055) * W), int(0.902 * H), int(0.11 * W), int(0.03 * H))), "wahl_item%d" % i, 3))
+	var t := pilot.ocr(paths)
+	if t.size() != 4:
+		return
+	var title := str(t[0]).to_upper().replace(" ", "")
+	pick_on = title.contains("CHOOSE") or title.contains("WÄHLE") or title.contains("WAHLE")
+	pick_names = []
+	if pick_on:
+		var all_items: Array = Meta.components + Meta.item_names + Meta.CONSUMABLES.keys()
+		for i in 3:
+			pick_names.append(OcrRead.match_long(str(t[i + 1]), all_items))
+
+## Wie gut passt ein angebotenes Item zur Ziel-Comp? Fertige Items der Carrys > ihre Komponenten > allgemein starke Komponenten
+func _pick_score(name: String) -> float:
+	if name == "":
+		return -1.0
+	var want_items := []
+	var tgt := brain.target
+	var it: Dictionary = tgt.get("items", {})
+	for u in it.keys():
+		want_items.append_array(it[u].get("i", []))
+	var s := 0.0
+	if name in want_items:
+		s += 6.0
+	for w in want_items:
+		var rec: Array = Meta.recipes.get(w, [])
+		if name in rec:
+			s += 2.0
+	s += {"B.F. Sword": 1.0, "Sparring Gloves": 0.8, "Recurve Bow": 0.7, "Tear Of The Goddess": 0.6, "Giant's Belt": 0.6, "Needlessly Large Rod": 0.5, "Chain Vest": 0.5, "Negatron Cloak": 0.4, "Spatula": 1.5}.get(name, 0.0)
+	if Meta.recipes.has(name):
+		s += 1.0      # fertiges Item ist meist mehr wert als eine Komponente
+	return s
+
+func _pick_step(now: int) -> bool:
+	if not pick_on or pick_names.size() != 3:
+		return false
+	var bi := 0
+	for i in 3:
+		if _pick_score(pick_names[i]) > _pick_score(pick_names[bi]):
+			bi = i
+	var sz := auto_last_img_size
+	pilot.click(DisplayServer.screen_get_position(screen_idx) + Vector2i(int(PICK_X[bi] * sz.x), int(0.86 * sz.y)))
+	_log("Item gewählt: %s (aus %s)" % [pick_names[bi] if pick_names[bi] != "" else "?", ", ".join(pick_names.map(func(n): return n if n != "" else "?"))])
+	pick_on = false
+	pick_ms = now + 1500
+	auto_next_ms = now + 1500
+	last_action_ms = now
+	return true
 
 ## Schlechte Augment-Karten einmal neu rollen (Knopf unter der Karte). true = gerollt, auf neues Bild warten
 func _aug_reroll_step(now: int) -> bool:
@@ -1318,6 +1384,9 @@ func _autopilot_step() -> void:
 			auto_tried.erase(k)
 	# Kugeln einsammeln / Karussell: Little Legend mit Rechtsklick laufen lassen
 	if _legend_step(now):
+		return
+	# Item-Auswahl unten verdeckt Shop und Gold: zuerst wählen
+	if use_ocr and _pick_step(now):
 		return
 	# Augment-Auswahl: das Gold ist dort verdeckt, deshalb vor der Gold-Prüfung
 	if use_ocr and aug_screen and brain.aug_offer.size() == 3:
@@ -1752,7 +1821,7 @@ func _hex_of(p: Vector2i) -> Vector2i:
 
 ## Name der angeklickten Unit aus ihrem Infofenster rechts lesen
 func _unit_name_at(p: Vector2i) -> String:
-	pilot.click(_img_to_screen(p))
+	pilot.rclick(_img_to_screen(p))     # Rechtsklick auf eine Unit öffnet ihr Infofenster (so hast du es gemacht)
 	await get_tree().create_timer(0.4).timeout
 	var shot := DisplayServer.screen_get_image(screen_idx)
 	if shot == null or shot.is_empty():
@@ -2135,7 +2204,7 @@ func _hud_tick(img: Image) -> void:
 	if now - hud_ms > 1500:
 		hud_ms = now
 		hud_units = Hud.units(img)
-		hud_orbs = Hud.orbs(img)
+		hud_orbs = Hud.orbs(img) + Hud.white_orbs(img)
 		hud_items = Hud.item_slots(img)
 		# Infofenster einer Unit verdeckt die Spielerliste: wegklicken
 		if lb.size() < 2 and auto_on and now > panel_fix_ms and _in_game():

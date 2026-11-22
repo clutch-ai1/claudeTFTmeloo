@@ -331,6 +331,68 @@ static func orbs(img: Image) -> Array:
 			out.append(Vector2i(X0 + (mnx + mxx + 1) * C / 2, Y0 + (mny + mxy + 1) * C / 2))
 	return out
 
+## Weiße/graue Beute-Kugeln (durchsichtige Blase mit Fragezeichen): farblose, helle Pixel in einem runden Fleck ~45 px
+static func white_orbs(img: Image) -> Array:
+	var W := img.get_width()
+	var H := img.get_height()
+	var X0 := int(0.229 * W)
+	var Y0 := int(0.111 * H)
+	var X1 := int(0.771 * W)
+	var Y1 := int(0.685 * H)
+	var C := maxi(4, int(8.0 * W / 1920.0))
+	var gw := (X1 - X0) / C
+	var gh := (Y1 - Y0) / C
+	var hit := PackedByteArray()
+	hit.resize(gw * gh)
+	for gy in gh:
+		for gx in gw:
+			var n := 0
+			for yy in range(0, C, 2):
+				for xx in range(0, C, 2):
+					var c := img.get_pixel(X0 + gx * C + xx, Y0 + gy * C + yy)
+					var mx := maxf(c.r, maxf(c.g, c.b))
+					var mn := minf(c.r, minf(c.g, c.b))
+					if mx - mn < 0.157 and (c.r + c.g + c.b) / 3.0 > 0.47 and c.b >= c.r - 0.03:
+						n += 1
+			if n >= 3:
+				hit[gy * gw + gx] = 1
+	var seen := PackedByteArray()
+	seen.resize(gw * gh)
+	var out := []
+	for i in gw * gh:
+		if hit[i] == 0 or seen[i] == 1:
+			continue
+		var st := [i]
+		seen[i] = 1
+		var n := 0
+		var mnx := gw
+		var mxx := 0
+		var mny := gh
+		var mxy := 0
+		while not st.is_empty():
+			var k: int = st.pop_back()
+			n += 1
+			var kx := k % gw
+			var ky := k / gw
+			mnx = mini(mnx, kx)
+			mxx = maxi(mxx, kx)
+			mny = mini(mny, ky)
+			mxy = maxi(mxy, ky)
+			for dy in [-1, 0, 1]:
+				for dx in [-1, 0, 1]:
+					var nx: int = kx + dx
+					var ny: int = ky + dy
+					if nx >= 0 and ny >= 0 and nx < gw and ny < gh:
+						var j := ny * gw + nx
+						if hit[j] == 1 and seen[j] == 0:
+							seen[j] = 1
+							st.append(j)
+		var bw := mxx - mnx + 1
+		var bh := mxy - mny + 1
+		if n >= 18 and bw >= 5 and bh >= 5 and bw <= 8 and bh <= 8 and absi(bw - bh) <= 2 and float(n) / (bw * bh) >= 0.45:
+			out.append(Vector2i(X0 + (mnx + mxx + 1) * C / 2, Y0 + (mny + mxy + 1) * C / 2))
+	return out
+
 ## Eigene Units an den grünen Lebensbalken. Ergebnis {"board": [Punkte], "bench": [Punkte]} (Punkt = Körpermitte)
 static func units(img: Image) -> Dictionary:
 	var W := img.get_width()
