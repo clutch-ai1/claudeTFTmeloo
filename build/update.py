@@ -335,5 +335,8 @@ print(len(allitems), allitems)
 t=open(TPL).read()
 assert '__DATA__' in t
 t=t.replace('const DATA=__DATA__;','const DATA='+open('data.json').read()+';')
+_st=[c['name'] for c in sorted(comps,key=lambda c:c['avg']) if c['tier']=='S'][:4]
+_og=('S-Tier gerade: '+', '.join(_st)+'. ' if _st else '')+'Comps, Boards, Items und Augments für TFT Set 19 auf dem PBE, alle 30 Minuten neu.'
+t=t.replace('__OGDESC__',_og.replace('"','&quot;'))
 open(OUT,'w').write(t)
 print('OK comps',len(comps),'size',len(t))

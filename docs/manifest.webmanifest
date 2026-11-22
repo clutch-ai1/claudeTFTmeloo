@@ -1,0 +1,15 @@
+{
+  "name": "Set 19 Comp-Planer by meloo",
+  "short_name": "Comp-Planer",
+  "description": "TFT Set 19 Comps, Boards, Items und Augments, alle 30 Minuten neu.",
+  "start_url": "./#start",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#11101a",
+  "theme_color": "#11101a",
+  "lang": "de",
+  "icons": [
+    {"src": "app-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "app-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}

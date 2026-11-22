@@ -3,7 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Set 19 Comp-Planer</title>
+<title>Set 19 Comp-Planer by meloo</title>
+<meta name="description" content="__OGDESC__">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Set 19 Comp-Planer by meloo">
+<meta property="og:description" content="__OGDESC__">
+<meta property="og:url" content="https://clutch-ai1.github.io/claudeTFTmeloo/">
+<meta property="og:image" content="https://clutch-ai1.github.io/claudeTFTmeloo/og.jpg">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#11101a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="app-192.png">
+<link rel="apple-touch-icon" href="app-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Comp-Planer">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -473,6 +487,10 @@ body.sideopen .layout.drawer .lside{transform:none}
 .ptips{margin:12px 0 0;padding:10px 12px;background:var(--panel-2);border-radius:10px;font-size:13px;line-height:1.45}
 .ptips h4{margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .ptips ul{margin:0;padding-left:18px}.ptips li{margin:3px 0}.ptips li.warn::marker{content:"⚠ "}
+
+.irank{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.ir{display:flex;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.ir .it{width:34px;height:34px;flex:none}.ir b{display:block;font-size:13.5px}.ir small{color:var(--muted);font-size:11.5px}
 </style>
 </head>
 <body>
@@ -745,7 +763,7 @@ function augSection(c){const r=augsForComp(c);
   if(!r.list.length)return '<p class="muted" style="font-size:13px;margin:0">Keine passenden Augments gefunden.</p>';
   return `${r.real?"":'<p class="muted" style="font-size:12.5px;margin:0 0 8px">Auf dem PBE gibt es noch keine Augment-Platzierungen. Hier stehen Augments, die über Trait oder Champion zu dieser Comp passen. Mit echten Daten werden sie automatisch nach Platzierung sortiert.</p>'}
   <div class="auglist" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))">${r.list.map(x=>`<button class="aug" data-goaug="${esc(x.a.n)}"><span class="an"><span>${esc(x.a.n)}</span><span class="rar ${x.a.r}">${RAR_DE[x.a.r]||x.a.r}</span></span><span class="ad">${esc(de(x.a.d||""))}</span>${x.avg!=null?`<span class="am"><span>Ø ${num(x.avg)} in dieser Comp · ${x.n.toLocaleString("de-DE")} Spiele</span></span>`:""}</button>`).join("")}</div>`}
-function renderDetail(){
+function renderDetail(){if(typeof syncHash==="function")syncHash();
   const c=COMPS.find(x=>x.id===st.comp);const d=$("#detail");
   if(!c){d.innerHTML="";return}
   if(!detailPick.lvl||!boardsFor(c,detailPick.lvl).length){detailPick={lvl:firstLvl(c,"late")||firstLvl(c,"mid")||firstLvl(c,"early"),i:0}}
@@ -758,7 +776,7 @@ function renderDetail(){
   d.innerHTML=`<div class="dnav"><button data-dgo="d-board">Board</button><button data-dgo="d-level">Leveln</button><button data-dgo="d-augs">Augments</button><button data-dgo="d-items">Items</button><button data-dgo="d-notes">Notizen</button></div><div class="dhead" style="--tc:${traitColor(c)}"><span class="tier ${c.tier}" style="min-width:42px;height:42px;font-size:24px">${c.tier}</span>
   <div><h2>${esc(c.name)}</h2><div class="sty">${esc(STYLE_LABEL(c.style))} · ${num(c.pick)} pro Lobby gespielt</div></div>
   <div class="kpis"><div><b>${num(c.avg)}${trendHtml(c.tr)}</b><small>Ø Platz</small></div><div><b>${pct(c.top4)}</b><small>Top 4</small></div><div><b>${pct(c.win)}</b><small>Win Rate</small></div></div>
-  <button class="favbtn" data-dfav="${esc(c.name)}" aria-pressed="${isFav(c)}" aria-label="Favorit" style="font-size:24px">${isFav(c)?"★":"☆"}</button><a class="btn" href="#overlay" data-ovsel="${c.id}">Overlay</a><button class="btn primary" id="toBuilder">Im Builder öffnen</button></div>
+  <button class="favbtn" data-dfav="${esc(c.name)}" aria-pressed="${isFav(c)}" aria-label="Favorit" style="font-size:24px">${isFav(c)?"★":"☆"}</button><button class="btn" data-share title="Link zu dieser Comp kopieren">🔗 Teilen</button><a class="btn" href="#overlay" data-ovsel="${c.id}">Overlay</a><button class="btn primary" id="toBuilder">Im Builder öffnen</button></div>
   <div class="roles">${(c.carry||[]).map((u,i)=>roleCard(c,u,"carry",i)).join("")}${(c.tank||[]).slice(0,1).map((u,i)=>roleCard(c,u,"tank",i)).join("")}</div>
   <div class="phasebar sect" id="d-board" role="group" aria-label="Phase und Level">${bar}</div>
   <div class="dgrid">
@@ -867,7 +885,7 @@ function renderSideGrid(){
   g.innerHTML=UL.filter(u=>(!side.cost||u.c===side.cost)&&(!q||u.n.toLowerCase().includes(q)||u.t.some(t=>t.toLowerCase().includes(q)))).sort((a,b)=>a.c-b.c||a.n.localeCompare(b.n))
     .map(u=>`<button data-champ="${esc(u.n)}" data-unit="${esc(u.n)}" aria-pressed="${st.champ===u.n}" title="${esc(u.n)}">${tile(u.n)}</button>`).join("");
 }
-function renderSide(){
+function renderSide(){if(typeof syncHash==="function")syncHash();
   const s=$("#side");
   if(st.view==="augs"){const a=AUGMAP[st.aug]||null;s.innerHTML=a?augDetail(a):`<div class="panel sbox"><h3>Augment wählen</h3><p class="muted" style="margin:0;font-size:13px">Klick links auf ein Augment, dann siehst du hier Beschreibung, Platzierung und passende Comps.</p></div>`;return}
   const det=st.champ?champDetail(st.champ):"";
@@ -898,7 +916,7 @@ $("#ch-trait").onchange=e=>{chf.trait=e.target.value;renderChamps()};
 /* Augments-Ansicht */
 const auf={rar:"alle",cat:"alle",q:""};
 const AUGCATS=[...new Set(AUGS.flatMap(a=>a.c))].sort((a,b)=>a.localeCompare(b));
-function renderAugs(){
+function renderAugs(){if(typeof syncHash==="function")syncHash();
   $("#aug-intro").textContent=`Alle ${AUGS.length} Augments aus Set 19. ${DATA.augstats?"Mit Platzierungen von MetaTFT.":"Auf dem PBE liefert MetaTFT noch keine Augment-Platzierungen. Sie erscheinen hier automatisch, sobald es Daten gibt. Bis dahin siehst du, welche Comps über Trait oder Champion zum Augment passen."} Die Beschreibungen stammen aus den offiziellen Set-Daten und sind auf Englisch. Klick ein Augment an und dann „Auf Deutsch übersetzen“, die Übersetzung bleibt in deinem Browser gespeichert.`;
   chipRow("#au-rar",[["alle","Alle"],["Silver","Silber"],["Gold","Gold"],["Prismatic","Prismatisch"]],auf.rar,"aurar");
   chipRow("#au-cat",[["alle","Alle"],...AUGCATS.map(c=>[c,c])],auf.cat,"aucat");
@@ -913,8 +931,8 @@ $("#au-search").oninput=e=>{auf.q=e.target.value;renderAugs()};
 /* Gemeinsame Klicks: Champion, Comp, Augment, Builder */
 document.addEventListener("click",e=>{
   const ch=e.target.closest("[data-champ]");if(ch&&!e.target.closest("#pgrid")){st.champ=ch.dataset.champ;renderSide();if(st.view==="champs")renderChamps();else document.querySelectorAll("#s-grid [data-champ]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.champ===st.champ));const sd=$("#side");if(DRAWER.has(st.view)){openSide(true);sd.scrollTop=0}else if(sd.getBoundingClientRect().top<0||innerWidth<1100)sd.scrollIntoView({behavior:"auto",block:"start"});return}
-  const gc=e.target.closest("[data-gocomp]");if(gc){st.comp=gc.dataset.gocomp;detailPick={lvl:null,i:0};if(location.hash!=="#comps")location.hash="comps";else{renderCards();renderDetail()}setTimeout(()=>$("#detail").scrollIntoView(),60);return}
-  const ga=e.target.closest("[data-goaug]");if(ga){st.aug=ga.dataset.goaug;if(location.hash!=="#augs")location.hash="augs";else{renderAugs();renderSide()}return}
+  const gc=e.target.closest("[data-gocomp]");if(gc){st.comp=gc.dataset.gocomp;detailPick={lvl:null,i:0};if(!location.hash.startsWith("#comps"))location.hash="comps";else{renderCards();renderDetail()}setTimeout(()=>$("#detail").scrollIntoView(),60);return}
+  const ga=e.target.closest("[data-goaug]");if(ga){st.aug=ga.dataset.goaug;if(!location.hash.startsWith("#augs"))location.hash="augs";else{renderAugs();renderSide()}return}
   const ab=e.target.closest("[data-addb]");if(ab){placeOne(ab.dataset.addb);location.hash="builder";return}
 });
 
@@ -1371,7 +1389,7 @@ function mainTrait(c){const ts=Object.keys(TB).sort((a,b)=>b.length-a.length);re
 function traitColor(c){const t=mainTrait(c);let h=TRAIT_HUE[t];if(h==null){h=0;for(const ch of (t||c.name))h=(h*31+ch.charCodeAt(0))%360}return `hsl(${h} 72% 58%)`}
 
 /* ===== Start: Was spiele ich jetzt? ===== */
-function openComp(id){st.comp=id;if(location.hash==="#comps")route();else location.hash="comps"}
+function openComp(id){st.comp=id;if(location.hash.startsWith("#comps"))route();else location.hash="comps"}
 function renderStart(){
   const best=g=>COMPS.filter(c=>STYLE_GROUP(c.style)===g).sort((a,b)=>a.avg-b.avg)[0];
   const lbl={reroll:"Bester Reroll",standard:"Bestes Standard",fast:"Beste schnell auf 8/9"};
@@ -1392,6 +1410,8 @@ function renderStart(){
     <div class="shead"><h2>Trend</h2><small>Veränderung Ø Platz in den letzten ${DATA.trendH||24} Std.</small></div>
     <div class="movers"><div class="panel"><div class="lbl" style="margin-bottom:6px">Im Aufwind</div>${up.map(mv).join("")||'<div class="empty">Gerade keine großen Gewinner.</div>'}</div>
     <div class="panel"><div class="lbl" style="margin-bottom:6px">Abwärts</div>${down.map(mv).join("")||'<div class="empty">Gerade keine großen Verlierer.</div>'}</div></div>
+    <div class="shead"><h2>Items, die gerade alle bauen</h2><small>In wie vielen Comps das Item auf Carry oder Tank landet</small></div>
+    <div class="irank">${itemRanking().slice(0,12).map(r=>`<div class="ir" title="${esc([...r.comps].join(", "))}">${itemBadge(r.i)}<div><b>${esc(r.i)}</b><small>${r.comps.size} Comps · ${r.role.carry>=r.role.tank?"Carry":"Tank"} · Ø ${num(r.avg.toFixed(2))}</small></div></div>`).join("")}</div>
     <div class="shead"><h2>Tier-Liste</h2><small>S bis Ø 4,25 · A bis 4,60 · B bis 4,90</small></div>
     <div class="tierlist">${tiers}</div>`;
 }
@@ -1418,8 +1438,8 @@ function doSearch(){
 }
 function goHit(r){if(!r)return;$("#q").value="";$("#qres").classList.add("hidden");$("#q").blur();
   if(r.k==="comp")openComp(r.id);
-  else if(r.k==="champ"){st.champ=r.n;if(location.hash==="#champs")route();else location.hash="champs"}
-  else if(r.k==="aug"){st.aug=r.n;if(location.hash==="#augs")route();else location.hash="augs"}
+  else if(r.k==="champ"){st.champ=r.n;if(location.hash.startsWith("#champs"))route();else location.hash="champs"}
+  else if(r.k==="aug"){st.aug=r.n;if(location.hash.startsWith("#augs"))route();else location.hash="augs"}
   else {location.hash="items";setTimeout(()=>{const f=document.querySelector("#view-items input[type=search],#view-items input");if(f){f.value=r.n;f.dispatchEvent(new Event("input"))}},60)}}
 $("#q").addEventListener("input",doSearch);
 $("#q").addEventListener("focus",doSearch);
@@ -1476,6 +1496,10 @@ function posTips(c,names){
   return `<div class="ptips"><h4>Positionierung</h4><ul>${out.map(t=>`<li>${t}</li>`).join("")}</ul></div>`;
 }
 
+/* Item-Ranking: welche Items die Carries und Tanks der Comps gerade tragen */
+function itemRanking(){const m={};COMPS.forEach(c=>{holders(c).forEach(u=>{const x=c.items[u];if(!x)return;const role=roleIn(c,u);new Set(x.i).forEach(i=>{if(!(DATA.recipes||{})[i]&&!Object.keys(DATA.recipes||{}).some(k=>ikey(k)===ikey(i)))return;const r=m[i]=m[i]||{i,n:0,w:0,s:0,comps:new Set(),role:{carry:0,tank:0}};r.n+=x.n;r.s+=x.avg*x.n;r.comps.add(c.name);if(role)r.role[role]++})})});
+  return Object.values(m).filter(r=>r.comps.size>=2).map(r=>({...r,avg:r.s/r.n})).sort((a,b)=>b.comps.size-a.comps.size||a.avg-b.avg)}
+
 const VIEWS=["start","comps","early","mid","late","champs","augs","unlocks","assist","items","roll","builder","overlay","quiz"];
 const FULL=new Set(["start","assist","items","roll","overlay","quiz"]);
 const DRAWER=new Set(["comps","early","mid","late"]);
@@ -1497,17 +1521,25 @@ function renderView(h){
 }
 function rerender(){renderView(st.view||"comps")}
 function route(){
-  let h=location.hash.slice(1)||"start";if(!VIEWS.includes(h))h="start";st.view=h;
+  let [h,sub]=(location.hash.slice(1)||"start").split("/");sub=sub?decodeURIComponent(sub):"";if(!VIEWS.includes(h))h="start";st.view=h;
+  if(sub){if(h==="comps"&&COMPS.some(c=>c.id===sub)){if(st.comp!==sub){st.comp=sub;detailPick={lvl:null,i:0}}}else if(h==="champs"&&U[sub])st.champ=sub;else if(h==="augs"&&AUGMAP[sub])st.aug=sub}
   document.querySelectorAll(".views a").forEach(a=>a.dataset.v===h?a.setAttribute("aria-current","page"):a.removeAttribute("aria-current"));
   const show=(id,on)=>$(id).classList.toggle("hidden",!on);
   show("#view-comps",h==="comps");show("#view-start",h==="start");show("#view-phase",h in PH);show("#view-builder",h==="builder");show("#view-champs",h==="champs");show("#view-augs",h==="augs");
   show("#view-unlocks",h==="unlocks");show("#view-assist",h==="assist");show("#view-items",h==="items");show("#view-roll",h==="roll");show("#view-overlay",h==="overlay");show("#view-quiz",h==="quiz");
   $("#layout").classList.toggle("hidden",h==="builder");$("#layout").classList.toggle("full",FULL.has(h));$("#layout").classList.toggle("drawer",DRAWER.has(h));openSide(false);
   document.body.classList.toggle("ov",h==="overlay");
-  renderView(h);
+  renderView(h);syncHash();
   window.scrollTo(0,0);
 }
+/* Teilbare Links: #comps/<id>, #champs/<Name>, #augs/<Name> */
+function syncHash(){const v=st.view;const sub=v==="comps"?st.comp:v==="champs"?st.champ:v==="augs"?st.aug:"";const want="#"+v+(sub?"/"+encodeURIComponent(sub):"");if(location.hash!==want)history.replaceState(null,"",want)}
+function shareLink(){const url=location.href;const done=()=>toast("Link kopiert, schick ihn deinen Freunden");
+  if(navigator.share&&matchMedia("(pointer:coarse)").matches){navigator.share({title:document.title,url}).catch(()=>{});return}
+  if(navigator.clipboard)navigator.clipboard.writeText(url).then(done,()=>prompt("Link kopieren:",url));else prompt("Link kopieren:",url)}
 window.addEventListener("hashchange",route);
+document.addEventListener("click",e=>{if(e.target.closest("[data-share]")){e.preventDefault();shareLink()}});
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")openSide(false)});
 document.addEventListener("click",e=>{if(document.body.classList.contains("sideopen")&&!e.target.closest("#side")&&!e.target.closest("[data-champ]")&&!e.target.closest("[data-goaug]")&&!e.target.closest(".sidebtn"))openSide(false)},true);
 addEventListener("scroll",()=>$("#totop").classList.toggle("on",scrollY>600),{passive:true});
