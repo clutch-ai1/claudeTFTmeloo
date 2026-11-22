@@ -68,7 +68,7 @@ def ulist(s,sep):
         if n not in out: out.append(n)
     return out
 missing=set()
-def tier(a): return 'S' if a<=3.9 else 'A' if a<=4.4 else 'B' if a<=4.75 else 'C'
+def tier(a): return 'S' if a<=4.25 else 'A' if a<=4.6 else 'B' if a<=4.9 else 'C'
 comps=[]
 itemset=set()
 for avg,cid,name,n,pick,top4,win,lev in rows:
@@ -244,6 +244,14 @@ for c in comps:
     carries=[u for n,u in sorted(cand,reverse=True) if u in umap and not umap[u]['role']['tank'] and n>0]
     tanks=[u for n,u in sorted(cand,reverse=True) if u in umap and umap[u]['role']['tank']]
     if not tanks: tanks=[u for u in pool if c['pos'].get(u,[3])[0]==0]
+    # Der Champion im Comp-Namen (z. B. "Slayer Viego") ist der Main Carry, wenn er kein Tank ist
+    # (aber nur, wenn er auch wirklich oft Items trägt, sonst ist er nur namensgebend wie Alune bei Heartsteel)
+    nn=lambda u:c['items'][u]['n'] if u in c['items'] else 0
+    named=[u for u in umap if re.search(r'\b'+re.escape(u)+r'$',c['name']) and not umap[u]['role']['tank']]
+    if named and carries and nn(named[0])>=0.3*max(1,nn(carries[0])):
+        carries=[named[0]]+[u for u in carries if u!=named[0]]
+    # Zweiter Carry nur, wenn er wirklich oft Items trägt (mind. 35 % vom Main Carry)
+    if len(carries)>1 and nn(carries[1])<0.35*max(1,nn(carries[0])): carries=carries[:1]
     c['carry']=carries[:2];c['tank']=tanks[:2]
     ca=[]
     for x in d.get('augments') or []:

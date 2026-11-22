@@ -631,10 +631,13 @@ function placeUnits(names,comp){
   order.forEach(n=>{let [r,c]=want(n);if(occ[r+"-"+c]){let best=null,bd=99;for(let rr=0;rr<4;rr++)for(let cc=0;cc<7;cc++){if(occ[rr+"-"+cc])continue;const d=Math.abs(rr-r)*2.2+Math.abs(cc-c);if(d<bd){bd=d;best=[rr,cc]}}[r,c]=best}occ[r+"-"+c]=n;out[n]=[r,c]});
   return out;
 }
+/* Items nur auf die Units, die sie in der Comp wirklich tragen: Main Carry (+ zweiter Carry) und Main Tank */
+function holders(c){if(!c)return new Set();const h=new Set();(c.carry||[]).slice(0,2).forEach(u=>h.add(u));(c.tank||[]).slice(0,1).forEach(u=>h.add(u));return h}
 function miniBoard(names,comp,{withItems=false,stars=false,lg=false}={}){
+  const H=holders(comp);
   const p=placeUnits(names,comp);const grid={};Object.entries(p).forEach(([n,[r,c]])=>grid[r+"-"+c]=n);
   let h=`<div class="mb${lg?" lg":""}" aria-label="Board mit Positionen">`;
-  for(let r=0;r<4;r++){h+=`<div class="r${r%2?" o":""}">`;for(let c=0;c<7;c++){const n=grid[r+"-"+c];h+=`<div class="hx">${n?tile(n,{stars:stars&&comp?comp.stars[n]||0:0,items:withItems&&comp&&comp.items[n]?comp.items[n].i:[]}):""}</div>`}h+="</div>"}
+  for(let r=0;r<4;r++){h+=`<div class="r${r%2?" o":""}">`;for(let c=0;c<7;c++){const n=grid[r+"-"+c];h+=`<div class="hx">${n?tile(n,{stars:stars&&comp?comp.stars[n]||0:0,items:withItems&&comp&&H.has(n)&&comp.items[n]?comp.items[n].i:[]}):""}</div>`}h+="</div>"}
   return h+"</div>";
 }
 
@@ -683,7 +686,7 @@ function renderDetail(){
   const bar=["early","mid","late"].map((p,pi)=>(pi?'<span class="sep"></span>':"")+PH[p].lv.map(l=>{const has=boardsFor(c,l).length;return `<button class="chip${has?"":" dim"}" data-dlvl="${l}" aria-pressed="${l===lvl}" ${has?"":"disabled"}>${PH[p].label} · Level ${l}</button>`}).join(" ")).join("");
   const lvTimes=c.lv.map(x=>`<div class="tl"><b>Level ${x.l}</b>${esc(x.s)}</div>`).join("");
   const finals=c.final.map(x=>`<div class="tl"><b>Level ${x.l}</b>${pct(x.pct)} · Ø ${num(x.avg)}</div>`).join("");
-  const carries=Object.entries(c.items).filter(([u])=>c.core.includes(u)||(b&&b.u.includes(u))).sort((a,b)=>b[1].n-a[1].n).slice(0,6);
+  const H=holders(c);const carries=[...H].filter(u=>c.items[u]).map(u=>[u,c.items[u]]);
   d.innerHTML=`<div class="dnav"><button data-dgo="d-board">Board</button><button data-dgo="d-level">Leveln</button><button data-dgo="d-augs">Augments</button><button data-dgo="d-items">Items</button><button data-dgo="d-notes">Notizen</button></div><div class="dhead"><span class="tier ${c.tier}" style="min-width:42px;height:42px;font-size:24px">${c.tier}</span>
   <div><h2>${esc(c.name)}</h2><div class="sty">${esc(STYLE_LABEL(c.style))} · ${num(c.pick)} pro Lobby gespielt</div></div>
   <div class="kpis"><div><b>${num(c.avg)}${trendHtml(c.tr)}</b><small>Ø Platz</small></div><div><b>${pct(c.top4)}</b><small>Top 4</small></div><div><b>${pct(c.win)}</b><small>Win Rate</small></div></div>
@@ -863,7 +866,7 @@ function renderPhase(){
   entries.sort((a,b)=>a.o.avg-b.o.avg);
   const seen=new Set();const uniq=entries.filter(x=>{const k=x.o.u.slice().sort().join("|");if(seen.has(k))return false;seen.add(k);return true}).slice(0,24);
   $("#plist").innerHTML=uniq.map(({c,o,i})=>{
-    const carries=Object.entries(c.items).sort((a,b)=>b[1].n-a[1].n).filter(([u])=>c.core.includes(u)).slice(0,2);
+    const carries=[...holders(c)].filter(u=>c.items[u]).map(u=>[u,c.items[u]]).slice(0,2);
     return `<div class="panel pitem">
       <div class="boardwrap-s">${miniBoard(o.u,c,{withItems:!isEarly,stars:false})}</div>
       <div class="info"><div class="urow" style="--s:34px;gap:12px 6px">${o.u.map(n=>ucell(n,{})).join("")}</div>
@@ -888,7 +891,7 @@ const ROWS=4,COLS=7;
 let board=store.get("tft19-board2",{});let sel=null,poolCost=0,poolTrait="",poolSearch="";
 const ALLTRAITS=[...new Set(UL.flatMap(u=>u.t))].sort((a,b)=>a.localeCompare(b));
 function saveBoard(){store.set("tft19-board2",board)}
-function bestItemsFor(n,comp){return (comp&&comp.items[n]?comp.items[n].i:BEST[n]||[]).slice(0,3)}
+function bestItemsFor(n,comp){if(comp&&!holders(comp).has(n))return [];return (comp&&comp.items[n]?comp.items[n].i:BEST[n]||[]).slice(0,3)}
 function loadBoard(names,comp,label,withItems=true){
   board={};sel=null;const p=placeUnits(names,comp);
   names.forEach(n=>{const [r,c]=p[n];board[r+"-"+c]={n,s:comp&&comp.stars[n]?Math.min(3,comp.stars[n]):2,i:withItems?bestItemsFor(n,comp):[]}});
