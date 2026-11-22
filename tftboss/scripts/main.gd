@@ -51,6 +51,8 @@ var hud_units := {"board": [], "bench": []}
 var hud_orbs: Array = []
 var hud_items: Array = []
 var hud_ms := 0
+var hp_pending := -1
+var lv_pending := -1
 var orb_walks := 0
 var orb_ms := 0
 var orb_stage := ""
@@ -141,7 +143,7 @@ func _ready() -> void:
 	timer.start()
 	Meta.loaded.connect(_refresh_all)
 	_refresh_all()
-	_log_file("Start, Version 15, Bildschirm %d" % screen_idx)
+	_log_file("Start, Version 16, Bildschirm %d" % screen_idx)
 	if OS.get_name() == "Windows" and pilot.start():
 		await get_tree().create_timer(2.5).timeout
 		var st0 := pilot.state()
@@ -824,7 +826,11 @@ func _tick() -> void:
 
 	# Augments
 	var sn := Brain.stage_num(brain.stage)
-	if rects.has("augs") and active and sn in AUG_STAGES and aug_off_stage != brain.stage:
+	if use_ocr:
+		_aug_ocr(img)
+		if not brain.aug_offer.is_empty():
+			seen.append("Augments: " + " | ".join(brain.aug_offer))
+	elif rects.has("augs") and active and sn in AUG_STAGES and aug_off_stage != brain.stage:
 		var offer := []
 		var slots := _slots(img, "augs")
 		for i in slots.size():
@@ -880,6 +886,75 @@ func _on_stage(t: String) -> void:
 	brain.stage = t
 	stage_changed_ms = Time.get_ticks_msec()
 	aug_seen_full = false
+
+## Augment-Auswahl („Choose One“) mit der Texterkennung lesen: 3 Karten, Namen in der Kartenmitte
+const AUG_X := [0.273, 0.497, 0.722]
+var aug_ocr_ms := 0
+var aug_rerolled := [false, false, false]
+var aug_screen := false
+
+func _aug_ocr(img: Image) -> void:
+	var now := Time.get_ticks_msec()
+	if now - aug_ocr_ms < 1200:
+		return
+	aug_ocr_ms = now
+	var W := img.get_width()
+	var H := img.get_height()
+	var paths := [_ocr_png(img.get_region(Rect2i(int(0.40 * W), int(0.16 * H), int(0.20 * W), int(0.05 * H))), "aug_titel", 2)]
+	for i in 3:
+		var cx: float = AUG_X[i]
+		paths.append(_ocr_png(img.get_region(Rect2i(int((cx - 0.065) * W), int(0.485 * H), int(0.13 * W), int(0.04 * H))), "aug_name%d" % i, 3))
+	var t := pilot.ocr(paths)
+	if t.size() != 4:
+		return
+	var title := str(t[0]).to_upper().replace(" ", "")
+	var on := title.contains("CHOOSE") or title.contains("WÄHLE") or title.contains("WAHLE")
+	if not on:
+		if aug_screen:
+			aug_screen = false
+			_aug_taken()
+		return
+	if not aug_screen:
+		aug_screen = true
+		aug_rerolled = [false, false, false]
+	var offer := []
+	for i in 3:
+		offer.append(OcrRead.match_long(str(t[i + 1]), Meta.aug_names))
+	if offer.all(func(a): return a != "") and offer != brain.aug_offer:
+		brain.aug_offer = offer
+		aug_seen_full = true
+		_log_file("Augments: " + " | ".join(offer) + "  (Wertung %s)" % str(offer.map(func(a): return snappedf(brain.aug_score(a), 0.1))))
+		_refresh_all()
+
+## Schlechte Augment-Karten einmal neu rollen (Knopf unter der Karte). true = gerollt, auf neues Bild warten
+func _aug_reroll_step(now: int) -> bool:
+	if not aug_screen or brain.aug_offer.size() != 3:
+		return false
+	var sc := []
+	var best := -1e9
+	for a in brain.aug_offer:
+		var v := brain.aug_score(a)
+		sc.append(v)
+		best = maxf(best, v)
+	var worst := -1
+	for i in 3:
+		if aug_rerolled[i]:
+			continue
+		# Rollen, wenn die Karte klar schlechter als die beste ist, oder wenn alle schwach sind
+		if sc[i] < best - 2.0 or best < 0.5:
+			if worst < 0 or sc[i] < sc[worst]:
+				worst = i
+	if worst < 0:
+		return false
+	aug_rerolled[worst] = true
+	var sz := auto_last_img_size
+	pilot.click(DisplayServer.screen_get_position(screen_idx) + Vector2i(int(AUG_X[worst] * sz.x), int(0.811 * sz.y)))
+	_log("Augment neu gerollt: %s (Wertung %.1f, beste %.1f)" % [brain.aug_offer[worst], sc[worst], best])
+	brain.aug_offer = []
+	aug_ocr_ms = 0
+	auto_next_ms = now + 1800
+	last_action_ms = now
+	return true
 
 func _aug_taken() -> void:
 	# Du hast gewählt: ich gehe davon aus, dass du meinen Vorschlag genommen hast.
@@ -1227,6 +1302,21 @@ func _autopilot_step() -> void:
 	# Kugeln einsammeln / Karussell: Little Legend mit Rechtsklick laufen lassen
 	if _legend_step(now):
 		return
+	# Augment-Auswahl: das Gold ist dort verdeckt, deshalb vor der Gold-Prüfung
+	if use_ocr and aug_screen and brain.aug_offer.size() == 3:
+		if _aug_reroll_step(now):
+			return
+		var bi := 0
+		for i in 3:
+			if brain.aug_score(brain.aug_offer[i]) > brain.aug_score(brain.aug_offer[bi]):
+				bi = i
+		var sz0 := auto_last_img_size
+		pilot.click(DisplayServer.screen_get_position(screen_idx) + Vector2i(int(AUG_X[bi] * sz0.x), int(0.45 * sz0.y)))
+		_log("Augment genommen: %s (Wertung %.1f)" % [brain.aug_offer[bi], brain.aug_score(brain.aug_offer[bi])])
+		auto_next_ms = now + 2000
+		last_action_ms = now
+		_auto_status("Nimmt Augment.")
+		return
 	var acts := brain.advise()
 	# Gold kurz nicht lesbar: mit dem mitgerechneten Wert weiterspielen (höchstens 15 s lang)
 	if not gold_fresh and (now - gold_read_ms > 15000 or brain.gold < 0):
@@ -1235,6 +1325,16 @@ func _autopilot_step() -> void:
 	for a in acts:
 		match a["k"]:
 			"aug":
+				if use_ocr and aug_screen:
+					if _aug_reroll_step(now):
+						return
+					var sz := auto_last_img_size
+					pilot.click(DisplayServer.screen_get_position(screen_idx) + Vector2i(int(AUG_X[a["idx"]] * sz.x), int(0.45 * sz.y)))
+					_log("Augment: " + str(brain.aug_offer[a["idx"]]))
+					auto_next_ms = now + 1500
+					last_action_ms = now
+					_auto_status("Nimmt Augment.")
+					return
 				if rects.has("augs"):
 					pilot.click(_gpos("augs", a["idx"]))
 					_log("Augment: " + str(brain.aug_offer[a["idx"]]))
@@ -1854,7 +1954,9 @@ func _hud_tick(img: Image) -> void:
 		hud.learn(gcrop, brain.gold)     # Texterkennung hatte es: Ziffern merken
 	var lv := hud.level(img)
 	if lv > 0 and lv != brain.level:
-		brain.level = lv
+		if lv == lv_pending:
+			brain.level = lv
+		lv_pending = lv
 	elif lv < 0 and brain.level > 0:
 		hud.learn(img.get_region(Hud.rect(img, Hud.R_LEVEL)), brain.level)
 	# Spielerliste an den Porträts
@@ -1866,7 +1968,11 @@ func _hud_tick(img: Image) -> void:
 			if int(e["hp"]) >= 0:
 				hs.append(int(e["hp"]))
 			if e["own"] and int(e["hp"]) >= 0 and int(e["hp"]) <= 150:
-				brain.hp = int(e["hp"])
+				# Nur übernehmen, wenn zweimal hintereinander gleich gelesen (kurze Fehllesungen wie 77 -> 30 ignorieren)
+				var hv := int(e["hp"])
+				if hv == brain.hp or hv == hp_pending:
+					brain.hp = hv
+				hp_pending = hv
 		if hs.size() >= 2:
 			brain.lobby_hp = hs
 	# Board, Bank, Kugeln, Items (etwas seltener, kostet Zeit)

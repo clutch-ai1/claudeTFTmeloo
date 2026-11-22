@@ -240,3 +240,23 @@ static func same_name(a: String, b: String) -> bool:
 	if x == "" or y == "":
 		return false
 	return x == y or lev(x, y) <= maxi(1, y.length() / 4) or (mini(x.length(), y.length()) >= 4 and (x.contains(y) or y.contains(x)))
+
+
+## Ganzen Text (mehrere Wörter) dem passendsten Namen zuordnen, z. B. Augment-Namen
+static func match_long(t: String, names: Array) -> String:
+	var x := _norm(t.replace("#", " "))
+	if x.length() < 3:
+		return ""
+	var best := ""
+	var bd := 99
+	for n in names:
+		var nn := _norm(n)
+		if nn.length() < 3:
+			continue
+		var d := lev(x, nn)
+		if x.contains(nn) and nn.length() >= 5:
+			d = mini(d, (x.length() - nn.length()) / 3)
+		if d <= maxi(1, nn.length() / 4) and d < bd:
+			bd = d
+			best = n
+	return best
