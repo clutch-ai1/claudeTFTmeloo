@@ -33,6 +33,8 @@ var bench_buys := 0              # alle Käufe des Bots seit Spielstart (grobe B
 var locked := false
 
 const SIDE := ["links", "Mitte", "rechts"]
+## Level-Zeitpunkte, wie meloo im aufgenommenen Spiel gespielt hat
+const MELOO_LEVELS := [{"s": "2-1", "l": 4}, {"s": "2-3", "l": 5}, {"s": "3-1", "l": 6}, {"s": "3-6", "l": 7}, {"s": "4-2", "l": 8}, {"s": "4-5", "l": 9}]
 const SPEC_WHY := ["passt zu den Traits", "passt zum Board", "starke Unit", "Board füllen"]
 
 static func stage_num(s: String) -> int:
@@ -584,6 +586,9 @@ func econ_advice(g: int) -> Array:
 		var lvplan: Array = target.get("lv", [])
 		if lvplan.is_empty():
 			lvplan = _standard_levels(style)
+		# Gelernt aus meloos Spiel (Lernmodus): 4 bei 2-1, 5 bei 2-3, 6 bei 3-1, 7 bei 3-6, 8 bei 4-2, 9 bei 4-5
+		if rr == 0:
+			lvplan = MELOO_LEVELS
 		for e in lvplan:
 			if sn >= stage_num(str(e["s"])):
 				want = maxi(want, int(e["l"]))
@@ -605,6 +610,12 @@ func econ_advice(g: int) -> Array:
 	elif plan == "loss" and sn == 32 and hp >= 0 and hp < 60 and g > 30:
 		roll = "Lossstreak vorbei: rollen bis 30 Gold zum Stabilisieren (D)"
 		until = 30
+	elif rr == 0 and sn == 32 and g > 50 and level >= 6:
+		roll = "Stage 3-2: kurz rollen bis 40 Gold, Board verstärken (D)"
+		until = 40
+	elif rr == 0 and level >= 9 and sn >= 51:
+		roll = "Level 9: alles rollen für das End-Board (D)"
+		until = 0
 	elif rr > 0 and level >= rr and sn >= 31:
 		var m3 := _missing_three_stars()
 		if m3.size() > 0 and g > 50:

@@ -143,7 +143,7 @@ func _ready() -> void:
 	timer.start()
 	Meta.loaded.connect(_refresh_all)
 	_refresh_all()
-	_log_file("Start, Version 16, Bildschirm %d" % screen_idx)
+	_log_file("Start, Version 17, Bildschirm %d" % screen_idx)
 	if OS.get_name() == "Windows" and pilot.start():
 		await get_tree().create_timer(2.5).timeout
 		var st0 := pilot.state()
@@ -735,7 +735,7 @@ func _tick() -> void:
 		seen.append("%s %s" % [NUM_NAME[key], t if t != "" else "-"])
 
 	# Eigenes Leben
-	if rects.has("hp") and not done_ocr.has("hp"):
+	if rects.has("hp") and not done_ocr.has("hp") and not use_ocr:
 		var crop_hp := _crop(img, "hp")
 		var rh := vision.read_number("hp", crop_hp)
 		if rh["ok"] and str(rh["text"]).is_valid_int():
@@ -1439,8 +1439,8 @@ func _read_traits_now() -> Dictionary:
 func _scout(manual: bool = false) -> void:
 	if scouting:
 		return
-	if not (rects.has("lobby") and rects.has("traits")):
-		_auto_status("Zum Scouten „Leben aller Spieler“ und „Trait-Leiste“ kalibrieren.")
+	if not rects.has("traits"):
+		_auto_status("Zum Scouten die „Trait-Leiste“ kalibrieren.")
 		return
 	if not pilot.ok and not pilot.start():
 		_auto_status(pilot.error)
@@ -1455,48 +1455,24 @@ func _scout(manual: bool = false) -> void:
 	scouting = true
 	scouted_stage = brain.stage
 	var mine := brain.my_traits.duplicate()
-	var shot0 := DisplayServer.screen_get_image(screen_idx)
-	var ents := _lobby_entries(shot0) if shot0 != null and not shot0.is_empty() else []
-	# Mich finden: Eintrag ohne Namen, sonst eindeutiges Leben
-	var me := -1
-	for i in ents.size():
-		if ents[i]["own"]:
-			me = i
-	if me < 0 and brain.hp >= 0:
-		var hits := []
-		for i in ents.size():
-			if int(ents[i]["hp"]) == brain.hp:
-				hits.append(i)
-		if hits.size() == 1:
-			me = hits[0]
-	if ents.size() < 2 or me < 0:
-		_log("Scouten übersprungen: Spielerliste nicht sicher gelesen (%d Einträge)." % ents.size())
-		scouting = false
-		return
+	# Wie du es machst: Tasten 1 bis 8 springen zu den Boards der Spieler, Leertaste zurück zum eigenen
 	var scores := []
-	for i in ents.size():
-		if i == me or int(ents[i]["hp"]) == 0:
-			continue
-		pilot.click(ents[i]["p"])
-		await get_tree().create_timer(0.5).timeout
+	for k in range(1, 9):
+		pilot.key(0x30 + k)
+		await get_tree().create_timer(0.55).timeout
 		var tc := _read_traits_now()
 		if tc.is_empty():
 			continue
 		if not mine.is_empty() and _same_traits(mine, tc) and _same_traits(tc, mine):
-			continue   # zeigt noch mein Board, Klick ging nicht durch
+			continue   # das ist mein eigenes Board
 		scores.append(OcrRead.trait_power(tc))
-		_log_file("Gegner %s (%d Leben): %s" % [ents[i]["name"], int(ents[i]["hp"]), str(tc)])
-	# Zurück zum eigenen Board und prüfen, dass es wirklich meins ist
-	var back := false
-	for attempt in 3:
-		pilot.click(ents[me]["p"])
-		await get_tree().create_timer(0.45).timeout
-		var tc2 := _read_traits_now()
-		if mine.is_empty() or _same_traits(mine, tc2):
-			back = true
-			break
-	if not back:
-		_log("Rückweg zum eigenen Board nicht bestätigt.")
+		_log_file("Gegner (Taste %d): %s" % [k, str(tc)])
+	pilot.key(0x20)
+	await get_tree().create_timer(0.45).timeout
+	var tc2 := _read_traits_now()
+	if not mine.is_empty() and not _same_traits(mine, tc2):
+		pilot.key(0x20)    # nochmal, sicher ist sicher
+		_log_file("Rückweg mit Leertaste nicht bestätigt, nochmal gedrückt.")
 	brain.my_traits = mine
 	trait_block_ms = Time.get_ticks_msec() + 1200
 	last_action_ms = Time.get_ticks_msec()
@@ -1969,14 +1945,14 @@ func _hud_tick(img: Image) -> void:
 		for e in lb:
 			if int(e["hp"]) >= 0:
 				hs.append(int(e["hp"]))
-			if e["own"] and int(e["hp"]) >= 0 and int(e["hp"]) <= 150:
-				# Nur übernehmen, wenn zweimal hintereinander gleich gelesen (kurze Fehllesungen wie 77 -> 30 ignorieren)
-				var hv := int(e["hp"])
-				if hv == brain.hp or hv == hp_pending:
-					brain.hp = hv
-				hp_pending = hv
 		if hs.size() >= 2:
 			brain.lobby_hp = hs
+	# Mein Leben: große Zahl neben meinem Porträt. Nur übernehmen, wenn zweimal hintereinander gleich gelesen
+	var hv := hud.own_hp(img)
+	if hv >= 0:
+		if hv == brain.hp or hv == hp_pending:
+			brain.hp = hv
+		hp_pending = hv
 	# Board, Bank, Kugeln, Items (etwas seltener, kostet Zeit)
 	if now - hud_ms > 1500:
 		hud_ms = now
@@ -2084,13 +2060,7 @@ func _ocr_tick(img: Image) -> Dictionary:
 			if lv != brain.level:
 				brain.level = lv
 				ch = true
-	if T.has("hp"):
-		var h := OcrRead.hp(T["hp"])
-		if h >= 0:
-			out["done"]["hp"] = true
-			if h != brain.hp:
-				brain.hp = h
-				ch = true
+	# Leben kommt nur noch aus der eigenen Ziffernerkennung (_hud_tick), die Texterkennung hat es zu oft verwechselt
 	if T.has("lobby"):
 		var lb0 := OcrRead.lobby(T["lobby"])
 		# Mein Eintrag hat keinen Namen. Krümel (Level-Abzeichen usw.) ohne Namen nur einmal zählen: den mit dem meisten Leben.
@@ -2110,12 +2080,6 @@ func _ocr_tick(img: Image) -> Dictionary:
 			if hs != brain.lobby_hp:
 				brain.lobby_hp = hs
 				ch = true
-			if not rects.has("hp"):
-				for e in lb:
-					if str(e["name"]) == "" and int(e["hp"]) != brain.hp:
-						brain.hp = int(e["hp"])
-						out["done"]["hp"] = true
-						ch = true
 	if T.has("streak") and _in_game():
 		var fcol := _flame_color(img.get_region(fl))
 		var nums := OcrRead.ints(T["streak"])

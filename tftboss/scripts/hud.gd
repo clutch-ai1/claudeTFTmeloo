@@ -237,6 +237,35 @@ func lobby(img: Image) -> Array:
 		out.append(e)
 	return out
 
+## Mein Leben: große weiße Zahl im dunklen Pfeil-Kasten links neben meinem Porträt (x≈1793-1828).
+## Sucht die ganze Liste ab, weil mein Platz je nach Rang wandert. -1 = nicht gefunden
+func own_hp(img: Image) -> int:
+	var W := img.get_width()
+	var H := img.get_height()
+	var sx := float(W) / 1920.0
+	var sy := float(H) / 1080.0
+	var a := -1
+	for y in range(int(150 * sy), int(845 * sy)):
+		var br := 0
+		var dk := 0
+		for x in range(int(1793 * sx), int(1828 * sx)):
+			var c := img.get_pixel(x, y)
+			if c.r > 0.78 and c.g > 0.78 and c.b > 0.78:
+				br += 1
+			elif c.r < 0.27 and c.g < 0.27 and c.b < 0.27:
+				dk += 1
+		if br >= 2 and dk >= int(8 * sx):
+			if a < 0:
+				a = y
+		elif a >= 0:
+			var h := y - a
+			if h >= int(13 * sy) and h <= int(24 * sy):
+				var v := read_int(img.get_region(Rect2i(int(1788 * sx), a - int(6 * sy), int(42 * sx), h + int(12 * sy))))
+				if v >= 0 and v <= 150:
+					return v
+			a = -1
+	return -1
+
 # ================================================================= Board
 
 ## Blaue Beute-Kugeln auf dem Board (gut sichtbar, satt blau/türkis). Ergebnis: Bildschirm-Punkte
