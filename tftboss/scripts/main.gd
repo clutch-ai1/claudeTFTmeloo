@@ -66,6 +66,9 @@ var item_last_count := -1
 var item_fail := 0
 var panel_fix_ms := 0
 var sell_ms := 0
+var arranging := false
+var arranged_stage := ""
+var my_units: Array = []          # [{"p": Punkt, "n": Name, "bench": bool}] durch Anklicken erkannt
 var sweep: Array = []            # Punkte, zu denen der Little Legend läuft (Kugeln einsammeln)
 var sweep_ms := 0
 var carousel_ms := 0
@@ -143,7 +146,7 @@ func _ready() -> void:
 	timer.start()
 	Meta.loaded.connect(_refresh_all)
 	_refresh_all()
-	_log_file("Start, Version 17, Bildschirm %d" % screen_idx)
+	_log_file("Start, Version 18, Bildschirm %d" % screen_idx)
 	if OS.get_name() == "Windows" and pilot.start():
 		await get_tree().create_timer(2.5).timeout
 		var st0 := pilot.state()
@@ -680,7 +683,7 @@ func _in_game() -> bool:
 	return now - stage_seen_ms < 20000 or now - shop_seen_ms < 8000
 
 func _tick() -> void:
-	if not running or rects.is_empty() or busy or scouting:
+	if not running or rects.is_empty() or busy or scouting or arranging:
 		return
 	busy = true
 	var t0 := Time.get_ticks_msec()
@@ -1711,6 +1714,128 @@ func _digits_selflearn(key: String, crop, ocr_val: int, maxv: int) -> int:
 		return int(r["text"])
 	return -1
 
+# ================================================================= Aufstellen
+
+## Hex-Mitten des eigenen Boards (1080p gemessen, Reihe 0 = vorne beim Gegner, Reihe 3 = hinten bei der Bank)
+const HEX_Y := [445, 520, 595, 670]
+const HEX_X0 := [553, 602, 528, 580]
+const HEX_DX := [117, 120, 124, 127.5]
+
+func _hex_pt(r: int, c: int) -> Vector2i:
+	var sz := auto_last_img_size
+	var sx := float(sz.x) / 1920.0
+	var sy := float(sz.y) / 1080.0
+	return Vector2i(int((HEX_X0[r] + HEX_DX[r] * c) * sx), int(HEX_Y[r] * sy))
+
+func _hex_of(p: Vector2i) -> Vector2i:
+	var best := Vector2i(-1, -1)
+	var bd := 1e9
+	for r in 4:
+		for c in 7:
+			var d := (Vector2(_hex_pt(r, c)) - Vector2(p)).length()
+			if d < bd:
+				bd = d
+				best = Vector2i(r, c)
+	return best
+
+## Name der angeklickten Unit aus ihrem Infofenster rechts lesen
+func _unit_name_at(p: Vector2i) -> String:
+	pilot.click(_img_to_screen(p))
+	await get_tree().create_timer(0.4).timeout
+	var shot := DisplayServer.screen_get_image(screen_idx)
+	if shot == null or shot.is_empty():
+		return ""
+	var W := shot.get_width()
+	var H := shot.get_height()
+	var t := pilot.ocr([_ocr_png(shot.get_region(Rect2i(int(0.872 * W), int(0.05 * H), int(0.125 * W), int(0.36 * H))), "infofenster", 2)])
+	if t.size() != 1:
+		return ""
+	return OcrRead.match_name(str(t[0]), Meta.unit_names)
+
+## Units erkennen (anklicken, Namen lesen) und nach der Ziel-Comp aufstellen:
+## Positionen aus den Comp-Daten, sonst Tanks nach vorne, alle anderen nach hinten.
+func _arrange() -> void:
+	if arranging or brain.target.is_empty():
+		return
+	arranging = true
+	var shot := DisplayServer.screen_get_image(screen_idx)
+	var un := Hud.units(shot)
+	my_units = []
+	for p in un["board"]:
+		my_units.append({"p": p, "n": await _unit_name_at(p), "bench": false})
+	for p in un["bench"]:
+		my_units.append({"p": p, "n": await _unit_name_at(p), "bench": true})
+	pilot.click(_screen_pt(0.50, 0.16))     # Infofenster schließen
+	await get_tree().create_timer(0.3).timeout
+	var names := my_units.filter(func(u): return u["n"] != "").map(func(u): return u["n"])
+	_log_file("Meine Units: " + ", ".join(my_units.map(func(u): return ("%s%s" % [u["n"] if u["n"] != "" else "?", " (Bank)" if u["bench"] else ""]))))
+	# Gekaufte Units zählen (für Paare, 2-Sterne, Verkaufen)
+	var cnt := {}
+	for n in names:
+		cnt[n] = int(cnt.get(n, 0)) + 1
+	if not cnt.is_empty():
+		brain.owned = cnt
+	# Zielplätze
+	var pos: Dictionary = brain.target.get("pos", {})
+	var taken := {}
+	var board := my_units.filter(func(u): return not u["bench"])
+	var moves := []
+	# Welche Units sollen aufs Board? Board-Units bleiben, Bank-Units der Comp ersetzen nichts (TFT füllt selbst auf)
+	for u in board:
+		var n: String = u["n"]
+		var want := Vector2i(-1, -1)
+		if pos.has(n):
+			want = Vector2i(int(pos[n][0]), int(pos[n][1]))
+		elif n != "" and Meta.units.has(n):
+			var tank := false
+			var role = Meta.units[n].get("role")
+			if typeof(role) == TYPE_DICTIONARY:
+				tank = bool(role.get("tank", false))
+			want = Vector2i(0 if tank else 3, -1)
+		else:
+			continue
+		u["want"] = want
+	# Feste Plätze zuerst, dann Reihen auffüllen (Mitte zuerst)
+	var order := [3, 2, 4, 1, 5, 0, 6]
+	for pass_fixed in [true, false]:
+		for u in board:
+			if not u.has("want"):
+				continue
+			var w: Vector2i = u["want"]
+			if (w.y >= 0) != pass_fixed:
+				continue
+			var tgt := w
+			if w.y < 0 or taken.has(w):
+				for c in order:
+					var cand := Vector2i(w.x, c)
+					if not taken.has(cand):
+						tgt = cand
+						break
+			taken[tgt] = true
+			if _hex_of(u["p"]) != tgt:
+				moves.append([u, tgt])
+	var done := 0
+	for m in moves:
+		if done >= 8:
+			break
+		var u: Dictionary = m[0]
+		var tgt: Vector2i = m[1]
+		var from: Vector2i = u["p"]
+		if _hex_of(from) == tgt:
+			continue   # durch einen früheren Tausch schon richtig
+		var to := _hex_pt(tgt.x, tgt.y)
+		pilot.drag(_img_to_screen(from), _img_to_screen(to))
+		await get_tree().create_timer(0.35).timeout
+		# Stand dort schon jemand, tauschen die beiden die Plätze
+		for v in board:
+			if v != u and _hex_of(v["p"]) == tgt:
+				v["p"] = from
+		u["p"] = to
+		done += 1
+		_log("Stellt %s auf Reihe %d, Platz %d" % [u["n"], tgt.x + 1, tgt.y + 1])
+	arranging = false
+	last_action_ms = Time.get_ticks_msec()
+
 ## Laufweg im Zickzack über das ganze eigene Board, falls Kugeln da liegen, die ich nicht sehe (graue)
 const SWEEP := [[0.29, 0.40], [0.29, 0.25], [0.40, 0.20], [0.40, 0.40], [0.40, 0.58], [0.52, 0.58], [0.52, 0.38], [0.52, 0.20], [0.64, 0.20], [0.64, 0.40], [0.64, 0.58], [0.72, 0.40], [0.72, 0.22], [0.50, 0.30]]
 
@@ -1747,6 +1872,11 @@ func _safe_target(p: Vector2i) -> Vector2i:
 ## true, wenn gerade gelaufen/gezogen wird (dann in diesem Schritt nichts anderes tun)
 func _legend_step(now: int) -> bool:
 	var sn := Brain.stage_num(brain.stage)
+	# Einmal pro Runde in der Planungsphase: eigene Units erkennen und nach Comp aufstellen
+	if sn >= 21 and sn % 10 != 4 and arranged_stage != brain.stage and now - stage_changed_ms > 3000 and now - stage_changed_ms < 20000 and shop_fresh and not hud_units["board"].is_empty():
+		arranged_stage = brain.stage
+		_arrange()
+		return true
 	var sz := auto_last_img_size
 	# Karussell (2-4, 3-4, ...): immer wieder zur Mitte laufen, dann schnappt er sich eine Unit
 	if sn >= 24 and sn % 10 == 4 and now - stage_changed_ms < 30000:
@@ -1802,10 +1932,25 @@ func _sell_step(now: int) -> bool:
 		why = "1 Gold bis zur nächsten Zinsstufe"
 	if why == "":
 		return false
-	var u: Vector2i = bench[0]
-	for b in bench:
-		if b.x > u.x:
-			u = b
+	# Am liebsten eine Unit verkaufen, die nicht zur Comp gehört und kein Paar ist (Namen vom Anklicken)
+	var rel := brain.relevant(brain.target) if not brain.target.is_empty() else {}
+	var u := Vector2i(-1, -1)
+	for mu in my_units:
+		if not mu["bench"] or mu["n"] == "":
+			continue
+		var n: String = mu["n"]
+		if rel.has(n) or int(brain.owned.get(n, 0)) >= 2:
+			continue
+		for b in bench:
+			if (Vector2(b) - Vector2(mu["p"])).length() < 0.03 * auto_last_img_size.x:
+				u = b
+	if u.x < 0:
+		if why != "Bank voll":
+			return false      # nichts sicher Überflüssiges: lieber nicht verkaufen
+		u = bench[0]
+		for b in bench:
+			if b.x > u.x:
+				u = b
 	pilot.hover_key(_img_to_screen(u), Autopilot.VK_E)
 	sell_ms = now + 4000
 	last_action_ms = now

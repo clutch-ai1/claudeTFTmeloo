@@ -586,8 +586,8 @@ func econ_advice(g: int) -> Array:
 		var lvplan: Array = target.get("lv", [])
 		if lvplan.is_empty():
 			lvplan = _standard_levels(style)
-		# Gelernt aus meloos Spiel (Lernmodus): 4 bei 2-1, 5 bei 2-3, 6 bei 3-1, 7 bei 3-6, 8 bei 4-2, 9 bei 4-5
-		if rr == 0:
+		# Comp ohne eigenen Level-Plan und kein Reroll: so leveln, wie meloo im aufgenommenen Spiel
+		if rr == 0 and target.get("lv", []).is_empty():
 			lvplan = MELOO_LEVELS
 		for e in lvplan:
 			if sn >= stage_num(str(e["s"])):
@@ -613,7 +613,7 @@ func econ_advice(g: int) -> Array:
 	elif rr == 0 and sn == 32 and g > 50 and level >= 6:
 		roll = "Stage 3-2: kurz rollen bis 40 Gold, Board verstärken (D)"
 		until = 40
-	elif rr == 0 and level >= 9 and sn >= 51:
+	elif rr == 0 and level >= 9 and sn >= 51 and style.begins_with("Fast 9"):
 		roll = "Level 9: alles rollen für das End-Board (D)"
 		until = 0
 	elif rr > 0 and level >= rr and sn >= 31:

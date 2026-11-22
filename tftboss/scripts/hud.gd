@@ -374,7 +374,7 @@ static func units(img: Image) -> Dictionary:
 	var bench := []
 	for b in bars:
 		var body := Vector2i(b.x + int(0.012 * W), b.y + int(0.045 * H))
-		if b.y > int(0.635 * H):
+		if b.y > int(0.62 * H):
 			bench.append(body)
 		else:
 			board.append(body)
