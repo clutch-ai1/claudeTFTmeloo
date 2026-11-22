@@ -15,6 +15,7 @@ func _ready():
 	print("Brain: stage=", m.brain.stage, " gold=", m.brain.gold, " lvl=", m.brain.level, " hp=", m.brain.hp, " lobby=", m.brain.lobby_hp, " streak=", m.brain.streak, " plan=", m.brain.plan)
 	print("HUD: units=", m.hud_units, " orbs=", m.hud_orbs, " items=", m.hud_items.size())
 	m.auto_on = true; m.auto_title = "TFT"; m.scouted_stage = m.brain.stage
+	m.bot_dir = "/tmp/bt"; DirAccess.make_dir_recursive_absolute("/tmp/bt")
 	if OS.get_environment("ARR") != "":
 		m.brain.target = Meta.comps[0]
 		m.arranged_stage = ""

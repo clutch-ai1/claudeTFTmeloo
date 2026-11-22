@@ -67,6 +67,10 @@ var item_fail := 0
 var panel_fix_ms := 0
 var sell_ms := 0
 var arranging := false
+var bot_dir := ""
+var bot_frames := 0
+var bot_shot_ms := 0
+const BOT_MAX_FRAMES := 1500
 var arranged_stage := ""
 var my_units: Array = []          # [{"p": Punkt, "n": Name, "bench": bool}] durch Anklicken erkannt
 var sweep: Array = []            # Punkte, zu denen der Little Legend läuft (Kugeln einsammeln)
@@ -146,7 +150,7 @@ func _ready() -> void:
 	timer.start()
 	Meta.loaded.connect(_refresh_all)
 	_refresh_all()
-	_log_file("Start, Version 18, Bildschirm %d" % screen_idx)
+	_log_file("Start, Version 19, Bildschirm %d" % screen_idx)
 	if OS.get_name() == "Windows" and pilot.start():
 		await get_tree().create_timer(2.5).timeout
 		var st0 := pilot.state()
@@ -706,6 +710,8 @@ func _tick() -> void:
 		_update_phase(img)
 		if _in_game() or phase == "game":
 			_hud_tick(img)
+			if auto_on and Time.get_ticks_msec() - bot_shot_ms > 5000:
+				_bot_shot("alle 5s")
 		if res["changed"]:
 			changed = true
 		seen.append_array(res["seen"])
@@ -1193,6 +1199,7 @@ func _auto_status(t: String) -> void:
 
 func _log(t: String) -> void:
 	_log_file("Autopilot: " + t)
+	_bot_shot(t)
 	var tm := Time.get_time_dict_from_system()
 	auto_log.append("%02d:%02d:%02d  %s" % [tm["hour"], tm["minute"], tm["second"], t])
 	if auto_log.size() > 30:
@@ -1243,6 +1250,11 @@ func _toggle_auto() -> void:
 	running = true
 	_update_run_btn()
 	btn_auto.text = "Autopilot stoppen"
+	# Was der Bot sieht und tut, für die Auswertung mitschneiden: Desktop\TFT Boss\bot_spiele\<Datum>
+	var t0 := Time.get_datetime_string_from_system().replace(":", "").replace("-", "").replace("T", "_")
+	bot_dir = OS.get_system_dir(OS.SYSTEM_DIR_DESKTOP).path_join("TFT Boss").path_join("bot_spiele").path_join(t0)
+	DirAccess.make_dir_recursive_absolute(bot_dir)
+	bot_frames = 0
 	_log("an, steuert: " + auto_title)
 	_auto_status("Autopilot an. F8 schaltet aus.")
 
@@ -1835,6 +1847,27 @@ func _arrange() -> void:
 		_log("Stellt %s auf Reihe %d, Platz %d" % [u["n"], tgt.x + 1, tgt.y + 1])
 	arranging = false
 	last_action_ms = Time.get_ticks_msec()
+
+## Ein Bild mit kurzer Beschreibung speichern (bei jeder Aktion und alle 5 s), damit Claude das Spiel danach prüfen kann
+func _bot_shot(what: String) -> void:
+	if not auto_on or bot_dir == "" or bot_frames >= BOT_MAX_FRAMES:
+		return
+	var now := Time.get_ticks_msec()
+	if now - bot_shot_ms < 600:
+		return
+	bot_shot_ms = now
+	var img := DisplayServer.screen_get_image(screen_idx)
+	if img == null or img.is_empty():
+		return
+	var tag := what.substr(0, 40).replace(" ", "_").replace("/", "-").replace(":", "").replace("\\", "").replace("(", "").replace(")", "").replace(",", "").replace("'", "")
+	var name := "%05d_%s_%s.jpg" % [bot_frames, brain.stage.replace("-", "_") if brain.stage != "" else "x", tag]
+	if img.save_jpg(bot_dir.path_join(name), 0.8) == OK:
+		bot_frames += 1
+		var f := FileAccess.open(bot_dir.path_join("verlauf.jsonl"), FileAccess.READ_WRITE if FileAccess.file_exists(bot_dir.path_join("verlauf.jsonl")) else FileAccess.WRITE)
+		if f:
+			f.seek_end()
+			f.store_line(JSON.stringify({"bild": name, "was": what, "lage": _learn_state(), "plan": brain.plan, "ziel": brain.target.get("name", ""), "meine_units": my_units.map(func(u): return u["n"])}))
+			f.close()
 
 ## Laufweg im Zickzack über das ganze eigene Board, falls Kugeln da liegen, die ich nicht sehe (graue)
 const SWEEP := [[0.29, 0.40], [0.29, 0.25], [0.40, 0.20], [0.40, 0.40], [0.40, 0.58], [0.52, 0.58], [0.52, 0.38], [0.52, 0.20], [0.64, 0.20], [0.64, 0.40], [0.64, 0.58], [0.72, 0.40], [0.72, 0.22], [0.50, 0.30]]
