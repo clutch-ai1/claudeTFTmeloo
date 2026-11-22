@@ -122,6 +122,8 @@ h2,h3{font-family:var(--display);letter-spacing:.4px;margin:0;line-height:1.05;t
 .phasebar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .phasebar .sep{width:1px;height:26px;background:var(--line);margin:0 6px}
 .dgrid{display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:start}
+.detail{container-type:inline-size}
+@container (max-width:800px){.dgrid{grid-template-columns:1fr}}
 .alts{display:flex;flex-direction:column;gap:8px}
 .alt{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--panel-2);cursor:pointer;border:1px solid transparent;text-align:left}
 .alt[aria-pressed="true"]{border-color:var(--accent)}
@@ -484,7 +486,7 @@ body.sideopen .layout.drawer .lside{transform:none}
 .cprio .cpi .it{width:26px;height:26px}.cprio .cpi b{font-size:15px}.cprio .cpi small{color:var(--muted);font-size:11px}
 .cprio .cpi.lead{border-color:var(--gold)}
 
-.ptips{margin:12px 0 0;padding:10px 12px;background:var(--panel-2);border-radius:10px;font-size:13px;line-height:1.45}
+.ptips{margin:0;padding:10px 12px;background:var(--panel-2);border-radius:10px;font-size:13px;line-height:1.45}
 .ptips h4{margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .ptips ul{margin:0;padding-left:18px}.ptips li{margin:3px 0}.ptips li.warn::marker{content:"⚠ "}
 
@@ -819,13 +821,14 @@ function renderDetail(){if(typeof syncHash==="function")syncHash();
   <div class="roles">${(c.carry||[]).map((u,i)=>roleCard(c,u,"carry",i)).join("")}${(c.tank||[]).slice(0,1).map((u,i)=>roleCard(c,u,"tank",i)).join("")}</div>
   <div class="phasebar sect" id="d-board" role="group" aria-label="Phase und Level">${bar}</div>
   <div class="dgrid">
-    <div><div class="boardwrap-s">${b?miniBoard(b.u,c,{withItems:!isEarly,stars:!isEarly,lg:true}):""}</div><div class="legend-front">Oben = vorne, zum Gegner</div>${b&&!isEarly?posTips(c,b.u):""}</div>
+    <div><div class="boardwrap-s">${b?miniBoard(b.u,c,{withItems:!isEarly,stars:!isEarly,lg:true}):""}</div><div class="legend-front">Oben = vorne, zum Gegner</div></div>
     <div class="alts"><div class="sect"><h3>${PH[phase].label} Game · Level ${lvl}</h3></div>
       ${b?`<div class="tchips">${traitChips(b.u.map(n=>({n,s:isEarly?1:(c.stars[n]||1)})))}</div>`:""}
       ${boards.map((o,i)=>`<button class="alt" data-alt="${i}" aria-pressed="${i===detailPick.i}"><div class="urow">${o.u.map(n=>tile(n)).join("")}</div><div class="num">${num(o.avg)}<small>Ø Platz</small></div>${o.win!=null?`<div class="num">${pct(o.win)}<small>Runden gewonnen</small></div>`:""}<div class="num">${o.n.toLocaleString("de-DE")}<small>Spiele</small></div></button>`).join("")}
       ${isEarly?`<p class="muted" style="font-size:12.5px;margin:0">Early-Boards: Ø Platz am Spielende, wenn du so auf Level ${lvl} stehst. „Runden gewonnen“ zeigt, wie oft dieses Board seine Kämpfe gewinnt.</p>`:""}
     </div>
   </div>
+  ${b&&!isEarly?posTips(c,b.u):""}
   <div class="sect" id="d-level"><h3>Wann leveln</h3><div class="timeline">${lvTimes}</div><p class="muted" style="font-size:12.5px;margin:8px 0 6px">So verteilen sich die End-Level:</p><div class="timeline">${finals}</div></div>
   <div class="sect" id="d-augs"><h3>${(()=>{const r=augsForComp(c);return r.real?"Beste Augments":"Passende Augments"})()}</h3>${augSection(c)}</div>
   <div class="sect" id="d-items"><h3>Beste Items</h3><div class="carries">${carries.map(([u,x])=>`<div class="carry"><button data-champ="${esc(u)}" style="all:unset;cursor:pointer">${tile(u)}</button><div><b>${esc(u)}${roleTag(roleIn(c,u))}</b><div class="ilist">${x.i.map(i=>`<div class="irow"><span>${itemBadge(i)}${esc(i)}</span>${recipeHtml(i)}</div>`).join("")}</div><small class="muted">Ø ${num(x.avg)} · ${x.n.toLocaleString("de-DE")} Spiele</small></div></div>`).join("")}</div>${compPrio(c)}</div>
@@ -1514,6 +1517,9 @@ function compPrio(c){
   document.addEventListener("mouseover",e=>{const el=e.target.closest(".tile[data-u]");if(el===cur)return;if(!el||el.closest("#utip")){if(!e.target.closest("#utip")){cur=null;tip.classList.remove("on")}return}
     cur=el;const n=el.dataset.u;tip.style.setProperty("--cc",`var(--c${(U[n]||{c:1}).c})`);tip.innerHTML=html(n,el);if(!tip.innerHTML){tip.classList.remove("on");return}place(el);tip.classList.add("on")});
   addEventListener("scroll",()=>{cur=null;tip.classList.remove("on")},true);
+  document.addEventListener("mouseout",e=>{if(!e.relatedTarget){cur=null;tip.classList.remove("on")}});
+  addEventListener("blur",()=>{cur=null;tip.classList.remove("on")});
+  document.addEventListener("mousedown",()=>{cur=null;tip.classList.remove("on")});
 })();
 
 /* ===== Positionierungs-Tipps aus dem angezeigten Board ===== */
