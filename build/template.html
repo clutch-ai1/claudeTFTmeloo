@@ -491,6 +491,41 @@ body.sideopen .layout.drawer .lside{transform:none}
 .irank{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
 .ir{display:flex;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
 .ir .it{width:34px;height:34px;flex:none}.ir b{display:block;font-size:13.5px}.ir small{color:var(--muted);font-size:11.5px}
+
+/* ===== Lobby-Check ===== */
+.lob{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:1050px){.lob{grid-template-columns:1fr}}
+.lob .panel{padding:14px}
+.lob h3{margin:0 0 4px}
+.lcomps{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 14px}
+.lcomps .chip{border-left:3px solid var(--tc)}
+.lcost{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px;align-items:center}
+.lcost .cl{width:46px;font-size:11px;color:var(--muted)}
+.lu{position:relative;background:none;border:0;padding:2px;cursor:pointer;border-radius:10px}
+.lu .tile{--s:42px}
+.lu.on .tile{box-shadow:0 0 0 3px var(--bad)}
+.lu .cnt{position:absolute;right:-4px;bottom:-4px;background:var(--bad);color:#140f14;font-weight:800;font-size:12px;border-radius:9px;min-width:18px;height:18px;display:grid;place-items:center;padding:0 4px}
+.lres{display:flex;flex-direction:column;gap:8px;position:sticky;top:90px;max-height:calc(100vh - 110px);overflow:auto}
+@media (max-width:1050px){.lres{position:static;order:-1;max-height:46vh}}
+.lr{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--tc);border-radius:12px;background:var(--panel);cursor:pointer;text-align:left;color:inherit}
+.lr:hover{border-color:var(--tc)}
+.lr .nm{font-weight:600}.lr .urow{margin-top:5px}.lr .urow .tile{--s:26px}
+.lr .tile.hit{box-shadow:0 0 0 2px var(--bad)}.lr .tile.dimu{opacity:.5}
+.lr .num{text-align:right;font-size:12px;color:var(--muted)}.lr .num b{display:block;font-size:18px;color:var(--ink)}
+.pill{display:inline-block;font-size:11px;font-weight:700;border-radius:20px;padding:1px 8px;margin-left:6px;vertical-align:1px}
+.pill.free{background:#1f4d35;color:#7ff0b0}.pill.mid{background:#4d421f;color:#ffd77a}.pill.hot{background:#4d1f25;color:#ff9a9a}
+/* ===== Vergleich ===== */
+.vsbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.vsbar select{background:var(--panel-2);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit;min-width:220px}
+.vsg{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:900px){.vsg{grid-template-columns:1fr}}
+.vsc{border:1px solid var(--line);border-top:4px solid var(--tc);border-radius:14px;background:var(--panel);padding:14px;display:flex;flex-direction:column;gap:12px}
+.vsc h2{font-size:26px}.vsc .k{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.vsc .k div{background:var(--panel-2);border-radius:8px;padding:6px 8px}.vsc .k b{display:block;font-size:19px}.vsc .k small{color:var(--muted);font-size:11px}
+.vsc .k b.better{color:var(--good)}
+.vsc .lbl2{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.vsc .mbw{display:flex;justify-content:center}
+.vshare{margin-top:14px;padding:12px 14px}
 </style>
 </head>
 <body>
@@ -515,6 +550,8 @@ body.sideopen .layout.drawer .lside{transform:none}
       <a href="#roll" data-v="roll">Reroll-Rechner</a>
       <a href="#builder" data-v="builder">Builder</a>
       <a href="#overlay" data-v="overlay">Overlay</a>
+      <a href="#lobby" data-v="lobby">Lobby-Check</a>
+      <a href="#vs" data-v="vs">Vergleich</a>
       <a href="#quiz" data-v="quiz">Quiz</a>
     </nav>
   </div>
@@ -544,7 +581,7 @@ body.sideopen .layout.drawer .lside{transform:none}
     <div class="plist" id="plist"></div>
   </section>
 
-  <section id="view-start" class="hidden"><div id="start"></div></section>
+  <section id="view-start" class="hidden"><div id="start-root"></div></section>
   <section id="view-champs" class="hidden">
     <div class="filters">
       <div class="frow"><span class="flabel">Kosten</span><span id="ch-cost"></span></div>
@@ -594,6 +631,8 @@ body.sideopen .layout.drawer .lside{transform:none}
       <div class="panel sbox"><h3>Shop-Chancen pro Level</h3><div class="notebox" id="rl-note"></div><div style="overflow-x:auto"><table class="rtab odds" id="rl-odds"></table></div></div>
     </div>
   </section>
+  <section id="view-lobby" class="hidden"><div id="lobby-root"></div></section>
+  <section id="view-vs" class="hidden"><div id="vs-root"></div></section>
   <section id="view-quiz" class="hidden"><div class="qwrap">
     <div class="qtop"><div class="qscore" id="qz-score"></div><div style="display:flex;gap:6px;flex-wrap:wrap" id="qz-set"></div></div>
     <div class="panel qcard" id="qz-card"></div>
@@ -1404,7 +1443,7 @@ function renderStart(){
   const tiers=["S","A","B","C"].map(t=>{const l=COMPS.filter(c=>c.tier===t).sort((a,b)=>a.avg-b.avg);if(!l.length)return"";
     return `<div class="trow"><div class="tl ${t}">${t}</div><div class="tcs">${l.map(c=>{const car=(c.carry||[])[0]||c.core[0];return `<button class="tc" data-open="${esc(c.id)}" style="--tc:${traitColor(c)}" title="${esc(c.name)} · Ø ${num(c.avg)}">${tile(car)}<small>${esc(c.name)}</small><em>Ø ${num(c.avg)}</em></button>`}).join("")}</div></div>`}).join("");
   const favs=COMPS.filter(isFav);
-  $("#start").innerHTML=`<div class="shead"><h2>Was spiele ich jetzt?</h2><small>Die stärkste Comp je Spielweise, Stand ${esc(String(DATA.updated).replace("T"," ").slice(0,16))} UTC</small></div>
+  $("#start-root").innerHTML=`<div class="shead"><h2>Was spiele ich jetzt?</h2><small>Die stärkste Comp je Spielweise, Stand ${esc(String(DATA.updated).replace("T"," ").slice(0,16))} UTC</small></div>
     <div class="hero">${hero}</div>
     ${favs.length?`<div class="shead"><h2>Deine Favoriten</h2></div><div class="movers"><div class="panel">${favs.map(mv).join("")}</div></div>`:""}
     <div class="shead"><h2>Trend</h2><small>Veränderung Ø Platz in den letzten ${DATA.trendH||24} Std.</small></div>
@@ -1415,8 +1454,8 @@ function renderStart(){
     <div class="shead"><h2>Tier-Liste</h2><small>S bis Ø 4,25 · A bis 4,60 · B bis 4,90</small></div>
     <div class="tierlist">${tiers}</div>`;
 }
-$("#start").addEventListener("click",e=>{const b=e.target.closest("[data-open]");if(b)openComp(b.dataset.open)});
-$("#start").addEventListener("keydown",e=>{if(e.key==="Enter"){const b=e.target.closest("[data-open]");if(b)openComp(b.dataset.open)}});
+$("#start-root").addEventListener("click",e=>{const b=e.target.closest("[data-open]");if(b)openComp(b.dataset.open)});
+$("#start-root").addEventListener("keydown",e=>{if(e.key==="Enter"){const b=e.target.closest("[data-open]");if(b)openComp(b.dataset.open)}});
 
 /* ===== Suche ===== */
 let qSel=0,qHits=[];
@@ -1461,7 +1500,7 @@ function compPrio(c){
 (()=>{const tip=$("#utip");if(!matchMedia("(hover:hover)").matches)return;let cur=null;
   const clean=t=>String(t||"").replace(/\(+[^)]*\)+/g,"").replace(/\s+/g," ").trim();
   function html(n,el){const u=U[n];if(!u)return"";
-    const comp=el.closest("#detail,#cards,.hero,#start")?COMPS.find(c=>c.id===st.comp):null;
+    const comp=el.closest("#detail,#cards,.hero,#start-root")?COMPS.find(c=>c.id===st.comp):null;
     const inComp=el.closest("#detail")&&comp&&comp.items[n]&&holders(comp).has(n);
     const it=inComp?comp.items[n].i:(BEST[n]||[]);
     const ab=clean(u.abdde||u.abd);const s=u.st||{};
@@ -1500,8 +1539,66 @@ function posTips(c,names){
 function itemRanking(){const m={};COMPS.forEach(c=>{holders(c).forEach(u=>{const x=c.items[u];if(!x)return;const role=roleIn(c,u);new Set(x.i).forEach(i=>{if(!(DATA.recipes||{})[i]&&!Object.keys(DATA.recipes||{}).some(k=>ikey(k)===ikey(i)))return;const r=m[i]=m[i]||{i,n:0,w:0,s:0,comps:new Set(),role:{carry:0,tank:0}};r.n+=x.n;r.s+=x.avg*x.n;r.comps.add(c.name);if(role)r.role[role]++})})});
   return Object.values(m).filter(r=>r.comps.size>=2).map(r=>({...r,avg:r.s/r.n})).sort((a,b)=>b.comps.size-a.comps.size||a.avg-b.avg)}
 
-const VIEWS=["start","comps","early","mid","late","champs","augs","unlocks","assist","items","roll","builder","overlay","quiz"];
-const FULL=new Set(["start","assist","items","roll","overlay","quiz"]);
+/* ===== Lobby-Check: was ist in deiner Lobby noch frei? ===== */
+let LOB=store.get("tft19-lobby",{u:{},c:[]});
+const saveLob=()=>store.set("tft19-lobby",LOB);
+function lobbyCounts(){const m={...LOB.u};LOB.c.forEach(id=>{const c=COMPS.find(x=>x.id===id);if(!c)return;lateBoard(c).forEach(u=>{m[u]=(m[u]||0)+1})});Object.keys(m).forEach(k=>{m[k]=Math.min(3,m[k]);if(!m[k])delete m[k]});return m}
+function contest(c,m){let sc=0;const hit=[];const H=new Set(c.carry||[]),T=new Set((c.tank||[]).slice(0,1));
+  lateBoard(c).forEach(u=>{const n=m[u]||0;if(!n)return;const w=H.has(u)?3:T.has(u)?2:1;sc+=w*n;hit.push(u)});return {sc,hit}}
+function renderLobby(){
+  const m=lobbyCounts();const anyIn=Object.keys(m).length>0;
+  const byCost=[1,2,3,4,5,7].map(k=>[k,UL.filter(u=>u.c===k).sort((a,b)=>a.n.localeCompare(b.n))]).filter(x=>x[1].length);
+  const res=COMPS.map(c=>{const {sc,hit}=contest(c,m);return {c,sc,hit,adj:c.avg+Math.min(0.9,sc*0.07)}}).sort((a,b)=>a.adj-b.adj);
+  const pill=sc=>sc===0?'<span class="pill free">frei</span>':sc<=3?'<span class="pill mid">leicht umkämpft</span>':'<span class="pill hot">umkämpft</span>';
+  $("#lobby-root").innerHTML=`<div class="shead" style="margin-top:4px"><h2>Lobby-Check</h2><small>Trag ein, was deine Gegner spielen. Die Seite zeigt dir, welche Comp noch frei ist.</small></div>
+  <div class="lob"><div class="panel">
+    <h3>Gegner spielen diese Comps</h3><p class="muted" style="font-size:12.5px;margin:0">Antippen, wenn du beim Scouten eine Comp erkennst.</p>
+    <div class="lcomps">${COMPS.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(c=>`<button class="chip" data-lc="${esc(c.id)}" aria-pressed="${LOB.c.includes(c.id)}" style="--tc:${traitColor(c)}">${esc(c.name)}</button>`).join("")}</div>
+    <h3>Oder einzelne Champions</h3><p class="muted" style="font-size:12.5px;margin:0 0 8px">Jeder Klick zählt einen Gegner mehr (bis 3), beim vierten Klick wieder 0. Rechtsklick nimmt einen weg.</p>
+    ${byCost.map(([k,l])=>`<div class="lcost"><span class="cl">${k} Gold</span>${l.map(u=>{const n=LOB.u[u.n]||0;const tot=m[u.n]||0;return `<button class="lu${tot?" on":""}" data-lu="${esc(u.n)}" aria-label="${esc(u.n)}: ${tot} Gegner">${tile(u.n)}${tot?`<span class="cnt">${tot}</span>`:""}</button>`}).join("")}</div>`).join("")}
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn" id="lobreset">Alles zurücksetzen</button></div>
+  </div>
+  <div class="lres">${anyIn?"":`<div class="panel muted" style="font-size:13px">Noch nichts eingetragen. Die Liste zeigt gerade einfach die besten Comps.</div>`}
+    ${res.map(r=>`<button class="lr" data-open="${esc(r.c.id)}" style="--tc:${traitColor(r.c)}"><span class="tier ${r.c.tier}">${r.c.tier}</span>
+      <div><span class="nm">${esc(r.c.name)}</span>${anyIn?pill(r.sc):""}<div class="urow">${lateBoard(r.c).map(u=>r.hit.includes(u)?tile(u).replace('class="tile"','class="tile hit"'):anyIn?tile(u).replace('class="tile"','class="tile dimu"'):tile(u)).join("")}</div></div>
+      <div class="num">${anyIn&&r.sc?`<b>~${num(r.adj.toFixed(2))}</b>Ø geschätzt<br><s>${num(r.c.avg)}</s>`:`<b>${num(r.c.avg)}</b>Ø Platz`}</div></button>`).join("")}
+  </div></div>`;
+}
+$("#lobby-root").addEventListener("click",e=>{
+  const lc=e.target.closest("[data-lc]");if(lc){const id=lc.dataset.lc;LOB.c=LOB.c.includes(id)?LOB.c.filter(x=>x!==id):[...LOB.c,id];saveLob();renderLobby();return}
+  const lu=e.target.closest("[data-lu]");if(lu){const n=lu.dataset.lu;LOB.u[n]=((LOB.u[n]||0)+1)%4;saveLob();renderLobby();return}
+  if(e.target.closest("#lobreset")){LOB={u:{},c:[]};saveLob();renderLobby();return}
+  const o=e.target.closest("[data-open]");if(o)openComp(o.dataset.open)});
+$("#lobby-root").addEventListener("contextmenu",e=>{const lu=e.target.closest("[data-lu]");if(!lu)return;e.preventDefault();const n=lu.dataset.lu;LOB.u[n]=Math.max(0,(LOB.u[n]||0)-1);saveLob();renderLobby()});
+
+/* ===== Vergleich zweier Comps ===== */
+let VS=store.get("tft19-vs",null);
+function renderVs(){
+  const sorted=COMPS.slice().sort((a,b)=>a.avg-b.avg);
+  if(!VS||!COMPS.some(c=>c.id===VS[0])||!COMPS.some(c=>c.id===VS[1]))VS=[sorted[0].id,sorted[1].id];
+  const A=COMPS.find(c=>c.id===VS[0]),B=COMPS.find(c=>c.id===VS[1]);
+  const sel=(i,cur)=>`<select data-vs="${i}">${sorted.map(c=>`<option value="${esc(c.id)}"${c.id===cur?" selected":""}>${c.tier} · ${esc(c.name)} (Ø ${num(c.avg)})</option>`).join("")}</select>`;
+  const better=(a,b,low)=>low?a<b:a>b;
+  const shared=lateBoard(A).filter(u=>lateBoard(B).includes(u));
+  const col=(c,o)=>{const car=(c.carry||[])[0],tk=(c.tank||[])[0];const ag=augsForComp(c).list.slice(0,3);
+    return `<div class="vsc" style="--tc:${traitColor(c)}">
+    <div style="display:flex;align-items:center;gap:10px"><span class="tier ${c.tier}" style="min-width:38px;height:38px;font-size:22px">${c.tier}</span><div><h2>${esc(c.name)}</h2><small class="muted">${esc(STYLE_LABEL(c.style))}</small></div><button class="btn small" data-open="${esc(c.id)}" style="margin-left:auto">Öffnen</button></div>
+    <div class="k"><div><b class="${better(c.avg,o.avg,1)?"better":""}">${num(c.avg)}${trendHtml(c.tr)}</b><small>Ø Platz</small></div><div><b class="${better(c.top4,o.top4)?"better":""}">${pct(c.top4)}</b><small>Top 4</small></div><div><b class="${better(c.win,o.win)?"better":""}">${pct(c.win)}</b><small>Win Rate</small></div><div><b>${num(c.pick)}</b><small>pro Lobby</small></div></div>
+    <div class="mbw">${miniBoard(lateBoard(c),c,{withItems:true,stars:true})}</div>
+    <div><div class="lbl2">Carry und Tank</div><div class="ilist" style="margin-top:6px">${[car,tk].filter(Boolean).map(u=>`<div class="irow"><span>${tile(u)} <b>${esc(u)}</b> ${(c.items[u]?c.items[u].i:[]).map(itemBadge).join("")}</span></div>`).join("")}</div></div>
+    <div><div class="lbl2">Wann leveln</div><div class="timeline" style="margin-top:6px">${c.lv.map(x=>`<div class="tl"><b>Level ${x.l}</b>${esc(x.s)}</div>`).join("")}</div></div>
+    ${ag.length?`<div><div class="lbl2">Augments</div><div style="margin-top:4px;font-size:13px">${ag.map(x=>esc(x.a.n)).join(" · ")}</div></div>`:""}
+  </div>`};
+  $("#vs-root").innerHTML=`<div class="shead" style="margin-top:4px"><h2>Comps vergleichen</h2><small>Grün = besser als die andere</small></div>
+  <div class="vsbar">${sel(0,A.id)}<span class="muted">gegen</span>${sel(1,B.id)}<button class="btn small" id="vsswap">⇄ tauschen</button></div>
+  <div class="vsg">${col(A,B)}${col(B,A)}</div>
+  <div class="panel vshare"><b>${shared.length} gemeinsame Units</b>${shared.length?`: ${shared.map(esc).join(", ")}. ${shared.length>=3?"Gut, um zwischen beiden zu pivoten.":""}`:". Die beiden Comps kommen sich nicht in die Quere."}</div>`;
+}
+$("#vs-root").addEventListener("change",e=>{const s=e.target.closest("[data-vs]");if(!s)return;VS[+s.dataset.vs]=s.value;store.set("tft19-vs",VS);renderVs()});
+$("#vs-root").addEventListener("click",e=>{if(e.target.closest("#vsswap")){VS=[VS[1],VS[0]];store.set("tft19-vs",VS);renderVs();return}const o=e.target.closest("[data-open]");if(o)openComp(o.dataset.open)});
+
+const VIEWS=["start","lobby","vs","comps","early","mid","late","champs","augs","unlocks","assist","items","roll","builder","overlay","quiz"];
+const FULL=new Set(["start","lobby","vs","assist","items","roll","overlay","quiz"]);
 const DRAWER=new Set(["comps","early","mid","late"]);
 function openSide(on){document.body.classList.toggle("sideopen",on)}
 function renderView(h){
@@ -1516,6 +1613,8 @@ function renderView(h){
   if(h==="roll")renderRoll();
   if(h==="overlay")renderOverlay();
   if(h==="quiz")renderQuiz();
+  if(h==="lobby")renderLobby();
+  if(h==="vs")renderVs();
   if(h==="builder"){renderBoard();renderPool()}
   if(h!=="builder"&&!FULL.has(h))renderSide();
 }
@@ -1526,7 +1625,7 @@ function route(){
   document.querySelectorAll(".views a").forEach(a=>a.dataset.v===h?a.setAttribute("aria-current","page"):a.removeAttribute("aria-current"));
   const show=(id,on)=>$(id).classList.toggle("hidden",!on);
   show("#view-comps",h==="comps");show("#view-start",h==="start");show("#view-phase",h in PH);show("#view-builder",h==="builder");show("#view-champs",h==="champs");show("#view-augs",h==="augs");
-  show("#view-unlocks",h==="unlocks");show("#view-assist",h==="assist");show("#view-items",h==="items");show("#view-roll",h==="roll");show("#view-overlay",h==="overlay");show("#view-quiz",h==="quiz");
+  show("#view-unlocks",h==="unlocks");show("#view-assist",h==="assist");show("#view-items",h==="items");show("#view-roll",h==="roll");show("#view-overlay",h==="overlay");show("#view-quiz",h==="quiz");show("#view-lobby",h==="lobby");show("#view-vs",h==="vs");
   $("#layout").classList.toggle("hidden",h==="builder");$("#layout").classList.toggle("full",FULL.has(h));$("#layout").classList.toggle("drawer",DRAWER.has(h));openSide(false);
   document.body.classList.toggle("ov",h==="overlay");
   renderView(h);syncHash();
