@@ -151,7 +151,7 @@ func _ready() -> void:
 	timer.start()
 	Meta.loaded.connect(_refresh_all)
 	_refresh_all()
-	_log_file("Start, Version 21, Bildschirm %d" % screen_idx)
+	_log_file("Start, Version 22, Bildschirm %d" % screen_idx)
 	if OS.get_name() == "Windows" and pilot.start():
 		await get_tree().create_timer(2.5).timeout
 		var st0 := pilot.state()
@@ -1822,7 +1822,11 @@ func _hex_of(p: Vector2i) -> Vector2i:
 
 ## Name der angeklickten Unit aus ihrem Infofenster rechts lesen
 func _unit_name_at(p: Vector2i) -> String:
-	pilot.rclick(_img_to_screen(p))     # Rechtsklick auf eine Unit öffnet ihr Infofenster (so hast du es gemacht)
+	# Vorher ein altes Infofenster schließen, sonst liest er den Namen der vorigen Unit
+	pilot.click(_screen_pt(0.50, 0.16))
+	await get_tree().create_timer(0.15).timeout
+	var before := DisplayServer.screen_get_image(screen_idx)
+	pilot.rclick(_img_to_screen(p))     # Rechtsklick auf eine Unit öffnet ihr Infofenster
 	await get_tree().create_timer(0.4).timeout
 	var shot := DisplayServer.screen_get_image(screen_idx)
 	if shot == null or shot.is_empty():
@@ -1832,7 +1836,27 @@ func _unit_name_at(p: Vector2i) -> String:
 	var t := pilot.ocr([_ocr_png(shot.get_region(Rect2i(int(0.872 * W), int(0.05 * H), int(0.125 * W), int(0.36 * H))), "infofenster", 2)])
 	if t.size() != 1:
 		return ""
-	return OcrRead.match_name(str(t[0]), Meta.unit_names)
+	var name := OcrRead.match_name(str(t[0]), Meta.unit_names)
+	if name != "" and before != null and not before.is_empty():
+		_save_unit_sample(before, p, name)
+	return name
+
+## Der Bot lernt Champs selbst: Bild der Unit + Name aus dem Infofenster speichern (Desktop\TFT Boss\lernen\units\<Name>)
+func _save_unit_sample(img: Image, p: Vector2i, name: String) -> void:
+	var W := img.get_width()
+	var H := img.get_height()
+	var sx := float(W) / 1920.0
+	var sy := float(H) / 1080.0
+	var r := Rect2i(p.x - int(60 * sx), p.y - int(110 * sy), int(120 * sx), int(150 * sy))
+	r = r.intersection(Rect2i(0, 0, W, H))
+	if r.size.x < 40 or r.size.y < 40:
+		return
+	var d := OS.get_system_dir(OS.SYSTEM_DIR_DESKTOP).path_join("TFT Boss").path_join("lernen").path_join("units").path_join(name.replace("'", "").replace(".", "").replace(" ", "_").replace("&", "und"))
+	DirAccess.make_dir_recursive_absolute(d)
+	if DirAccess.get_files_at(d).size() >= 300:
+		return
+	var t := Time.get_datetime_string_from_system().replace(":", "").replace("-", "").replace("T", "_")
+	img.get_region(r).save_png(d.path_join("%s_%s_%d_%d.png" % [t, brain.stage.replace("-", "_"), p.x, p.y]))
 
 ## Units erkennen (anklicken, Namen lesen) und nach der Ziel-Comp aufstellen:
 ## Positionen aus den Comp-Daten, sonst Tanks nach vorne, alle anderen nach hinten.
