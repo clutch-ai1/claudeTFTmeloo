@@ -440,16 +440,35 @@ body.sideopen .layout.drawer .lside{transform:none}
 .card{border-left:3px solid var(--tc,var(--line))!important;background:linear-gradient(90deg,color-mix(in srgb,var(--tc,#888) 14%,var(--panel)) 0%,var(--panel) 55%)}
 .dhead{border-left:4px solid var(--tc,transparent);padding-left:12px}
 /* ===== Suche ===== */
-.qwrap{position:relative;flex:1 1 240px;max-width:320px;min-width:150px}
-.qwrap input{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:20px;padding:7px 14px;color:var(--ink);font-size:13.5px}
-.qwrap input:focus{outline:2px solid var(--gold);outline-offset:1px}
-.qres{position:absolute;top:calc(100% + 6px);left:0;right:0;min-width:300px;max-height:60vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 40px #000a;z-index:40;padding:6px}
-.qres.hidden{display:none}
+.gsearch{position:relative;flex:1 1 240px;max-width:320px;min-width:150px}
+.gsearch input{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:20px;padding:7px 14px;color:var(--ink);font-size:13.5px}
+.gsearch input:focus{outline:2px solid var(--gold);outline-offset:1px}
+.gres{position:absolute;top:calc(100% + 6px);left:0;right:0;min-width:300px;max-height:60vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 40px #000a;z-index:40;padding:6px}
+.gres.hidden{display:none}
 .qi{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:6px 8px;border-radius:8px;background:none;border:0;color:inherit;cursor:pointer}
 .qi .tile{--s:30px}.qi>span:not(.ib){font-family:var(--body);font-size:14px;font-weight:600}.qi small{color:var(--muted);margin-left:auto;font-size:11px}
 .qi.on,.qi:hover{background:var(--panel-2)}
 .qi .ib{width:30px;height:30px;display:grid;place-items:center}
-@media (max-width:700px){.top{flex-wrap:wrap;row-gap:8px}.qwrap{order:3;flex-basis:100%;max-width:none}.views{order:4;width:100%}}
+@media (max-width:700px){.top{flex-wrap:wrap;row-gap:8px}.gsearch{order:3;flex-basis:100%;max-width:none}.views{order:4;width:100%}}
+
+/* ===== Unit-Info beim Drüberfahren ===== */
+.utip{position:fixed;z-index:60;width:300px;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--cc,var(--gold));border-radius:12px;box-shadow:0 16px 40px #000c;padding:12px 13px;font-size:12.5px;line-height:1.4;opacity:0;transform:translateY(4px);transition:opacity .1s,transform .1s}
+.utip.on{opacity:1;transform:none}
+.utip .uh{display:flex;gap:10px;align-items:center;margin-bottom:8px}.utip .uh .tile{--s:44px}
+.utip .uh b{font-family:var(--display);font-size:20px;display:block;line-height:1}
+.utip .uh small{color:var(--muted)}
+.utip .tr{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0 8px}.utip .tr span{background:var(--panel-2);border-radius:6px;padding:1px 7px;font-size:11.5px}
+.utip .ab b{color:var(--gold)}.utip .ab p{margin:2px 0 8px;color:var(--ink);opacity:.85}
+.utip .ui{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.utip .ui .it{width:24px;height:24px}
+.utip .us{display:flex;gap:14px;margin-top:8px;color:var(--muted)}.utip .us b{color:var(--ink)}
+.utip .ul{margin-top:6px;color:#c9c6ff}
+/* ===== Item-Bau ===== */
+.recipe{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)}.recipe .it{width:18px;height:18px}
+.ilist .irow{display:flex;flex-direction:column;gap:1px;margin-bottom:3px}
+.cprio{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.cprio .cpi{display:flex;align-items:center;gap:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:5px 10px 5px 6px}
+.cprio .cpi .it{width:26px;height:26px}.cprio .cpi b{font-size:15px}.cprio .cpi small{color:var(--muted);font-size:11px}
+.cprio .cpi.lead{border-color:var(--gold)}
 </style>
 </head>
 <body>
@@ -459,7 +478,7 @@ body.sideopen .layout.drawer .lside{transform:none}
       <h1>Set 19 Comp-Planer</h1>
       <div class="meta" id="meta"></div>
     </div>
-    <div class="qwrap"><input id="q" type="search" placeholder="Suchen … (Strg+K)" aria-label="Champions, Comps, Items und Augments suchen" autocomplete="off"><div class="qres hidden" id="qres" role="listbox"></div></div>
+    <div class="gsearch"><input id="q" type="search" placeholder="Suchen … (Strg+K)" aria-label="Champions, Comps, Items und Augments suchen" autocomplete="off"><div class="gres hidden" id="qres" role="listbox"></div></div>
     <nav class="views" aria-label="Bereiche">
       <a href="#start" data-v="start">Start</a>
       <a href="#comps" data-v="comps">Comps</a>
@@ -614,7 +633,7 @@ body.sideopen .layout.drawer .lside{transform:none}
   </div>
 </div>
 <div class="toast" id="toast" role="status"></div>
-<button class="totop" id="totop" aria-label="Nach oben">↑</button>
+<div class="utip" id="utip" role="tooltip"></div><button class="totop" id="totop" aria-label="Nach oben">↑</button>
 
 <script>
 const DATA=__DATA__;
@@ -654,7 +673,7 @@ function itemBadge(i){const im=IICONS[ikey(i)]||SITEITEMS[ikey(i)];const k=IKIND
 const LOCK=`<span class="lock" title="Muss freigeschaltet werden"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7.5" rx="1.5" fill="#c9c6ff"/><path d="M5.2 7V5.2a2.8 2.8 0 0 1 5.6 0V7" fill="none" stroke="#c9c6ff" stroke-width="1.8"/></svg></span>`;
 function tile(name,{stars=0,items=[]}={}){
   const u=U[name]||{c:1,l:0,t:[]};const img=ICONS[name]||SITEICONS[name];
-  return `<div class="tile" style="--cc:var(--c${u.c})" title="${esc(name)} · ${u.c} Gold${u.t.length?" · "+esc(u.t.join(", ")):""}${u.l&&u.u?" · Unlock: "+esc(u.u):""}">${img?`<img src="${img}" alt="" draggable="false">`:`<span class="ini">${esc(initials(name))}</span>`}${stars?`<span class="stars">${"★".repeat(stars)}</span>`:""}${u.l?LOCK:""}${items&&items.length?`<span class="its">${items.map(itemBadge).join("")}</span>`:""}</div>`;
+  return `<div class="tile" style="--cc:var(--c${u.c})" data-u="${esc(name)}" aria-label="${esc(name)}">${img?`<img src="${img}" alt="" draggable="false">`:`<span class="ini">${esc(initials(name))}</span>`}${stars?`<span class="stars">${"★".repeat(stars)}</span>`:""}${u.l?LOCK:""}${items&&items.length?`<span class="its">${items.map(itemBadge).join("")}</span>`:""}</div>`;
 }
 const ucell=(n,o)=>`<div class="ucell">${tile(n,o)}<div class="unitcap">${esc(n)}</div></div>`;
 function traitCountsOf(list){ // list: [{n,s}]
@@ -748,7 +767,7 @@ function renderDetail(){
   </div>
   <div class="sect" id="d-level"><h3>Wann leveln</h3><div class="timeline">${lvTimes}</div><p class="muted" style="font-size:12.5px;margin:8px 0 6px">So verteilen sich die End-Level:</p><div class="timeline">${finals}</div></div>
   <div class="sect" id="d-augs"><h3>${(()=>{const r=augsForComp(c);return r.real?"Beste Augments":"Passende Augments"})()}</h3>${augSection(c)}</div>
-  <div class="sect" id="d-items"><h3>Beste Items</h3><div class="carries">${carries.map(([u,x])=>`<div class="carry"><button data-champ="${esc(u)}" style="all:unset;cursor:pointer">${tile(u)}</button><div><b>${esc(u)}${roleTag(roleIn(c,u))}</b><div class="ilist">${x.i.map(i=>`<span>${itemBadge(i)}${esc(i)}</span>`).join("")}</div><small class="muted">Ø ${num(x.avg)} · ${x.n.toLocaleString("de-DE")} Spiele</small></div></div>`).join("")}</div></div>
+  <div class="sect" id="d-items"><h3>Beste Items</h3><div class="carries">${carries.map(([u,x])=>`<div class="carry"><button data-champ="${esc(u)}" style="all:unset;cursor:pointer">${tile(u)}</button><div><b>${esc(u)}${roleTag(roleIn(c,u))}</b><div class="ilist">${x.i.map(i=>`<div class="irow"><span>${itemBadge(i)}${esc(i)}</span>${recipeHtml(i)}</div>`).join("")}</div><small class="muted">Ø ${num(x.avg)} · ${x.n.toLocaleString("de-DE")} Spiele</small></div></div>`).join("")}</div>${compPrio(c)}</div>
   <div class="sect" id="d-notes"><h3>Meine Notizen</h3><textarea class="notes" id="cnote" placeholder="Eigene Notizen zu dieser Comp, z. B. gegen wen sie schwach ist. Wird in deinem Browser gespeichert.">${esc(NOTES[c.name]||"")}</textarea></div>`;
   $("#cnote").oninput=e=>{NOTES[c.name]=e.target.value;store.set("tft19-notes",NOTES)};
   $("#toBuilder").onclick=()=>{loadBoard(b?b.u:c.core,c,c.name+" · Level "+lvl);location.hash="builder"};
@@ -1404,6 +1423,35 @@ $("#q").addEventListener("keydown",e=>{if(!qHits.length)return;if(e.key==="Arrow
 $("#qres").addEventListener("mousedown",e=>{const b=e.target.closest("[data-qi]");if(b){e.preventDefault();goHit(qHits[+b.dataset.qi])}});
 $("#q").addEventListener("blur",()=>setTimeout(()=>$("#qres").classList.add("hidden"),120));
 document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();$("#q").focus();$("#q").select()}});
+
+/* ===== Item-Bau: Rezepte und Komponenten-Prio ===== */
+function recipeHtml(i){const r=(DATA.recipes||{})[Object.keys(DATA.recipes||{}).find(k=>ikey(k)===ikey(i))];return r?`<span class="recipe">${itemBadge(r[0])}+${itemBadge(r[1])}</span>`:""}
+function compPrio(c){
+  const R=DATA.recipes||{};const cnt={};const H=[...holders(c)];
+  H.forEach((u,ui)=>{const x=c.items[u];if(!x)return;const w=roleIn(c,u)==="carry"?(ui===0?1.5:1.1):1;x.i.forEach(i=>{const k=Object.keys(R).find(k=>ikey(k)===ikey(i));if(!k)return;R[k].forEach(cp=>{cnt[cp]=cnt[cp]||{n:0,w:0};cnt[cp].n++;cnt[cp].w+=w})})});
+  const l=Object.entries(cnt).sort((a,b)=>b[1].w-a[1].w);if(!l.length)return"";
+  return `<h3 style="margin-top:16px;font-size:17px">Komponenten, die du sammeln solltest</h3><p class="muted" style="font-size:12.5px;margin:4px 0 0">So oft steckt jede Komponente in den Items oben. Diese am Karussell und bei Orbs bevorzugen, die ersten zuerst.</p>
+  <div class="cprio">${l.map(([cp,v],i)=>`<div class="cpi${i<2?" lead":""}">${itemBadge(cp)}<b>${v.n}×</b><small>${esc(cp)}</small></div>`).join("")}</div>`;
+}
+/* ===== Unit-Info beim Drüberfahren ===== */
+(()=>{const tip=$("#utip");if(!matchMedia("(hover:hover)").matches)return;let cur=null;
+  const clean=t=>String(t||"").replace(/\(+[^)]*\)+/g,"").replace(/\s+/g," ").trim();
+  function html(n,el){const u=U[n];if(!u)return"";
+    const comp=el.closest("#detail,#cards,.hero,#start")?COMPS.find(c=>c.id===st.comp):null;
+    const inComp=el.closest("#detail")&&comp&&comp.items[n]&&holders(comp).has(n);
+    const it=inComp?comp.items[n].i:(BEST[n]||[]);
+    const ab=clean(u.abd);const s=u.st||{};
+    return `<div class="uh">${tile(n)}<div><b>${esc(n)}</b><small>${u.c} Gold${u.role&&u.role.label?" · "+esc(u.role.label):""}</small></div></div>
+      <div class="tr">${u.t.map(t=>`<span>${esc(t)}</span>`).join("")}</div>
+      ${u.ab?`<div class="ab"><b>${esc(u.ab)}</b><p>${esc(ab.length>240?ab.slice(0,237)+"…":ab)}</p></div>`:""}
+      ${it.length?`<div class="lbl" style="margin-bottom:4px">${inComp?"Items in dieser Comp":"Beste Items"}</div><div class="ui">${it.map(itemBadge).join("")}</div>`:""}
+      ${s.avg?`<div class="us"><span>Ø <b>${num(s.avg)}</b></span><span>Top 4 <b>${pct(s.top4)}</b></span><span>${(s.n||0).toLocaleString("de-DE")} Spiele</span></div>`:""}
+      ${u.l&&u.u?`<div class="ul">🔒 Freischalten: ${esc(u.u)}</div>`:""}`}
+  function place(el){const r=el.getBoundingClientRect();const w=tip.offsetWidth,h=tip.offsetHeight;let x=r.right+10,y=r.top-4;if(x+w>innerWidth-8)x=r.left-w-10;if(x<8)x=Math.min(innerWidth-w-8,Math.max(8,r.left));if(y+h>innerHeight-8)y=innerHeight-h-8;if(y<8)y=8;tip.style.left=x+"px";tip.style.top=y+"px"}
+  document.addEventListener("mouseover",e=>{const el=e.target.closest(".tile[data-u]");if(el===cur)return;if(!el||el.closest("#utip")){if(!e.target.closest("#utip")){cur=null;tip.classList.remove("on")}return}
+    cur=el;const n=el.dataset.u;tip.style.setProperty("--cc",`var(--c${(U[n]||{c:1}).c})`);tip.innerHTML=html(n,el);if(!tip.innerHTML){tip.classList.remove("on");return}place(el);tip.classList.add("on")});
+  addEventListener("scroll",()=>{cur=null;tip.classList.remove("on")},true);
+})();
 
 const VIEWS=["start","comps","early","mid","late","champs","augs","unlocks","assist","items","roll","builder","overlay","quiz"];
 const FULL=new Set(["start","assist","items","roll","overlay","quiz"]);
