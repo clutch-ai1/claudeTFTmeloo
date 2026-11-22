@@ -52,3 +52,10 @@ func drag(a: Vector2i, b: Vector2i) -> void:
 	actions.append("drag %d,%d->%d,%d" % [a.x, a.y, b.x, b.y])
 func hover_key(p: Vector2i, vk: int) -> void:
 	actions.append("hover %d,%d key %s" % [p.x, p.y, char(vk)])
+var fake_events := []
+func watch(on: bool) -> void:
+	actions.append("watch %s" % on)
+func events() -> Array:
+	var e := fake_events.duplicate()
+	fake_events.clear()
+	return e

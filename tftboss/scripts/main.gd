@@ -20,6 +20,18 @@ var auto_tried := {}             # Shop-Platz -> Unit, die schon versucht wurde 
 var auto_log: Array = []
 var auto_last_img_size := Vector2i.ZERO
 var btn_auto: Button
+var btn_learn: Button
+var learn_on := false
+var learn_dir := ""
+var learn_file: FileAccess = null
+var learn_prev: Image = null
+var learn_prev_ms := 0
+var learn_frames := 0
+var learn_events := 0
+var learn_last_frame_ms := 0
+var learn_need_after := false
+var learn_timer: Timer
+const LEARN_MAX_FRAMES := 3000
 var scouting := false
 var phase := ""                  # home, modes, lobby, queue, match, loading, game
 var phase_ms := 0
@@ -129,7 +141,7 @@ func _ready() -> void:
 	timer.start()
 	Meta.loaded.connect(_refresh_all)
 	_refresh_all()
-	_log_file("Start, Version 14, Bildschirm %d" % screen_idx)
+	_log_file("Start, Version 15, Bildschirm %d" % screen_idx)
 	if OS.get_name() == "Windows" and pilot.start():
 		await get_tree().create_timer(2.5).timeout
 		var st0 := pilot.state()
@@ -280,6 +292,11 @@ func _build_ui() -> void:
 	btn_auto.text = "Autopilot starten"
 	btn_auto.pressed.connect(_toggle_auto)
 	hap.add_child(btn_auto)
+	btn_learn = Button.new()
+	btn_learn.text = "Lernmodus: mir zuschauen"
+	btn_learn.tooltip_text = "Du spielst, der Bot schaut zu: speichert Bilder und deine Klicks/Tasten, damit Claude ihm daraus TFT beibringen kann."
+	btn_learn.pressed.connect(_toggle_learn)
+	hap.add_child(btn_learn)
 	btn_scout = Button.new()
 	btn_scout.text = "Jetzt scouten"
 	btn_scout.pressed.connect(func(): _scout(true))
@@ -1396,6 +1413,101 @@ func _avg(a: Array) -> float:
 	for x in a:
 		s += float(x)
 	return s / maxf(1.0, float(a.size()))
+
+# ================================================================= Lernmodus (der Bot schaut dir zu)
+
+func _toggle_learn() -> void:
+	if learn_on:
+		_learn_stop()
+		return
+	if not pilot.ok and not pilot.start():
+		_auto_status("Lernmodus geht nicht: " + pilot.error)
+		return
+	if auto_on:
+		_auto_off("Lernmodus an, Autopilot aus.")
+	var t := Time.get_datetime_string_from_system().replace(":", "").replace("-", "").replace("T", "_")
+	learn_dir = OS.get_system_dir(OS.SYSTEM_DIR_DESKTOP).path_join("TFT Boss").path_join("lernen").path_join(t)
+	DirAccess.make_dir_recursive_absolute(learn_dir)
+	learn_file = FileAccess.open(learn_dir.path_join("ereignisse.jsonl"), FileAccess.WRITE)
+	learn_frames = 0
+	learn_events = 0
+	learn_prev = null
+	pilot.watch(true)
+	pilot.events()          # alte Eingaben verwerfen
+	learn_on = true
+	btn_learn.text = "Lernmodus beenden"
+	btn_auto.disabled = true
+	if learn_timer == null:
+		learn_timer = Timer.new()
+		learn_timer.wait_time = 0.5
+		learn_timer.timeout.connect(_learn_tick)
+		add_child(learn_timer)
+	learn_timer.start()
+	if not running:
+		running = true
+		_update_run_btn()
+	_log("Lernmodus an: spiel ganz normal, ich schaue zu und speichere alles in " + learn_dir)
+	_auto_status("Lernmodus läuft. Spiel normal. Tipp: klick ab und zu deine Units an (dann sieht der Bot ihren Namen).")
+
+func _learn_stop() -> void:
+	learn_on = false
+	pilot.watch(false)
+	if learn_timer:
+		learn_timer.stop()
+	if learn_file:
+		learn_file.close()
+		learn_file = null
+	btn_learn.text = "Lernmodus: mir zuschauen"
+	btn_auto.disabled = false
+	_log("Lernmodus aus: %d Bilder, %d Eingaben gespeichert." % [learn_frames, learn_events])
+	_auto_status("Lernmodus beendet: %d Bilder und %d Eingaben in „%s“. Sag Claude Bescheid, dann lernt er daraus." % [learn_frames, learn_events, learn_dir.get_file()])
+
+func _learn_save(img: Image, tag: String) -> String:
+	if img == null or learn_frames >= LEARN_MAX_FRAMES:
+		return ""
+	var name := "%05d_%s_%s.jpg" % [learn_frames, brain.stage.replace("-", "_") if brain.stage != "" else "x", tag]
+	if img.save_jpg(learn_dir.path_join(name), 0.85) == OK:
+		learn_frames += 1
+		learn_last_frame_ms = Time.get_ticks_msec()
+		return name
+	return ""
+
+func _learn_state() -> Dictionary:
+	return {"stage": brain.stage, "gold": brain.gold, "level": brain.level, "hp": brain.hp, "streak": brain.streak,
+		"shop": brain.shop.duplicate(), "traits": brain.my_traits.duplicate(), "lobby": brain.lobby_hp.duplicate(),
+		"phase": phase, "bench": hud_units["bench"].size(), "board": hud_units["board"].size(), "items": hud_items.size()}
+
+func _learn_tick() -> void:
+	if not learn_on:
+		return
+	var now := Time.get_ticks_msec()
+	var img := DisplayServer.screen_get_image(screen_idx)
+	if img == null or img.is_empty():
+		return
+	var evs := pilot.events()
+	# "Danach"-Bild von der letzten Eingabe
+	if learn_need_after:
+		var n := _learn_save(img, "danach")
+		learn_need_after = false
+		if learn_file and n != "":
+			learn_file.store_line(JSON.stringify({"t": now, "bild_danach": n, "lage": _learn_state()}))
+	if not evs.is_empty():
+		var before := ""
+		if learn_prev != null:
+			before = _learn_save(learn_prev, "davor")
+		for e in evs:
+			learn_events += 1
+			var rec := {"t": now, "eingabe": e["ev"], "x": e["x"], "y": e["y"], "ms": e["ms"], "bild_davor": before, "lage": _learn_state()}
+			if learn_file:
+				learn_file.store_line(JSON.stringify(rec))
+		learn_need_after = true
+	elif now - learn_last_frame_ms > 4000 and phase == "game":
+		_learn_save(img, "alle4s")
+	learn_prev = img
+	learn_prev_ms = now
+	if learn_file:
+		learn_file.flush()
+	_auto_status("Lernmodus läuft: %d Bilder, %d Eingaben. Spiel normal weiter." % [learn_frames, learn_events])
 
 # ================================================================= Aufnahmen
 

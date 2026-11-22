@@ -39,6 +39,37 @@ public static class TB {
     Thread.Sleep(80);
     Send(new INPUT[] { M(0x0004u) });
   }
+  // ---- Zuschauen: Eingaben des Spielers mitschreiben (Maus + wichtige Tasten) ----
+  static readonly int[] WatchKeys = { 0x01, 0x02, 0x44, 0x46, 0x45, 0x57, 0x51, 0x52, 0x20, 0x09, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39 };
+  static System.Collections.Generic.List<string> Ev = new System.Collections.Generic.List<string>();
+  static volatile bool Watching = false;
+  static Thread Watcher = null;
+  public static void Watch(bool on) {
+    Watching = on;
+    if (on && Watcher == null) {
+      Watcher = new Thread(() => {
+        var down = new bool[256];
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (true) {
+          if (Watching) {
+            foreach (int vk in WatchKeys) {
+              bool d = (GetAsyncKeyState(vk) & 0x8000) != 0;
+              if (d != down[vk]) {
+                down[vk] = d;
+                POINT p; GetCursorPos(out p);
+                string name = vk == 0x01 ? "L" : vk == 0x02 ? "R" : vk == 0x20 ? "SPACE" : vk == 0x09 ? "TAB" : ((char)vk).ToString();
+                lock (Ev) { if (Ev.Count < 5000) Ev.Add(sw.ElapsedMilliseconds + "|" + name + (d ? "_DOWN" : "_UP") + "|" + p.X + "|" + p.Y); }
+              }
+            }
+          }
+          Thread.Sleep(8);
+        }
+      });
+      Watcher.IsBackground = true;
+      Watcher.Start();
+    }
+  }
+  public static string Events() { lock (Ev) { var s = string.Join(";", Ev); Ev.Clear(); return s; } }
   public static void Key(byte vk) {
     ushort sc = (ushort)MapVirtualKey(vk, 0);
     Send(new INPUT[] { K(sc, 0) }); Thread.Sleep(45); Send(new INPUT[] { K(sc, 0x0002) });
@@ -105,6 +136,8 @@ while ($true) {
       [Console]::Out.WriteLine(($out -join ' @@ ')); [Console]::Out.Flush()
     }
     'ocrl'   { if ($ocr -eq $null) { [Console]::Out.WriteLine('ERR ' + $ocrErr) } else { [Console]::Out.WriteLine((ReadText $l.Substring(5) $true)) }; [Console]::Out.Flush() }
+    'watch'  { [TB]::Watch($p[1] -eq 'on') }
+    'events' { [Console]::Out.WriteLine('EV ' + [TB]::Events()); [Console]::Out.Flush() }
     'quit'   { exit }
   }
 }
@@ -210,6 +243,22 @@ func ocr(paths: Array) -> Array:
 ## Wie ocr(), aber jede Zeile endet mit " ~Y" (Mitte der Zeile im Bild, in Pixeln)
 func ocr_lines(path: String) -> String:
 	return _ask_line("ocrl " + path)
+
+## Zuschauen an/aus: der Helfer schreibt Mausklicks und Tasten des Spielers mit
+func watch(on: bool) -> void:
+	_send("watch " + ("on" if on else "off"))
+
+## Alle Eingaben seit dem letzten Abruf: [{"ms", "ev", "x", "y"}]
+func events() -> Array:
+	var l := _ask_line("events")
+	var out := []
+	if not l.begins_with("EV"):
+		return out
+	for part in l.substr(3).split(";", false):
+		var f := part.split("|")
+		if f.size() == 4:
+			out.append({"ms": int(f[0]), "ev": f[1], "x": int(f[2]), "y": int(f[3])})
+	return out
 
 func cursor() -> Vector2i:
 	var l := _ask_line("cursor")
