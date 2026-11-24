@@ -49,6 +49,8 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           runden=1
           if [ "$DAUER" = "true" ]; then runden=10; fi
+          set -o pipefail
+          fehler=0
           for i in $(seq 1 $runden); do
             echo "=== Runde $i von $runden: $(date -u +'%H:%M') UTC ==="
             # Immer vom neuesten Stand ausgehen (eigene alte Daten-Commits braucht es nicht, sie werden neu erzeugt)
@@ -64,11 +66,12 @@ jobs:
                 if git push -q; then echo "Hochgeladen"; else echo "Push abgelehnt (jemand war schneller), nächste Runde"; fi
               fi
             else
-              echo "Update fehlgeschlagen (MetaTFT nicht erreichbar?), nächste Runde"
+              echo "::error::Update fehlgeschlagen in Runde $i (MetaTFT nicht erreichbar oder Format geändert)"; fehler=$((fehler+1))
               git checkout -- docs data 2>/dev/null || true
             fi
             if [ "$i" -lt "$runden" ]; then sleep 1800; fi
           done
+          if [ "$fehler" -eq "$runden" ]; then echo "::error::Alle $runden Runden fehlgeschlagen"; exit 1; fi
       - name: Nächsten Dauer-Lauf starten
         if: ${{ always() && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dauer)) }}
         env:

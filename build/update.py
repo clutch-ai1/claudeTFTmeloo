@@ -15,7 +15,8 @@ dl('https://api-hc.metatft.com/tft-comps-api/comps_data?queue=PBE','comps_data.j
 dl('https://api-hc.metatft.com/tft-comps-api/comps_stats?queue=PBE&patch=current&days=3&permit_filter_adjustment=true','comps_stats.json')
 for f in glob.glob('cd_*.json'): os.remove(f)
 ids=list(json.load(open('comps_data.json'))['results']['data']['cluster_details'])
-def g(c): dl(f'https://api-hc.metatft.com/tft-comps-api/comp_details?comp={c}&cluster_id=427&queue=PBE',f'cd_{c}.json')
+# Die Cluster-Nummer steckt in der Comp-ID (429000 -> 429). MetaTFT ändert sie bei jeder Neuberechnung.
+def g(c): dl(f'https://api-hc.metatft.com/tft-comps-api/comp_details?comp={c}&cluster_id={int(c)//1000}&queue=PBE',f'cd_{c}.json')
 with cf.ThreadPoolExecutor(8) as ex: list(ex.map(g,ids))
 z=json.load(open('set19.json'))
 units=[x for x in z['units'] if x.get('cost') and x['apiName'].startswith('DA_') and x.get('traits')]
